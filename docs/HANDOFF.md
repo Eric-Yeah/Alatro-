@@ -1,6 +1,6 @@
-# Übergabe: Stand nach M3 und M4, nächster Schritt M5
+# Übergabe: Stand nach M5, nächster Schritt M6
 
-Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
+Stand: 18.11.2026. Branch `claude/focused-dirac-4o4hhw`.
 
 ## Wo wir stehen
 
@@ -11,10 +11,12 @@ Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
 | M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
-| **M5 UI, UX, Juice** (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken) | **als Nächstes** |
-| M6 Politur, Performance, Optionen | offen |
+| M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken) | erledigt, Sichtprüfung auf dem iPad offen |
+| **M6 Politur, Performance, Optionen** | **als Nächstes** |
 
-Teststand: `npm test` 231 von 231 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Hinweis: In `docs/PLAN.md` steht eine ältere Meilenstein Zählung (dort ist M7 Boss Blinds). Maßgeblich ist diese Tabelle, einen M7 gibt es nicht.
+
+Teststand: `npm test` 231 von 231 grün (M5 ändert nur die UI), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
@@ -53,12 +55,28 @@ Einen neuen Joker anlegen:
 * Face Card Prüfungen immer über `ctx.isFace(card)`, damit der Maskenball wirkt. Ranglose Karten (Obsidian) lösen Rang Bedingungen nicht aus.
 * Tests: Gruppen Tests ergänzen, der Katalog Rauchtest und die Beschreibungs Prüfung laufen automatisch über alle Jokers.
 
-Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
+Offen und möglich: Sticker (gibt es nicht), weitere Jokers.
 
-## Hinweise für M5
+## M5 (erledigt)
 
-* Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`, Symbole aus Grafikprimitiven: Stern, Kolben, Mond). Eigene Grafiken und Sounds für Benutzen und Elixier Effekte gehören zu M5.
-* Die Score Animation kennt jetzt `source.kind === 'consumable'` (Fernrohr). Das Popup erscheint unter dem Slot, ob der Zeitpunkt gut wirkt, wurde nur im Code geprüft, nicht Bild für Bild.
+| Datei | Inhalt |
+|---|---|
+| `src/data/juice.ts` | Stimmungen (`MOODS`), Shake Stufen, CRT und Sound Werte, Standard Einstellungen |
+| `src/settings.ts` | Einstellungen (CRT, Ton, Lautstärke) in `alatro.settings.v1`, `getSettings`, `updateSettings`, `onSettings` |
+| `src/ui/Background.ts` | Shader mit Stimmung, `setMood(key)` überblendet |
+| `src/ui/Crt.ts` | CRT Filter auf der Bühne (`createCrt`, `updateCrt`), verdrahtet in `main.ts` |
+| `src/ui/screenFx.ts` | `screenFx.shake`, `shakeTier`, `xMultShake`, `lossShake`. `main.ts` addiert den Versatz auf `game.root` |
+| `src/ui/audio.ts` | `sfx(name, step)`, WebAudio Synthese, Entsperren bei der ersten Berührung |
+| `src/ui/EditionFx.ts` | `editionSheen(editionId, w, h, radius)`, Overlay mit Shader |
+| `src/ui/JokerArt.ts` | `drawJokerArt`, `motifFor` |
+
+Ein neuer Klang: Name in `SfxName` und `case` in `sfx()`. Eine neue Stimmung: Eintrag in `MOODS` und `MoodKey`.
+
+Offen für M6: Optionen Dialog (Lautstärke Regler, Animationstempo, CRT, Ton, bisher nur zwei Knöpfe im Hauptmenü), Performance auf dem iPad (CRT und Edition Filter messen), Feinabstimmung von Shake, Flash und Klängen auf dem Gerät, eigene Schrift (U9, O und 0 in der Seed Eingabe, AUDIT O40), Sound für Boss Effekte und Edition Auslösung.
+
+Weitere Hinweise:
+
+* Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`). Das Popup unter dem Slot beim Fernrohr wurde nur im Code geprüft.
 * Seed Eingabe: O und 0 sehen in der Systemschrift fast gleich aus (AUDIT O40).
 
 ## Browser Test

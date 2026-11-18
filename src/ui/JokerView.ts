@@ -2,6 +2,8 @@ import { Container, Graphics, Text } from 'pixi.js';
 import { getJoker, type JokerInstance } from '../core/jokers';
 import { EDITIONS } from '../data/modifiers';
 import { C, EDITION_COLORS, FONT, RARITY_COLORS } from './theme';
+import { editionSheen } from './EditionFx';
+import { drawJokerArt } from './JokerArt';
 
 export const JOKER_W = 104;
 export const JOKER_H = 140;
@@ -15,18 +17,18 @@ export class JokerView extends Container {
     const g = new Graphics()
       .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
       .roundRect(-w / 2, -h / 2, w, h, 10).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
-      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, h - 50, 6).fill(color)
-      .circle(0, -h / 2 + 7 + (h - 50) / 2, 22).fill({ color: 0xffffff, alpha: 0.25 });
-    const initial = new Text({ text: def.name[0], style: { fontFamily: FONT, fontSize: 40, fontWeight: '900', fill: 0xffffff } });
-    initial.anchor.set(0.5);
-    initial.y = -h / 2 + 7 + (h - 50) / 2;
+      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, h - 50, 6).fill(color);
+    const art = new Graphics();
+    art.y = -h / 2 + 7 + (h - 50) / 2;
+    drawJokerArt(art, def, w - 20, color);
     const name = new Text({
       text: def.name,
       style: { fontFamily: FONT, fontSize: 15, fontWeight: '800', fill: C.cardEdge, align: 'center', wordWrap: true, wordWrapWidth: w - 10 },
     });
     name.anchor.set(0.5);
     name.y = h / 2 - 22;
-    this.addChild(g, initial, name);
+    if (name.width > w - 8) name.scale.set((w - 8) / name.width);
+    this.addChild(g, art, name);
     if (joker.edition && EDITIONS[joker.edition]) {
       const ec = EDITION_COLORS[joker.edition] ?? C.accent;
       const glow = new Graphics()
@@ -35,6 +37,8 @@ export class JokerView extends Container {
       ed.anchor.set(0.5);
       ed.y = -h / 2 + 14;
       this.addChild(glow, ed);
+      const sheen = editionSheen(joker.edition, w, h, 10);
+      if (sheen) this.addChild(sheen);
     }
     this.eventMode = 'static';
     this.cursor = 'pointer';

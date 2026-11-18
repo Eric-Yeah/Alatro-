@@ -129,13 +129,13 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | in Arbeit (Run Info mit Händen, Blinds, Vouchers und Deck ist da, Options Button folgt in M6) |
-| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | offen |
-| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | offen |
-| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | offen |
-| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | offen |
-| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | offen |
+| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | erledigt (M5) |
+| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | erledigt (M5) |
+| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | erledigt (M5) |
+| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | erledigt (M5) |
+| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | erledigt (M5) |
 | U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
-| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | offen |
+| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | teilweise (CRT und Ton schaltbar im Hauptmenü, Lautstärke und Tempo folgen in M6) |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
 ## Fortschritt
@@ -196,6 +196,17 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Spielstand Version 4** mit Migration von Version 3 (Consumables, Typ Gewichte, neue Regeln).
 * **Refactor:** Zufallsziehungen (Joker, Editions, Spielkarten, Consumables) in `core/generate.ts`, `ShopItem` ist eine Union aus Joker, Consumable und Spielkarte.
 * **Browser Test:** Runde mit Slots, Elixier auf zwei Zielkarten, Pair mit Fernrohr (78 Punkte wie berechnet), Shop mit allen Karten Arten, Elixier Pack mit Zielwahl, Run Info, Sammlung, Seed Eingabe. Keine Konsolenfehler.
+
+### M5 (UI, UX, Juice, Sichtprüfung auf dem iPad steht aus)
+
+* **Daten** (`data/juice.ts`): Stimmungen, Shake Stufen, CRT Werte, Sound Grundtöne und Standard Einstellungen. Keine Zahlen im UI Code.
+* **Stimmung pro Blind** (`ui/Background.ts`, `setMood`): Small ruhig und blaugrün, Big warm und kräftig, Boss dunkelrot mit höherem Tempo und mehr Bändern, Shop grünlich und golden, Menü violett. Die Farben werden in 0,9 Sekunden überblendet. Das Spiel meldet die Stimmung über `Game.onMood`.
+* **CRT** (`ui/Crt.ts`): Scanlines, RGB Maske, Farbsaum zu den Rändern, dunkle Ecken, leichtes Flackern, als Filter auf der ganzen Bühne. Ohne Krümmung, damit Touch Koordinaten stimmen. Schaltbar über `settings.ts` (CRT Knopf im Hauptmenü).
+* **Shake und Flash** (`ui/screenFx.ts`): fünf Stufen nach Hand Score im Verhältnis zum Blind Ziel, kleiner Ruck bei X Mult, Ruck beim Verlieren, Blitz beim Gewinn des Runs.
+* **Sound** (`ui/audio.ts`): WebAudio Synthese ohne Dateien. Chips und Mult steigen pro Zählschritt um einen Halbton (bis 14 Schritte), dazu X Mult, Geld, Gesamt Schlag, Karten wählen, Spielen, Abwerfen, Ziehen, Kaufen, Verkaufen, Reroll, Consumable, Runde gewonnen, Sieg, Niederlage, Rettung und UI Klick. Audio wird bei der ersten Berührung entsperrt (Safari).
+* **Edition Shader** (`ui/EditionFx.ts`): Schimmer (Lichtstreif), Aura (wandernde Regenbogen Streifen), Prisma (Gold mit Funkeln), Schatten (dunkle Wellen). Als Overlay auf Karten und Jokers, Filter pro Edition geteilt.
+* **Joker Grafiken** (`ui/JokerArt.ts`): 12 Vektor Motive, gewählt nach Wirkung (X Mult Sprengstern, Geld Münze, Retrigger Spirale, Mult Flamme, Chips Kristall, Wachstum Komet, Passiv Orbit, Legendary Krone, sonst Stern, Mond, Kolben oder Auge). Beiwerk und Akzentfarbe sind aus der ID abgeleitet und damit stabil.
+* **Browser Test:** Hauptmenü mit CRT, Run Setup, Blind Auswahl (Small Stimmung), Hand spielen mit Scoring Animation, Kontaktbogen aller 79 Jokers und aller Editions auf Jokers und Karten, keine Konsolenfehler. Der Ton und der Shake wurden nur im Code geprüft (kein Audio im Testbrowser, Screenshots fangen keine Einzelbilder der Animation).
 
 ## Behalten
 
@@ -276,3 +287,7 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O48 | Hooks außerhalb des Scorings | `roundEnd` darf keinen Zufall nutzen (Anzeige und Auszahlung müssen gleich sein). Wachstum bei `roundEnd` passiert beim Einkassieren, nicht in der Vorschau |
 | O49 | Joker Passive bei Boss Schwächung | Der vom Boss geschwächte Joker ganz rechts bleibt für Passive, Rettung und Hooks außerhalb des Scorings aktiv, nur das Scoring ignoriert ihn |
 | O50 | Legendary Jokers (4.1) | Nur über das Omen Ahnenruf, 3 Stück in M3 |
+| O51 | Shake Stufen (9.3) | Stufe nach Hand Score geteilt durch Blind Ziel: ab 0,1 kleiner Shake, ab 0,3 mit leichtem Blitz, ab 0,6 stärker, ab 1 volle Stufe. Werte in `data/juice.ts`, Feinabstimmung auf dem iPad offen |
+| O52 | CRT ohne Krümmung | Eine Tonnenverzerrung würde Touch Ziele verschieben, deshalb nur Scanlines, Maske, Farbsaum, Vignette und Flackern |
+| O53 | Joker Grafik nach Wirkung | Motiv richtet sich nach der Art der Wirkung, nicht nach dem Namen, Jokers mit gleicher Wirkung sehen ähnlich aus und unterscheiden sich durch Akzentfarbe und Beiwerk. Einzelne Handzeichnungen wären später möglich |
+| O54 | Ton Standard | Ton ist an, Lautstärke 0,7. Mangels Ton im Testbrowser nur im Code geprüft |

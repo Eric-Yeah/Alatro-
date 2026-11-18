@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { SUIT_SYMBOLS, isFace, isRankless, rankLabel, type Card } from '../core/cards';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import { editionSheen } from './EditionFx';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT, SEAL_COLORS, SUIT_COLORS } from './theme';
 
 export const CARD_W = 112;
@@ -89,6 +90,8 @@ export class CardView extends Container {
         .roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 12).stroke({ width: 5, color: ec, alpha: 0.9 })
         .roundRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, 8).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
       this.face.addChild(glow);
+      const sheen = editionSheen(card.edition, w, h, 10);
+      if (sheen) this.face.addChild(sheen);
     }
 
     this.addChild(this.face);
