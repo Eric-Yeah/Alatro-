@@ -4,7 +4,8 @@ import { detectHand } from './handEval';
 import { BLIND_KINDS, blindReward, blindTarget, type BlindKind, type Scaling } from './blinds';
 import { FINAL_ANTE } from '../data/blinds';
 import { INTEREST, PAYOUT, REROLL, START } from '../data/economy';
-import { SHOP } from '../data/shop';
+import { SHOP, SHOP_TYPE_WEIGHTS, type ShopType } from '../data/shop';
+import { CONSUMABLE_BY_ID } from '../data/consumables';
 import { initialHandLevels, type HandLevels } from './hands';
 import { allJokers, getJoker, jokerRules, type JokerInstance } from './jokers';
 import { RngStreams, type RngStreamsState } from './rng';
@@ -13,7 +14,7 @@ import { rollRarity, sellValue as sellFromPrice } from './shop';
 import { EDITIONS } from '../data/modifiers';
 import type { Card, HandType, Suit } from './types';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** Regeln eines Runs. Decks, Stakes und Vouchers verändern diese Werte (M2). */
 export interface RunRules {
@@ -39,6 +40,12 @@ export interface RunRules {
   discount: number;
   /** Faktor auf Editions Chancen */
   editionRate: number;
+  /** Gewichte der Kartentypen in den Karten Slots */
+  typeWeights: Record<ShopType, number>;
+  /** Faktor auf Sternbilder in den Consumable Slots (1 = kein Effekt) */
+  sternbildXMult: number;
+  /** Spielkarten im Shop kommen mit Modifikatoren */
+  shopCardMods: boolean;
 }
 
 export function defaultRules(): RunRules {
@@ -57,6 +64,9 @@ export function defaultRules(): RunRules {
     rerollBase: REROLL.base,
     discount: 1,
     editionRate: 1,
+    typeWeights: { ...SHOP_TYPE_WEIGHTS },
+    sternbildXMult: 1,
+    shopCardMods: false,
   };
 }
 
@@ -81,13 +91,24 @@ export interface RoundState {
 
 export type Phase = 'blindSelect' | 'round' | 'roundWon' | 'shop' | 'pack' | 'gameOver';
 
-export interface ShopItem {
-  kind: 'joker';
+export type ShopItem =
+  | {
+    kind: 'joker';
+    defId: string;
+    edition?: string;
+    price: number;
+    /** gratis durch einen Tag */
+    free?: boolean;
+  }
+  | { kind: 'consumable'; defId: string; price: number }
+  | { kind: 'card'; card: Card; price: number };
+
+/** Ein Consumable im Slot */
+export interface ConsumableInstance {
+  uid: number;
   defId: string;
-  edition?: string;
-  price: number;
-  /** gratis durch einen Tag */
-  free?: boolean;
+  /** Kaufpreis, Grundlage für den Verkaufswert */
+  buyPrice?: number;
 }
 
 export interface ShopState {
@@ -103,12 +124,15 @@ export interface ShopState {
 
 export type PackOption =
   | { kind: 'joker'; defId: string; edition?: string }
-  | { kind: 'card'; card: Card };
+  | { kind: 'card'; card: Card }
+  | { kind: 'consumable'; defId: string };
 
 export interface PackState {
   packId: string;
   options: (PackOption | null)[];
   picksLeft: number;
+  /** Karten aus dem Deck, die in Elixier und Omen Packs als Ziele angeboten werden */
+  handIds?: number[];
   /** wohin es nach dem Pack weitergeht */
   returnPhase: Phase;
 }
@@ -125,6 +149,7 @@ export interface RunState {
   discards: number;
   jokerSlots: number;
   consumableSlots: number;
+  consumables: ConsumableInstance[];
   handLevels: HandLevels;
   /** wie oft jede Hand gespielt wurde (Secret Hands, Statistik) */
   handsPlayed: Record<HandType, number>;
@@ -182,6 +207,7 @@ export function newRun(seed: string): RunState {
     discards: START.discards,
     jokerSlots: START.jokerSlots,
     consumableSlots: START.consumableSlots,
+    consumables: [],
     handLevels,
     handsPlayed: zeroCounts(handLevels),
     jokers: [],
@@ -295,6 +321,16 @@ function takeFromHand(r: RoundState, ids: number[]): Card[] {
   return taken;
 }
 
+/** Sternbilder in den Consumable Slots mit der Hand, die sie verbessern */
+function heldSternbilder(run: RunState): { uid: number; hand: HandType }[] {
+  const out: { uid: number; hand: HandType }[] = [];
+  for (const c of run.consumables) {
+    const e = CONSUMABLE_BY_ID[c.defId]?.effect;
+    if (e?.kind === 'levelHand') out.push({ uid: c.uid, hand: e.hand });
+  }
+  return out;
+}
+
 export function playCards(run: RunState, ids: number[]): ScoreResult {
   const r = run.round!;
   if (ids.length === 0 || ids.length > START.maxPlay) throw new Error('invalid selection');
@@ -319,6 +355,8 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
     rules,
     boss: boss ? { levelDown: boss.levelDown, halveBase: boss.halveBase, nullify } : undefined,
     balance: run.rules.balance,
+    heldSternbilder: run.rules.sternbildXMult > 1 ? heldSternbilder(run) : [],
+    sternbildXMult: run.rules.sternbildXMult,
     chance: (num, den, key) => rng.chance(num, den, `${key}_a${run.ante}`, run.rules.probMult),
   });
   r.playedTypes.push(type);

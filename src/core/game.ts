@@ -8,27 +8,32 @@
  * roundWon -> (cashOut) shop
  * shop -> (buyPack) pack -> shop
  * shop -> (leaveShop) blindSelect
+ *
+ * Consumables im Slot (useConsumable, sellConsumable) sind in jeder Phase erlaubt, solange
+ * der Effekt keine Karten Ziele braucht oder eine Runde läuft.
  */
 import { BOSSES } from '../data/bosses';
-import { RANKS, SUITS } from '../data/cards';
+import { CONSUMABLE_COST, CONSUMABLES, PACK_HAND_SIZE, type ConsumableType } from '../data/consumables';
 import { DECKS, type DeckDef } from '../data/decks';
-import { ENHANCEMENTS, EDITIONS, SEALS } from '../data/modifiers';
+import { EDITIONS } from '../data/modifiers';
 import type { RunMods } from '../data/modsSpec';
-import { FIRST_SHOP_PACK, PACKS, PLAYING_CARD_ROLLS, type PackDef } from '../data/packs';
-import { JOKER_EDITION_ROLL } from '../data/shop';
+import { FIRST_SHOP_PACK, PACKS, type PackDef } from '../data/packs';
+import { BASE_PRICES } from '../data/shop';
 import { STAKES, type StakeDef } from '../data/stakes';
 import { TAGS, type TagDef } from '../data/tags';
 import { VOUCHERS, type VoucherDef } from '../data/vouchers';
 import { REROLL } from '../data/economy';
 import { BLIND_KINDS, isShowdown } from './blinds';
 import { createStandardDeck } from './cards';
-import { allJokers, getJoker, type JokerDef } from './jokers';
+import { addConsumable, canUseConsumable, consumableDef, createStarSealConsumables, freeConsumableSlots, useDirect, type UseResult } from './consumables';
+import { rollConsumable, rollJoker, rollJokerEdition, rollPlayingCard } from './generate';
+import { getJoker } from './jokers';
 import type { RngStreams } from './rng';
 import {
   addJoker, canAddJoker, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon, jokerSellValue, newRun,
   playCards, rngOf, startRound, type PackOption, type RoundEarnings, type RunState, type ShopItem,
 } from './run';
-import { buyPrice, rollRarity } from './shop';
+import { buyPrice } from './shop';
 import type { ScoreResult } from './scoring';
 import type { Card } from './types';
 
@@ -61,6 +66,9 @@ export function applyMods(run: RunState, m: RunMods) {
   if (m.noInterest !== undefined) r.noInterest = m.noInterest;
   if (m.perHandLeft !== undefined) r.perHandLeft = m.perHandLeft;
   if (m.perDiscardLeft !== undefined) r.perDiscardLeft = m.perDiscardLeft;
+  if (m.typeWeights) r.typeWeights = { ...r.typeWeights, ...m.typeWeights };
+  if (m.sternbildXMult !== undefined) r.sternbildXMult = m.sternbildXMult;
+  if (m.shopCardMods !== undefined) r.shopCardMods = m.shopCardMods;
 }
 
 function buildDeck(deck: DeckDef): Card[] {
@@ -208,13 +216,14 @@ export function afterHand(run: RunState): Card[] {
 }
 
 /** Auszahlung, nächster Blind, Shop öffnen. Nach einem Boss beginnt eine neue Ante. */
-export function cashOut(run: RunState): RoundEarnings {
+export function cashOut(run: RunState): RoundEarnings & { starSealCreated: string[] } {
   if (run.phase !== 'roundWon') throw new Error('round not won');
   const wasBoss = run.round!.blind === 'boss';
+  const starSealCreated = createStarSealConsumables(run);
   const earnings = finishRound(run);
   if (wasBoss) enterAnte(run);
   openShop(run);
-  return earnings;
+  return { ...earnings, starSealCreated };
 }
 
 // ─────────────────────────────────────────────── Shop
@@ -224,28 +233,17 @@ function priceWithDiscount(run: RunState, base: number, surcharge = 0): number {
   return buyPrice({ base, editionSurcharge: surcharge, discount: run.rules.discount * tag });
 }
 
-function rollJokerEdition(run: RunState, rng: RngStreams, key: string): string | undefined {
-  const r = rng.next(key);
-  const rate = run.rules.editionRate;
-  if (r > 1 - JOKER_EDITION_ROLL.schatten) return 'schatten';
-  if (r > 1 - JOKER_EDITION_ROLL.prisma * rate) return 'prisma';
-  if (r > 1 - JOKER_EDITION_ROLL.aura * rate) return 'aura';
-  if (r > 1 - JOKER_EDITION_ROLL.schimmer * rate) return 'schimmer';
-  return undefined;
-}
-
-/** Zieht einen Joker: Rarity Wurf, keine Duplikate, Resample auf alle freien Jokers. */
-function rollJoker(run: RunState, rng: RngStreams, keyBase: string, exclude: Set<string>, rarity?: JokerDef['rarity']): JokerDef | null {
-  const owned = new Set(run.jokers.map((j) => j.defId));
-  const free = allJokers().filter((j) => !owned.has(j.id) && !exclude.has(j.id) && j.rarity !== 'legendary');
-  if (!free.length) return null;
-  const want = rarity ?? rollRarity(rng, `${keyBase}_rarity`);
-  const pool = free.filter((j) => j.rarity === want);
-  return rng.pick(`${keyBase}_pick`, pool.length ? pool : free);
-}
-
 function rollShopCard(run: RunState, rng: RngStreams, exclude: Set<string>): ShopItem | null {
-  // Typ Wurf nach SHOP_TYPE_WEIGHTS (data/shop.ts) folgt mit den Consumables in M4, bis dahin nur Jokers
+  const type = rng.weighted(`shop_type_a${run.ante}`, run.rules.typeWeights);
+  if (type === 'karte') {
+    const card = rollPlayingCard(run, rng, `shop_card_a${run.ante}`, !run.rules.shopCardMods);
+    return { kind: 'card', card, price: priceWithDiscount(run, BASE_PRICES.playingCard) };
+  }
+  if (type !== 'joker') {
+    const def = rollConsumable(run, rng, type as ConsumableType, `shop_${type}_a${run.ante}`, exclude);
+    if (def) return { kind: 'consumable', defId: def.id, price: priceWithDiscount(run, def.cost) };
+    // leerer Pool: es fällt auf einen Joker zurück (Briefing 7.1)
+  }
   const def = rollJoker(run, rng, `shop_joker_a${run.ante}`, exclude);
   if (!def) return null;
   exclude.add(def.id);
@@ -296,7 +294,7 @@ export function reroll(run: RunState): boolean {
   if (s.freeRerolls > 0) s.freeRerolls--;
   else s.rerollsUsed++;
   // Reroll ersetzt nur die normalen Karten Slots, nicht Packs, Voucher oder gratis Tag Jokers
-  const keepFree = s.cards.filter((c): c is ShopItem => !!c && !!c.free);
+  const keepFree = s.cards.filter((c): c is ShopItem & { kind: 'joker' } => c?.kind === 'joker' && !!c.free);
   const exclude = new Set(keepFree.map((c) => c.defId));
   const rng = rngOf(run);
   s.cards = [];
@@ -307,16 +305,39 @@ export function reroll(run: RunState): boolean {
 
 export function canBuyCard(run: RunState, index: number): boolean {
   const item = run.shop?.cards[index];
-  return !!item && run.money >= item.price && canAddJoker(run, item.edition);
+  if (!item || run.money < item.price) return false;
+  if (item.kind === 'joker') return canAddJoker(run, item.edition);
+  if (item.kind === 'consumable') return freeConsumableSlots(run) > 0;
+  return true;
 }
 
 export function buyCard(run: RunState, index: number): boolean {
   if (!canBuyCard(run, index)) return false;
   const item = run.shop!.cards[index]!;
   run.money -= item.price;
-  addJoker(run, item.defId, { edition: item.edition, buyPrice: item.free ? 0 : item.price });
+  if (item.kind === 'joker') addJoker(run, item.defId, { edition: item.edition, buyPrice: item.free ? 0 : item.price });
+  else if (item.kind === 'consumable') addConsumable(run, item.defId, item.price);
+  else run.deck.push(item.card);
   run.shop!.cards[index] = null;
   return true;
+}
+
+/** Consumable ohne Karten Ziel kaufen und sofort benutzen, ohne einen Slot zu belegen. */
+export function canBuyAndUse(run: RunState, index: number): boolean {
+  const item = run.shop?.cards[index];
+  if (item?.kind !== 'consumable' || run.money < item.price) return false;
+  const def = consumableDef(item.defId);
+  return !!def && !def.targets && canUseConsumable(run, item.defId, [], 'direct');
+}
+
+export function buyAndUse(run: RunState, index: number): UseResult | null {
+  if (!canBuyAndUse(run, index)) return null;
+  const item = run.shop!.cards[index] as ShopItem & { kind: 'consumable' };
+  const res = useDirect(run, item.defId);
+  if (!res) return null;
+  run.money -= item.price;
+  run.shop!.cards[index] = null;
+  return res;
 }
 
 export function buyVoucher(run: RunState): boolean {
@@ -355,19 +376,6 @@ export function leaveShop(run: RunState) {
 
 // ─────────────────────────────────────────────── Packs
 
-function rollPlayingCard(run: RunState, rng: RngStreams, key: string): Card {
-  const card: Card = { id: run.nextCardId++, rank: rng.pick(`${key}_rank`, RANKS), suit: rng.pick(`${key}_suit`, SUITS) };
-  if (rng.next(`${key}_enh`) < PLAYING_CARD_ROLLS.enhancementChance) card.enhancement = rng.pick(`${key}_enh_pick`, Object.keys(ENHANCEMENTS));
-  if (rng.next(`${key}_seal`) < PLAYING_CARD_ROLLS.sealChance) card.seal = rng.pick(`${key}_seal_pick`, Object.keys(SEALS));
-  const r = rng.next(`${key}_ed`);
-  let acc = 0;
-  for (const e of PLAYING_CARD_ROLLS.editions) {
-    acc += e.chance * run.rules.editionRate;
-    if (r < acc) { card.edition = e.id; break; }
-  }
-  return card;
-}
-
 export function openPack(run: RunState, packId: string, returnPhase: RunState['phase']) {
   const pack = PACK_BY_ID[packId];
   const rng = rngOf(run);
@@ -379,30 +387,43 @@ export function openPack(run: RunState, packId: string, returnPhase: RunState['p
       if (!def) break;
       exclude.add(def.id);
       options.push({ kind: 'joker', defId: def.id, edition: rollJokerEdition(run, rng, `pack_edition_a${run.ante}`) });
-    } else {
+    } else if (pack.kind === 'karten') {
       options.push({ kind: 'card', card: rollPlayingCard(run, rng, `pack_card_a${run.ante}`) });
+    } else {
+      const def = rollConsumable(run, rng, pack.kind, `pack_${pack.kind}_a${run.ante}`, exclude);
+      if (!def) break;
+      exclude.add(def.id);
+      options.push({ kind: 'consumable', defId: def.id });
     }
   }
-  run.pack = { packId, options, picksLeft: pack.picks, returnPhase };
+  // Elixier und Omen brauchen Karten als Ziele: eine Hand aus dem Deck wird mit angezeigt
+  const handIds = pack.kind === 'elixier' || pack.kind === 'omen'
+    ? rng.shuffle(`pack_hand_a${run.ante}`, [...run.deck]).slice(0, PACK_HAND_SIZE).map((c) => c.id)
+    : undefined;
+  run.pack = { packId, options, picksLeft: pack.picks, returnPhase, ...(handIds ? { handIds } : {}) };
   run.phase = 'pack';
 }
 
-export function canPick(run: RunState, index: number): boolean {
+export function canPick(run: RunState, index: number, targetIds: number[] = []): boolean {
   const o = run.pack?.options[index];
   if (!o || !run.pack || run.pack.picksLeft <= 0) return false;
+  if (o.kind === 'consumable') return canUseConsumable(run, o.defId, targetIds, 'direct');
   return o.kind === 'card' || canAddJoker(run, o.edition);
 }
 
-export function pickFromPack(run: RunState, index: number): boolean {
-  if (!canPick(run, index)) return false;
+/** Wählt eine Karte. Consumables aus Packs werden sofort benutzt, targetIds sind die Ziel Karten. */
+export function pickFromPack(run: RunState, index: number, targetIds: number[] = []): UseResult | boolean {
+  if (!canPick(run, index, targetIds)) return false;
   const p = run.pack!;
   const o = p.options[index]!;
+  let result: UseResult | null = null;
   if (o.kind === 'joker') addJoker(run, o.defId, { edition: o.edition, buyPrice: getJoker(o.defId)?.cost });
-  else run.deck.push(o.card);
+  else if (o.kind === 'card') run.deck.push(o.card);
+  else result = useDirect(run, o.defId, targetIds);
   p.options[index] = null;
   p.picksLeft--;
   if (p.picksLeft <= 0 || p.options.every((x) => !x)) closePack(run);
-  return true;
+  return result ?? true;
 }
 
 export function closePack(run: RunState) {
@@ -411,3 +432,6 @@ export function closePack(run: RunState) {
   run.phase = back;
 }
 
+
+export { sellConsumable, useConsumable, canUseConsumable } from './consumables';
+export { CONSUMABLE_COST, CONSUMABLES };

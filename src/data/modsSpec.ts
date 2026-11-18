@@ -1,4 +1,5 @@
 import type { Scaling } from './blinds';
+import type { ShopType } from './shop';
 
 /**
  * Deklarative Regeländerungen, gemeinsam genutzt von Vouchers, Decks und Stakes.
@@ -25,4 +26,10 @@ export interface RunMods {
   noInterest?: boolean;
   perHandLeft?: number;
   perDiscardLeft?: number;
+  /** setzt Gewichte der Kartentypen im Shop */
+  typeWeights?: Partial<Record<ShopType, number>>;
+  /** Faktor auf Sternbilder in den Consumable Slots, deren Hand gespielt wird */
+  sternbildXMult?: number;
+  /** Spielkarten im Shop kommen mit Modifikatoren */
+  shopCardMods?: boolean;
 }

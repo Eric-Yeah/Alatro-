@@ -16,6 +16,7 @@ export function saveRun(run: RunState | null) {
 /**
  * Migration älterer Spielstände.
  * Version 1: ein globaler Zufallszustand (rngState), keine Regeln, keine Hand Statistik.
+ * Version 3: Spielstand vor den Consumables (M4).
  */
 export function migrateRun(raw: any): RunState | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -53,6 +54,12 @@ export function migrateRun(raw: any): RunState | null {
     raw.phase = 'blindSelect';
     if (raw.round) raw.phase = isRoundWon(raw) ? 'roundWon' : 'round';
     enterAnte(raw);
+  }
+  if (raw.version === 3) {
+    // Version 3: keine Consumables, keine Shop Typ Gewichte, keine Sternbild Regel
+    raw.consumables = [];
+    raw.rules = { ...defaultRules(), ...raw.rules };
+    raw.version = 4;
   }
   if (raw.version !== SAVE_VERSION) return null;
   return raw as RunState;

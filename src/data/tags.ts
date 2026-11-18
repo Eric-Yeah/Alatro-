@@ -30,6 +30,8 @@ export const TAGS: TagDef[] = [
   { id: 'supernova', name: 'Supernova', description: 'Der nächste Shop enthält einen gratis Rare Joker', minAnte: 2, when: 'nextShop', effect: { kind: 'freeJoker', rarity: 'rare' } },
   { id: 'gauklerkiste', name: 'Gauklerkiste', description: 'Öffnet sofort ein gratis Mega Joker Pack', minAnte: 2, when: 'immediate', effect: { kind: 'openPack', pack: 'joker_mega' } },
   { id: 'kartenregen', name: 'Kartenregen', description: 'Öffnet sofort ein gratis Mega Karten Pack', minAnte: 1, when: 'immediate', effect: { kind: 'openPack', pack: 'karten_mega' } },
+  { id: 'sternschnuppe', name: 'Sternschnuppe', description: 'Öffnet sofort ein gratis Mega Sternbild Pack', minAnte: 1, when: 'immediate', effect: { kind: 'openPack', pack: 'sternbild_mega' } },
+  { id: 'alchemistenkiste', name: 'Alchemistenkiste', description: 'Öffnet sofort ein gratis Mega Elixier Pack', minAnte: 1, when: 'immediate', effect: { kind: 'openPack', pack: 'elixier_mega' } },
   { id: 'nachtwache', name: 'Nachtwache', description: '+1 Hand in der nächsten Runde', minAnte: 1, when: 'nextRound', effect: { kind: 'extraHands', amount: 1 } },
   { id: 'schutzzauber', name: 'Schutzzauber', description: 'Deaktiviert den Effekt des nächsten Boss Blinds', minAnte: 1, when: 'nextBoss', effect: { kind: 'disableBoss' } },
   { id: 'doppelstern', name: 'Doppelstern', description: 'Der nächste Tag zählt doppelt', minAnte: 1, when: 'nextTag', effect: { kind: 'duplicateNext' } },

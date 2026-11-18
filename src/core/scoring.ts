@@ -20,9 +20,10 @@ export type ScoreEventSource =
   | { kind: 'card'; cardId: number }
   | { kind: 'held'; cardId: number }
   | { kind: 'joker'; jokerUid: number }
+  | { kind: 'consumable'; uid: number }
   | { kind: 'rule' };
 
-export type ScorePhase = 'base' | 'card' | 'held' | 'joker' | 'retrigger' | 'balance' | 'debuff';
+export type ScorePhase = 'base' | 'card' | 'held' | 'joker' | 'consumable' | 'retrigger' | 'balance' | 'debuff';
 
 /** Ein sichtbarer Schritt der Score Animation (Briefing 8.2). */
 export interface ScoreEvent {
@@ -65,6 +66,10 @@ export interface ScoreInput {
   boss?: BossScoreMods;
   /** Chips und Mult am Ende mitteln (Deck Regel, Briefing 3.1 Schritt 7) */
   balance?: boolean;
+  /** Sternbilder in den Consumable Slots (Briefing 3.1 Schritt 6) mit ihrer Hand */
+  heldSternbilder?: { uid: number; hand: HandType }[];
+  /** Faktor der Sternbilder, wenn ihre Hand gespielt wird (nur über 1 wirksam) */
+  sternbildXMult?: number;
   /** Zufallsentscheidungen, Standard: nie */
   chance?: (num: number, den: number, key: string) => boolean;
 }
@@ -192,7 +197,12 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     if (ed?.xMult) apply('joker', src, { xMult: ed.xMult });
   }
 
-  // 6) Consumable Phase: folgt mit den Consumables (M4)
+  // 6) Consumable Phase: Sternbilder im Slot, deren Hand gespielt wird
+  if ((input.sternbildXMult ?? 1) > 1) {
+    for (const s of input.heldSternbilder ?? []) {
+      if (s.hand === type) apply('consumable', { kind: 'consumable', uid: s.uid }, { xMult: input.sternbildXMult });
+    }
+  }
 
   // 7) Balance (Offener Punkt O3: abrunden)
   if (input.balance) {

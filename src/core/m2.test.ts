@@ -183,7 +183,7 @@ describe('Shop', () => {
     for (let i = 0; i < 20; i++) {
       run.phase = 'roundWon';
       openShop(run);
-      for (const c of run.shop!.cards) if (c) expect(['funke', 'glut', 'frost', 'kleinvieh']).not.toContain(c.defId);
+      for (const c of run.shop!.cards) if (c?.kind === 'joker') expect(['funke', 'glut', 'frost', 'kleinvieh']).not.toContain(c.defId);
     }
   });
 
@@ -276,7 +276,7 @@ describe('Shop', () => {
     const run = createRun({ seed: 'SHOP0010' });
     run.pendingTags = ['komet'];
     wonRound(run);
-    const free = run.shop!.cards.find((c) => c?.free);
+    const free = run.shop!.cards.find((c) => c?.kind === 'joker' && c.free);
     expect(free?.price).toBe(0);
   });
 

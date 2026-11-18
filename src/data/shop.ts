@@ -10,8 +10,14 @@ export const SHOP = {
   /** Gratis Jokers aus Tags erscheinen zusätzlich zu den normalen Slots */
 };
 
-/** Gewichte der Kartentypen in den Karten Slots (Briefing 6.2). Consumables folgen in M4. */
-export const SHOP_TYPE_WEIGHTS = {
+/** Kartentypen in den Karten Slots (Briefing 6.2): Joker, Consumables und Spielkarten */
+export type ShopType = 'joker' | 'sternbild' | 'elixier' | 'karte' | 'omen';
+
+/**
+ * Start Gewichte der Kartentypen in den Karten Slots (Briefing 6.2). Spielkarten kommen erst
+ * mit einem Voucher in den Shop, Omen nur aus Packs. Vouchers verändern die Gewichte pro Run.
+ */
+export const SHOP_TYPE_WEIGHTS: Record<ShopType, number> = {
   joker: 20,
   sternbild: 4,
   elixier: 4,
