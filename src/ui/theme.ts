@@ -54,3 +54,28 @@ export function fmtMult(n: number): string {
   if (n >= 1000) return fmt(n);
   return n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 }
+
+/** Eigene Farben der Modifikatoren */
+export const ENHANCEMENT_COLORS: Record<string, number> = {
+  kupfer: 0xe9b48a,
+  rubin: 0xf3b0b8,
+  mondstein: 0xdde4f5,
+  kristall: 0xd2f3f7,
+  eisen: 0xbfc3cf,
+  obsidian: 0x2e2838,
+  quecksilber: 0xd5dde6,
+  gold: 0xf4d978,
+};
+
+export const SEAL_COLORS: Record<string, number> = {
+  echo: 0xe0475b,
+  muenze: 0xf0b429,
+  stern: 0x4f8fd9,
+};
+
+export const EDITION_COLORS: Record<string, number> = {
+  schimmer: 0x9fd8ff,
+  aura: 0xff7fd0,
+  prisma: 0xffd23f,
+  schatten: 0x1a1426,
+};

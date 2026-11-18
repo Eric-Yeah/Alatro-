@@ -17,6 +17,7 @@ Stand: Audit vor Beginn der Umbauten.
 | Vorhandene Unit Tests (`src/core/core.test.ts`) | `npm test` | 26 von 26 grün |
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
+| M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -57,8 +58,8 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 |---|---|---|---|---|---|
 | S1 | Phasen: Basis, Karten (Chips, dann Joker), Held (nur Joker), Joker | Before, Basis mit Boss Modifikatoren, Karten (Chips, Modifikator, Siegel, Edition, Joker), Held (Modifikator, Joker), Joker (Edition vor, Effekt, other joker, Edition nach), Consumable Phase, Balance, Floor, After (3.1 bis 3.4) | Reihenfolge | groß | erledigt |
 | S2 | Keine Retrigger | Retrigger wiederholen die komplette Kartensequenz, Karten Retrigger zuerst, dann Jokers links nach rechts, additiv (3.2, 3.3) | Feature | mittel | erledigt |
-| S3 | Keine Karten Modifikatoren, Siegel, Editions | Eigene Typen mit Effekten in der Reihenfolge aus 3.2 | Feature | groß | in Arbeit |
-| S4 | Keine Boss Modifikatoren im Scoring | Level senken (min. 1), Basis halbieren mit Aufrunden, Hand wertlos (3.1 Schritt 0) | Feature | mittel | in Arbeit |
+| S3 | Keine Karten Modifikatoren, Siegel, Editions | Eigene Typen mit Effekten in der Reihenfolge aus 3.2 | Feature | groß | erledigt |
+| S4 | Keine Boss Modifikatoren im Scoring | Level senken (min. 1), Basis halbieren mit Aufrunden, Hand wertlos (3.1 Schritt 0) | Feature | mittel | erledigt |
 | S5 | Keine Balance Regel | Chips und Mult am Ende mitteln (Deck Regel, 3.1 Schritt 7) | Feature | klein | erledigt |
 | S6 | `onHandPlayed` läuft vor dem Scoring, After Phase fehlt | Getrennte Before und After Phase (3.1 Schritte 1 und 9) | Reihenfolge | klein | erledigt |
 | S7 | ScoreEvent Protokoll vorhanden, aber ohne Typ, Phase und Text | Event mit Typ, Quelle, Wert, laufenden Chips und Mult, Nachricht (8.2) | Architektur | klein | erledigt |
@@ -70,18 +71,18 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | J1 | Mehrere Hook Funktionen pro Joker, Zahlen direkt im Code | `JokerDef` mit `config` (Zahlen als Daten) und einem `calculate(ctx)` Hook mit Phase im Kontext, Adapter für die 9 vorhandenen Jokers (8.2) | Architektur | mittel | erledigt |
 | J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | in Arbeit |
 | J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | offen |
-| J4 | Joker Editions fehlen | Eigene Editions mit Phase vor bzw. nach dem Joker (3.4, 6.4) | Feature | mittel | in Arbeit |
+| J4 | Joker Editions fehlen | Eigene Editions mit Phase vor bzw. nach dem Joker (3.4, 6.4) | Feature | mittel | erledigt |
 
 ### Consumables, Vouchers, Tags, Bosse, Decks, Stakes (4.3 bis 4.9)
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | K1 | Keine Consumables, Slot Anzeige ist Platzhalter | 3 eigene Consumable Typen (Hand Level, Karten verändern, riskante Effekte), 2 Slots, Benutzen aus Slot und Shop | Feature | groß | offen |
-| K2 | Keine Vouchers | Eigene Voucher Paare (Basis und Upgrade), 1 Slot im Shop pro Ante | Feature | mittel | offen |
-| K3 | Kein Skip, keine Tags | Skip für Small und Big Blind mit eigenem Tag Katalog (1.1) | Feature | mittel | offen |
-| K4 | Boss Blind ohne Effekt | Eigene Bosse mit Regeln, Auswahlregel, Mindest Ante, eigene Showdown Bosse für Ante 8, 16 usw. | Feature | groß | offen |
-| K5 | Ein Standarddeck | Eigene Start Decks mit Regeln | Feature | mittel | offen |
-| K6 | Keine Stakes | Eigene kumulative Schwierigkeitsstufen inkl. Skalierung 1 bis 3 und Small Blind ohne Belohnung | Feature | mittel | offen |
+| K2 | Keine Vouchers | Eigene Voucher Paare (Basis und Upgrade), 1 Slot im Shop pro Ante | Feature | mittel | erledigt |
+| K3 | Kein Skip, keine Tags | Skip für Small und Big Blind mit eigenem Tag Katalog (1.1) | Feature | mittel | erledigt |
+| K4 | Boss Blind ohne Effekt | Eigene Bosse mit Regeln, Auswahlregel, Mindest Ante, eigene Showdown Bosse für Ante 8, 16 usw. | Feature | groß | erledigt |
+| K5 | Ein Standarddeck | Eigene Start Decks mit Regeln | Feature | mittel | erledigt |
+| K6 | Keine Stakes | Eigene kumulative Schwierigkeitsstufen inkl. Skalierung 1 bis 3 und Small Blind ohne Belohnung | Feature | mittel | erledigt |
 
 ### Blind Ziele und Belohnungen (5)
 
@@ -97,11 +98,11 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
-| P1 | Kein Shop, nur Auswahl 1 aus 3 Jokers als Platzhalter | 2 Karten Slots, 2 Pack Slots, 1 Voucher, Reroll 5 plus 1, Next Round (6.1) | Feature | groß | offen |
+| P1 | Kein Shop, nur Auswahl 1 aus 3 Jokers als Platzhalter | 2 Karten Slots, 2 Pack Slots, 1 Voucher, Reroll 5 plus 1, Next Round (6.1) | Feature | groß | erledigt |
 | P2 | Rarity Gewichte im UI Code | Gewichte 70, 25, 5 und Typgewichte aus Daten (6.2, 6.3) | Zahl | klein | erledigt |
 | P3 | Keine Preisformel | (Basis plus Edition Aufschlag plus Inflation) mal Rabatt, halbe Beträge abrunden, min. 1 (6.5) | Feature | klein | erledigt |
-| P4 | Keine Booster Packs | Eigene Pack Typen in Normal, Jumbo, Mega mit Gewichten und Pack Ansicht (6.6) | Feature | groß | offen |
-| P5 | Sell Value aus Basispreis | Sell Value aus aktuellem Kaufpreis (1.4) | Zahl | klein | in Arbeit |
+| P4 | Keine Booster Packs | Eigene Pack Typen in Normal, Jumbo, Mega mit Gewichten und Pack Ansicht (6.6) | Feature | groß | in Arbeit |
+| P5 | Sell Value aus Basispreis | Sell Value aus aktuellem Kaufpreis (1.4) | Zahl | klein | erledigt |
 
 ### Zufall (7)
 
@@ -110,14 +111,14 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | R1 | Ein globaler Strom | Strom pro Key, initial `hash(seed + key)` (7.2) | Architektur | mittel | erledigt |
 | R2 | Kein `chance()` | `chance(num, den, key)` mit Wahrscheinlichkeitsfaktor (7.2, 7.3) | Feature | klein | erledigt |
 | R3 | Keine Seed Eingabe, Seeds ohne O, 0, 1, I | Seed Eingabe 0 bis 8 Zeichen, 0 und O gleich behandeln (7.1) | Feature | klein | in Arbeit |
-| R4 | Kein Resample und Fallback bei leerem Pool | Resample Strom und Fallback Item pro Typ (7.1) | Feature | klein | in Arbeit |
+| R4 | Kein Resample und Fallback bei leerem Pool | Resample Strom und Fallback Item pro Typ (7.1) | Feature | klein | erledigt |
 
 ### Architektur (8)
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | A1 | Kein `data/` Ordner, Zahlen verteilt im Code | Alle Spielzahlen in `src/data/` (8.2, 10.4) | Architektur | mittel | erledigt |
-| A2 | Spielablauf steckt in `ui/Game.ts` | Expliziter Zustandsautomat in der Engine, UI reagiert nur (8.2) | Architektur | mittel | offen |
+| A2 | Spielablauf steckt in `ui/Game.ts` | Expliziter Zustandsautomat in der Engine, UI reagiert nur (8.2) | Architektur | mittel | erledigt |
 | A3 | Spielstand ohne Version | Versioniertes Save Format mit Migration, inkl. Strom Zuständen (10.4, M4) | Architektur | klein | erledigt |
 | A4 | Engine ohne DOM | bleibt so (8.2) | keiner | | erledigt |
 
@@ -131,7 +132,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | offen |
 | U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | offen |
 | U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | offen |
-| U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | offen |
+| U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
 | U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | offen |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
@@ -148,6 +149,19 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * Aus M2 vorgezogen, weil klein und rein: Zufallsströme pro Key mit `chance()`, Seed Normalisierung, Rarity Wurf, Preisformel, Reroll Kosten.
 * Spielstand Version 2 mit Migration von Version 1.
 * UI: Spielbegriffe auf Englisch (Small Blind, Hands, Discards, Play Hand, Rank, Suit, Common usw.), Popups für Retrigger und Regel Events.
+
+### M2 (abgeschlossen)
+
+* **Zustandsautomat** in `src/core/game.ts` mit den Phasen blindSelect, round, roundWon, shop, pack, gameOver. Die UI ruft nur noch Aktionen auf (selectBlind, skipBlind, playHand, afterHand, cashOut, buyCard, reroll, buyPack, pickFromPack, leaveShop).
+* **Eigene Bosse** (`data/bosses.ts`): 12 normale und 2 Showdown Bosse mit deklarativen Effekten (Suit, Face oder gerade Ränge geschwächt, Hand Size, Discards, Level senken, Basis halbieren, Handtyp nur einmal, Mindestkarten, Geldverlust, Joker geschwächt, eigener Ziel Faktor). Auswahl nach Mindest Ante, Showdown alle 8 Antes, keine Wiederholung bis alle gesehen.
+* **Skip und eigene Tags** (`data/tags.ts`): 11 Tags mit Zeitpunkt sofort, nächster Shop, nächste Runde, nächster Boss oder nächster Tag.
+* **Shop** nach Briefing 6: Karten Slots (Jokers mit Rarity 70, 25, 5 und Edition Wurf), 2 Packs, 1 Voucher pro Ante, Reroll 5 plus 1 mit Reset, erstes Pack garantiert Joker Pack, Preisformel mit Rabatten, Verkaufswert aus Kaufpreis, Schatten Edition gibt +1 Slot.
+* **Booster Packs** (`data/packs.ts`): Joker Packs und Karten Packs in Normal, Jumbo, Mega. Karten Packs erzeugen Karten mit eigenen Enhancements, Seals und Editions.
+* **Eigene Vouchers** (`data/vouchers.ts`): 8 Paare aus Basis und Upgrade, deklarative Regeländerungen.
+* **Eigene Decks** (`data/decks.ts`): 7 Decks. **Eigene Stakes** (`data/stakes.ts`): 6 kumulative Stufen mit Skalierung 2 und 3.
+* **UI**: Run Setup mit Deck und Stake Auswahl, Blind Auswahl mit Skip und Tag Vorschau, Boss Name und Effekt im Blind Panel, Shop Szene, Pack Ansicht, geschwächte Karten abgedunkelt, Modifikatoren auf Karten sichtbar, offene Tags in der linken Spalte.
+* Spielstand Version 3 mit Migration.
+* Consumable Packs und der Typ Wurf der Shop Slots folgen mit den Consumables in M4.
 
 ## Behalten
 
@@ -199,3 +213,9 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O19 | Flush House mit 4 Karten Regel (2.2) | Full House plus 4 Karten gleicher Suit |
 | O20 | Nur ranglose Karten gespielt | High Card ohne Rang Karte, die ranglosen Karten scoren trotzdem |
 | O21 | Zerbrechen eines Enhancements (eigener Kristall) | läuft über `chance()` und ist damit vom Wahrscheinlichkeitsfaktor betroffen |
+| O22 | Boss Auswahl (eigene Regel) | zufällig unter passenden Bossen, keine Wiederholung, bis alle einer Kategorie gesehen sind |
+| O23 | Reroll und gratis Tag Jokers (eigene Regel) | Reroll ersetzt nur die normalen Karten Slots, gratis Jokers aus Tags bleiben |
+| O24 | Shop Typ Wurf (6.2) | bis M4 nur Jokers in den Karten Slots, die Gewichte für Consumables stehen schon in `data/shop.ts` |
+| O25 | Geld durch Boss Effekte | darf negativ werden, Käufe sind dann nicht möglich |
+| O26 | Suit Debuff bei Karten mit jeder Suit | Quecksilber Karten sind von jedem Suit Debuff betroffen. "Gerade Ränge" meint nur 2, 4, 6, 8, 10 |
+| O27 | Showdown Ziel Faktor | eigene Showdown Bosse nutzen ihren Faktor (z. B. X5), sonst gilt der Standard Boss Faktor 2 |

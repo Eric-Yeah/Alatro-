@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { getJoker, type JokerInstance } from '../core/jokers';
-import { C, FONT, RARITY_COLORS } from './theme';
+import { EDITIONS } from '../data/modifiers';
+import { C, EDITION_COLORS, FONT, RARITY_COLORS } from './theme';
 
 export const JOKER_W = 104;
 export const JOKER_H = 140;
@@ -26,6 +27,15 @@ export class JokerView extends Container {
     name.anchor.set(0.5);
     name.y = h / 2 - 22;
     this.addChild(g, initial, name);
+    if (joker.edition && EDITIONS[joker.edition]) {
+      const ec = EDITION_COLORS[joker.edition] ?? C.accent;
+      const glow = new Graphics()
+        .roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 12).stroke({ width: 5, color: ec, alpha: 0.95 });
+      const ed = new Text({ text: EDITIONS[joker.edition].name, style: { fontFamily: FONT, fontSize: 12, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1b1530, width: 4 } } });
+      ed.anchor.set(0.5);
+      ed.y = -h / 2 + 14;
+      this.addChild(glow, ed);
+    }
     this.eventMode = 'static';
     this.cursor = 'pointer';
   }
