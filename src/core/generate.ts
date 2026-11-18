@@ -27,7 +27,8 @@ export function rollJokerEdition(run: RunState, rng: RngStreams, key: string): s
 /** Zieht einen Joker: Rarity Wurf, keine Duplikate, Resample auf alle freien Jokers. */
 export function rollJoker(run: RunState, rng: RngStreams, keyBase: string, exclude: Set<string>, rarity?: JokerDef['rarity']): JokerDef | null {
   const owned = new Set(run.jokers.map((j) => j.defId));
-  const free = allJokers().filter((j) => !owned.has(j.id) && !exclude.has(j.id) && j.rarity !== 'legendary');
+  // Legendary erscheint nie zufällig, nur wenn ausdrücklich verlangt (Omen). minAnte ist die Spawn Bedingung
+  const free = allJokers().filter((j) => !owned.has(j.id) && !exclude.has(j.id) && (j.rarity !== 'legendary' || rarity === 'legendary') && (j.minAnte ?? 1) <= run.ante);
   if (!free.length) return null;
   const want = rarity ?? rollRarity(rng, `${keyBase}_rarity`);
   const pool = free.filter((j) => j.rarity === want);

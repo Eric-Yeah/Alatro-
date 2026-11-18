@@ -7,7 +7,7 @@ import { INTEREST, PAYOUT, REROLL, START } from '../data/economy';
 import { SHOP, SHOP_TYPE_WEIGHTS, type ShopType } from '../data/shop';
 import { CONSUMABLE_BY_ID } from '../data/consumables';
 import { initialHandLevels, type HandLevels } from './hands';
-import { allJokers, getJoker, jokerRules, type JokerInstance } from './jokers';
+import { allJokers, copyTarget, getJoker, jokerRules, sumPassives, type JokerContext, type JokerDef, type JokerInstance, type JokerPhase } from './jokers';
 import { RngStreams, type RngStreamsState } from './rng';
 import { scoreHand, type ScoreResult } from './scoring';
 import { rollRarity, sellValue as sellFromPrice } from './shop';
@@ -87,6 +87,8 @@ export interface RoundState {
   debuffSuit?: Suit;
   /** in dieser Runde gespielte Handtypen */
   playedTypes: HandType[];
+  /** ein Joker hat diese Runde vor der Niederlage gerettet (Joker Name für die Anzeige) */
+  rescuedBy?: string;
 }
 
 export type Phase = 'blindSelect' | 'round' | 'roundWon' | 'shop' | 'pack' | 'gameOver';
@@ -184,6 +186,8 @@ export interface RoundEarnings {
   handsBonus: number;
   discardsBonus: number;
   interest: number;
+  /** Geld durch Jokers am Rundenende */
+  jokers: number;
   total: number;
 }
 
@@ -238,8 +242,65 @@ export function rngOf(run: RunState): RngStreams {
   return new RngStreams(run.rng);
 }
 
+/** Dauerhafte Wirkungen aller Jokers im Besitz */
+export function jokerPassive(run: RunState) {
+  return sumPassives(run.jokers);
+}
+
+/** Wahrscheinlichkeitsfaktor: Regel Faktor, verdoppelt pro Joker mit doubleProb (Offener Punkt O11) */
+export function effectiveProbMult(run: RunState): number {
+  return run.rules.probMult * 2 ** jokerPassive(run).doubleProb;
+}
+
+export interface HookResult {
+  money: number;
+  consumables: ('sternbild' | 'elixier' | 'omen')[];
+}
+
+/**
+ * Ruft eine Joker Phase außerhalb des Scorings auf (discard, blindSelected, roundEnd, sell).
+ * commit = false rechnet auf Kopien und verändert nichts (Anzeige der Auszahlung).
+ * Geld und Consumables werden nur zurückgegeben, die Aufrufer wenden sie an.
+ */
+export function runJokerHook(run: RunState, phase: JokerPhase, extra: Partial<JokerContext> = {}, commit = true, only?: JokerInstance[]): HookResult {
+  const source = only ?? run.jokers;
+  const list = source
+    .map((inst) => ({ inst: commit ? inst : { ...inst, vars: { ...inst.vars }, }, def: getJoker(inst.defId) }))
+    .filter((j): j is { inst: JokerInstance; def: JokerDef } => !!j.def);
+  const r = run.round;
+  const rngs = rngOf(run);
+  const rules = jokerRules(source);
+  const ctx: Omit<JokerContext, 'phase'> = {
+    handType: 'highCard',
+    contained: new Set(),
+    played: [],
+    scoring: [],
+    held: r?.hand ?? [],
+    money: run.money,
+    handsLeft: r?.handsLeft ?? 0,
+    discardsLeft: r?.discardsLeft ?? 0,
+    chance: (num, den, key) => rngs.chance(num, den, `${key}_a${run.ante}`, effectiveProbMult(run)),
+    isFace: (card) => !!rules.allFace || isFace(card.rank),
+    ante: run.ante,
+    blind: r?.blind,
+    ...extra,
+  };
+  const out: HookResult = { money: 0, consumables: [] };
+  const destroy: number[] = [];
+  list.forEach((j, i) => {
+    const t = j.def.copies ? (phase === 'sell' ? null : copyTarget(list, i)) : j;
+    const e = t?.def.calculate?.({ ...ctx, phase }, t.inst, t.def.config);
+    if (!e) return;
+    out.money += e.money ?? 0;
+    out.consumables.push(...(e.consumables ?? []));
+    if (e.destroySelf) destroy.push(j.inst.uid);
+  });
+  if (commit && destroy.length && !only) run.jokers = run.jokers.filter((j) => !destroy.includes(j.uid));
+  return out;
+}
+
 export function runChance(run: RunState, num: number, den: number, key: string): boolean {
-  return rngOf(run).chance(num, den, key, run.rules.probMult);
+  return rngOf(run).chance(num, den, key, effectiveProbMult(run));
 }
 
 export function currentBlind(run: RunState): BlindKind {
@@ -260,16 +321,17 @@ export function startRound(run: RunState, opts: { extraHands?: number; bossDisab
   const drawPile = rng.shuffle(`shuffle_a${run.ante}_${blind}`, [...run.deck]);
   const boss = blind === 'boss' && run.anteBoss && !opts.bossDisabled ? BOSS_BY_ID[run.anteBoss] : undefined;
   const e = boss?.effect ?? {};
+  const p = jokerPassive(run);
   const round: RoundState = {
     blind,
     target: currentTarget(run, blind),
     score: 0,
-    handsLeft: Math.max(1, run.hands + (e.handsDelta ?? 0) + (opts.extraHands ?? 0)),
-    discardsLeft: Math.max(0, e.setDiscards ?? run.discards),
+    handsLeft: Math.max(1, run.hands + p.hands + (e.handsDelta ?? 0) + (opts.extraHands ?? 0)),
+    discardsLeft: Math.max(0, e.setDiscards ?? run.discards + p.discards),
     drawPile,
     hand: [],
     discardPile: [],
-    handSize: Math.max(1, run.handSize + (e.handSizeDelta ?? 0)),
+    handSize: Math.max(1, run.handSize + p.handSize + (e.handSizeDelta ?? 0)),
     bossId: boss?.id,
     playedTypes: [],
   };
@@ -357,7 +419,7 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
     balance: run.rules.balance,
     heldSternbilder: run.rules.sternbildXMult > 1 ? heldSternbilder(run) : [],
     sternbildXMult: run.rules.sternbildXMult,
-    chance: (num, den, key) => rng.chance(num, den, `${key}_a${run.ante}`, run.rules.probMult),
+    chance: (num, den, key) => rng.chance(num, den, `${key}_a${run.ante}`, effectiveProbMult(run)),
   });
   r.playedTypes.push(type);
   r.score += result.total;
@@ -366,6 +428,13 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
   const destroyedIds = new Set(result.destroyed.map((c) => c.id));
   run.deck = run.deck.filter((c) => !destroyedIds.has(c.id));
   r.discardPile.push(...played.filter((c) => !destroyedIds.has(c.id)));
+  for (const ed of result.cardEdits) {
+    modifyCardById(run, ed.cardId, (c) => {
+      if (ed.extraChips) c.extraChips = (c.extraChips ?? 0) + ed.extraChips;
+      if (ed.enhancement && !c.enhancement) c.enhancement = ed.enhancement;
+    });
+  }
+  if (result.destroyJokers.length) run.jokers = run.jokers.filter((j) => !result.destroyJokers.includes(j.uid));
   return result;
 }
 
@@ -373,8 +442,28 @@ export function discardCards(run: RunState, ids: number[]): void {
   const r = run.round!;
   if (ids.length === 0 || ids.length > START.maxDiscard) throw new Error('invalid selection');
   if (r.discardsLeft <= 0) throw new Error('no discards left');
-  r.discardPile.push(...takeFromHand(r, ids));
+  const discarded = takeFromHand(r, ids);
+  r.discardPile.push(...discarded);
   r.discardsLeft--;
+  run.money += runJokerHook(run, 'discard', { discarded }).money;
+}
+
+/** Alle Objekte einer Karte (Deck, Hand, Stapel). Nach dem Laden eines Spielstands sind es getrennte Kopien. */
+function cardObjects(run: RunState, id: number): Card[] {
+  const out = new Set<Card>();
+  const scan = (list?: Card[]) => list?.forEach((c) => { if (c.id === id) out.add(c); });
+  scan(run.deck);
+  if (run.round) {
+    scan(run.round.hand);
+    scan(run.round.drawPile);
+    scan(run.round.discardPile);
+  }
+  return [...out];
+}
+
+/** Ändert eine Karte überall, wo sie vorkommt */
+export function modifyCardById(run: RunState, id: number, fn: (c: Card) => void) {
+  for (const c of cardObjects(run, id)) fn(c);
 }
 
 export function isRoundWon(run: RunState): boolean {
@@ -397,14 +486,16 @@ export function computeEarnings(run: RunState): RoundEarnings {
   const reward = blindReward(run.ante, r.blind, run.rules.smallBlindReward);
   const handsBonus = r.handsLeft * run.rules.perHandLeft;
   const discardsBonus = r.discardsLeft * run.rules.perDiscardLeft;
-  const interest = interestFor(run.money, run.rules);
-  return { blindReward: reward, handsBonus, discardsBonus, interest, total: reward + handsBonus + discardsBonus + interest };
+  const interest = interestFor(run.money, { ...run.rules, interestCap: run.rules.interestCap + jokerPassive(run).interestCapDelta });
+  const jokers = runJokerHook(run, 'roundEnd', {}, false).money;
+  return { blindReward: reward, handsBonus, discardsBonus, interest, jokers, total: reward + handsBonus + discardsBonus + interest + jokers };
 }
 
 /** Zahlt die Runde aus und geht zum nächsten Blind. */
 export function finishRound(run: RunState): RoundEarnings {
   const earnings = computeEarnings(run);
   run.money += earnings.total;
+  runJokerHook(run, 'roundEnd', {}, true);
   const wasBoss = run.round!.blind === 'boss';
   run.round = null;
   if (wasBoss) {
@@ -425,7 +516,7 @@ export function canAddJoker(run: RunState, edition?: string): boolean {
 
 export function addJoker(run: RunState, defId: string, opts: { edition?: string; buyPrice?: number } = {}): JokerInstance | null {
   if (!canAddJoker(run, opts.edition)) return null;
-  const inst: JokerInstance = { uid: run.nextUid++, defId, vars: {}, ...(opts.edition ? { edition: opts.edition } : {}), ...(opts.buyPrice !== undefined ? { buyPrice: opts.buyPrice } : {}) };
+  const inst: JokerInstance = { uid: run.nextUid++, defId, vars: { ...(getJoker(defId)?.init?.(getJoker(defId)!.config) ?? {}) }, ...(opts.edition ? { edition: opts.edition } : {}), ...(opts.buyPrice !== undefined ? { buyPrice: opts.buyPrice } : {}) };
   run.jokers.push(inst);
   return inst;
 }
@@ -437,7 +528,7 @@ export function jokerSellValue(inst: JokerInstance): number {
 
 /** Joker Slots inklusive Schatten Edition (+1 Slot) */
 export function jokerCapacity(run: RunState): number {
-  return run.jokerSlots + run.jokers.filter((j) => j.edition && EDITIONS[j.edition]?.extraSlot).reduce((s, j) => s + (EDITIONS[j.edition!].extraSlot ?? 0), 0);
+  return run.jokerSlots + jokerPassive(run).jokerSlots + run.jokers.filter((j) => j.edition && EDITIONS[j.edition]?.extraSlot).reduce((s, j) => s + (EDITIONS[j.edition!].extraSlot ?? 0), 0);
 }
 
 /** Kompatibilität: Verkaufswert aus einem Preis. */

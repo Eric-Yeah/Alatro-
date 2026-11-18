@@ -35,6 +35,14 @@ export interface Effect {
   /** zusätzliche Auswertungen einer Karte (nur in der Retrigger Phase) */
   retrigger?: number;
   message?: string;
+  /** erzeugt Consumables (Blind Auswahl und ähnliche Hooks) */
+  consumables?: ('sternbild' | 'elixier' | 'omen')[];
+  /** der Joker zerstört sich selbst */
+  destroySelf?: boolean;
+  /** After Phase: jede gewertete Karte erhält dauerhaft diese Chips */
+  cardChips?: number;
+  /** After Phase: die erste gewertete Karte ohne Enhancement erhält dieses Enhancement */
+  enhanceFirst?: string;
 }
 
 /** Regeln der Hand Erkennung, werden von Jokers gesetzt. */

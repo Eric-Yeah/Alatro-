@@ -1,4 +1,4 @@
-# Übergabe: Stand nach M4, offen sind M3 und M5
+# Übergabe: Stand nach M3 und M4, nächster Schritt M5
 
 Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 
@@ -9,14 +9,14 @@ Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 | Schritt 1 Audit (`AUDIT.md`, `tests/spec/`) | erledigt |
 | M1 Engine Kern (Daten, Erkennung, Scoring Pipeline, Blinds, Zinsen) | erledigt |
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
-| **M3 Eigener Joker Katalog** | **offen** (wurde übersprungen, M4 hängt nicht davon ab) |
+| M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
-| M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader) | offen |
+| **M5 UI, UX, Juice** (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken) | **als Nächstes** |
 | M6 Politur, Performance, Optionen | offen |
 
-Teststand: `npm test` 134 von 134 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 231 von 231 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
-Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Für M3 braucht es nur die allgemeinen Teile (Abschnitt 3 Scoring Reihenfolge, 8.2 Joker Schema, 10.1 Gruppen). Diese sind hier zusammengefasst. Den Originalkatalog aus Abschnitt 4 nicht verwenden.
+Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
 ## Projektstruktur
 
@@ -26,11 +26,11 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 | `src/core/types.ts` | gemeinsame Typen (Card, HandType, Effect, DetectRules) |
 | `src/core/handEval.ts` | `detectHand(cards, rules)` mit `contained` Set |
 | `src/core/scoring.ts` | `scoreHand()`: Before, Basis mit Boss Mods, Karten (Rang, Enhancement, Seal, Edition, Jokers scored, Retrigger), Held, Jokers main mit Edition vor und nach, **Consumable Phase (Sternbilder im Slot)**, Balance, Floor, After. Liefert ScoreEvents |
-| `src/core/jokers.ts` | Joker Schema: `JokerDef { id, name, rarity, cost, config, description mit {platzhaltern}, copyCompat, rules?, calculate(ctx, self, cfg) }`, Registry (`registerJokers`, `getJoker`, `allJokers`), `jokerDescription`, `jokerRules` |
+| `src/core/jokers.ts` | Joker Schema: `JokerDef { id, name, rarity, cost, config, description mit {platzhaltern}, copyCompat, rules?, init?, passive?, copies?, rescue?, minAnte?, calculate(ctx, self, cfg) }`, Registry (`registerJokers`, `getJoker`, `allJokers`), `jokerDescription`, `jokerRules`, `copyTarget`, `sumPassives` |
 | `src/core/consumables.ts` | Slots (`addConsumable`, `freeConsumableSlots`, `sellConsumable`), `canUseConsumable(run, defId, targetIds, where)`, `applyConsumable`, `useConsumable` (aus dem Slot), `useDirect` (Pack, Kaufen und Benutzen), `poolCards` (Hand der Runde oder Pack Hand), `createStarSealConsumables` |
 | `src/core/generate.ts` | Zufallsziehungen: `rollJoker`, `rollJokerEdition`, `rollPlayingCard`, `rollEnhancedCard`, `rollConsumable` (geheime Sternbilder erst nach dem ersten Spielen) |
 | `src/core/runInfo.ts` | reine Daten für die Run Info: `handRows`, `blindRows`, `deckStats` |
-| `src/core/run.ts` | RunState (Version 4), RunRules (inkl. `typeWeights`, `sternbildXMult`, `shopCardMods`), Runde, Boss Effekte, Auszahlung, `addJoker`, `ShopItem` (Union Joker, Consumable, Spielkarte), `PackOption`, `PackState.handIds` |
+| `src/core/run.ts` | `runJokerHook` (Phasen außerhalb des Scorings), `jokerPassive`, `effectiveProbMult`, RunState (Version 4), RunRules (inkl. `typeWeights`, `sternbildXMult`, `shopCardMods`), Runde, Boss Effekte, Auszahlung, `addJoker`, `ShopItem` (Union Joker, Consumable, Spielkarte), `PackOption`, `PackState.handIds` |
 | `src/core/game.ts` | Zustandsautomat und Aktionen: `createRun`, `enterAnte`, `selectBlind`, `skipBlind`, `playHand`, `discardHand`, `afterHand`, `cashOut` (liefert zusätzlich `starSealCreated`), `openShop`, `reroll`, `buyCard`, `buyAndUse`, `buyVoucher`, `buyPack`, `pickFromPack(run, index, targetIds)`, `closePack`, `sellJoker`, `useConsumable`, `sellConsumable`, `leaveShop`, `applyMods` |
 | `src/core/index.ts` | registriert `JOKER_DEFS` (muss vor Engine Nutzung importiert sein, auch in Tests) |
 | `src/save.ts` | localStorage, Migration Version 1 zu 2 zu 3 zu 4, `saveRun` trägt die Collection nach |
@@ -40,41 +40,20 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 | `tests/spec/` | Testfälle aus Briefing 10.3 mit Adapter `helpers.ts` (neutrale Test Jokers) |
 | `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`, `m4`, `m4info`) |
 
-## Aufgabe M3: eigener Joker Katalog
+## Joker Katalog (M3, erledigt)
 
-Ziel: etwa 60 eigene Jokers im Thema, gruppenweise, **jede Gruppe mit Tests** (neue Datei `src/core/m3.test.ts` oder pro Gruppe). Vorhanden sind 9: Funke, Treppe, Glut, Frost, Kleinvieh, Einzelgänger, Letzte Chance, Schneeball, Sparschwein (`src/data/jokers.ts`). IDs nicht ändern (Spielstände).
+79 Jokers in `src/data/jokers.ts`, gruppiert nach Mechanik, Tests in `src/core/m3.test.ts`. Einzelheiten und Entscheidungen stehen in `AUDIT.md` (Abschnitt M3, O43 bis O50).
 
-### Engine Erweiterungen, die M3 braucht
+Einen neuen Joker anlegen:
 
-Die Phasen in `JokerPhase` reichen bisher für das Scoring (`before`, `scored`, `held`, `retrigger`, `main`, `after`). Für die Gruppen 5 bis 8 fehlen Hooks außerhalb des Scorings. Vorschlag:
+* Eintrag in `JOKER_DEFS` mit eindeutiger ID (nie ändern), `config` für alle Zahlen und `description` mit Platzhaltern wie `{mult}`. Skalierende Jokers legen ihre Startwerte in `init(cfg)` ab (veränderliche Werte stehen in `self.vars`, config bleibt fest, die Namen dürfen sich nicht überschneiden).
+* Phasen für `calculate(ctx, self, cfg)`: Scoring `before`, `scored`, `held`, `retrigger`, `main`, `after`, `other`. Außerhalb des Scorings `discard`, `blindSelected`, `roundEnd` (ohne Zufall, die Anzeige rechnet vorab), `sell`. Rückgabe ist ein `Effect` (chips, mult, xMult, money, retrigger, consumables, destroySelf, cardChips, enhanceFirst).
+* Dauerhafte Wirkungen über `passive(cfg)` (Hands, Discards, Hand Size, Slots, Zinsdeckel, Shop Slots, gratis Rerolls, Rabatt, Wahrscheinlichkeit), Erkennungsregeln über `rules`, Kopien über `copies`, Rettung über `rescue` (mit `config.fraction`), Spawn Bedingung über `minAnte`.
+* `copyCompat: false` für alles, was sich nicht sinnvoll kopieren lässt.
+* Face Card Prüfungen immer über `ctx.isFace(card)`, damit der Maskenball wirkt. Ranglose Karten (Obsidian) lösen Rang Bedingungen nicht aus.
+* Tests: Gruppen Tests ergänzen, der Katalog Rauchtest und die Beschreibungs Prüfung laufen automatisch über alle Jokers.
 
-* Neue Phasen: `discard` (beim Abwerfen, mit den Karten), `blindSelected` (bei `selectBlind`), `roundEnd` (bei `cashOut`, Rückgabe `money` fließt in die Auszahlung als eigene Zeile), `shopReroll`, `shopOpen`, `sell` (beim Verkauf des Jokers selbst).
-* Aufrufstellen in `src/core/game.ts` bzw. `run.ts` ergänzen, Kontext dafür erweitern (Run Zugriff über einen schmalen Kontext, nicht ganzer RunState, wo möglich).
-* `other` Phase für Jokers, die auf andere Jokers reagieren (Briefing 3.4 Schritt 3).
-* Kopierender Joker: ruft `calculate` des rechten Nachbarn mit dessen `self` und `config` auf, nur wenn `copyCompat`.
-* Joker, die Erkennungsregeln setzen: Feld `rules` existiert schon (4 Karten Flush und Straight, Lücken Straight, gleichfarbige Suits, Splash, allFace). `allFace` wird in `isFace` Prüfungen der Jokers noch nicht berücksichtigt.
-* Joker, die `probMult` erhöhen: in `playCards` bzw. `runChance` aus den Jokers ableiten.
-* Erweiterung der Rundenwerte durch Jokers (Hands, Discards, Hand Size): beim `selectBlind` anwenden.
-* Spawn Bedingungen (`spawnCondition`) und Sticker Kompatibilität sind im Schema noch nicht vorhanden (AUDIT J2).
-* Neu seit M4: Omen können Jokers erzeugen (`Teufelsmarkt`) und zerstören (`Hexenkessel`). Beide nutzen `rollJoker` und `run.jokers` direkt, neue Joker Hooks (z. B. `sell`) müssen dort nicht beachtet werden, solange Zerstörung kein Verkauf ist.
-
-### Gruppen (eigene Inhalte, Beispiele nur als Richtung)
-
-1. **Einfache MAIN Jokers:** +Mult, +Chips, X Mult, "Hand enthält Pair, Two Pair, Three of a Kind, Straight, Flush" (über `ctx.contained`).
-2. **SCORED und HELD Jokers:** Suit, Rang, Face Card, gerade und ungerade Ränge, Karten in der Hand.
-3. **Retrigger Jokers:** z. B. Face Cards erneut, erste Karte zweimal, niedrige Ränge, letzte Hand, Held Effekte wiederholen.
-4. **Skalierende Jokers:** wachsen pro Hand, pro Discard, pro bestimmtem Handtyp, pro Runde, verlieren Wert pro Hand (Zustand in `self.vars`).
-5. **Geld Jokers:** Geld am Rundenende, pro gewerteter Karte mit Chance, pro Discard, Zinsen erhöhen.
-6. **Blind und Shop Jokers:** Effekt bei Blind Auswahl, gratis Reroll, Rabatt, Joker beim Verkauf.
-7. **Passive Jokers:** Erkennungsregeln, +Hand Size, +Discards, Wahrscheinlichkeit verdoppeln.
-8. **Spezialfälle:** Kopie des rechten Nachbarn, Rettung vor Game Over einmalig, Joker die Karten verändern (Enhancement vergeben), Legendary (nicht im Shop).
-
-Verteilung grob: 60 Prozent Common, 30 Prozent Uncommon, 10 Prozent Rare, dazu wenige Legendary. Mit vielen Jokers lohnt sich ein Blick auf die Collection (`src/collection.ts`): sie listet Jokers automatisch aus der Registry, 12 Einträge pro Seite, Seitenwechsel ist eingebaut.
-
-### Danach
-
-* `AUDIT.md`: J2, J3 auf erledigt bzw. in Arbeit setzen, M3 Abschnitt unter "Fortschritt", neue Entscheidungen unter "Offene Punkte" (ab O43).
-* UI: Jokers haben bisher nur Farbkreis mit Initiale. Für M3 reicht das, bessere eigene Joker Grafiken in M5.
+Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
 
 ## Hinweise für M5
 

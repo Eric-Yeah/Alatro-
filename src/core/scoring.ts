@@ -1,8 +1,8 @@
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
-import { chipValue, isRankless } from './cards';
+import { chipValue, isFace, isRankless } from './cards';
 import { detectHand } from './handEval';
 import { handBase, type HandLevels } from './hands';
-import { getJoker, jokerRules, type JokerContext, type JokerDef, type JokerInstance, type JokerPhase } from './jokers';
+import { copyTarget, getJoker, jokerRules, type JokerContext, type JokerDef, type JokerInstance, type JokerPhase } from './jokers';
 import type { Card, DetectRules, Effect, HandType } from './types';
 
 /** Boss Modifikatoren, die den Handwert verändern (Briefing 3.1 Schritt 0). */
@@ -50,6 +50,10 @@ export interface ScoreResult {
   events: ScoreEvent[];
   /** Karten, die nach dem Scoring zerstört werden */
   destroyed: Card[];
+  /** dauerhafte Änderungen an gewerteten Karten durch Jokers (After Phase) */
+  cardEdits: { cardId: number; extraChips?: number; enhancement?: string }[];
+  /** Jokers, die sich nach dem Scoring selbst zerstören (uid) */
+  destroyJokers: number[];
 }
 
 export interface ScoreInput {
@@ -113,9 +117,14 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     handsLeft: input.handsLeft,
     discardsLeft: input.discardsLeft,
     chance,
+    isFace: (card) => !!rules.allFace || isFace(card.rank),
   };
-  const callJoker = (j: { inst: JokerInstance; def: JokerDef }, phase: JokerPhase, extra: Partial<JokerContext> = {}) =>
-    j.def.calculate?.({ ...baseCtx, ...extra, phase }, j.inst, j.def.config);
+  // Kopierende Jokers rufen die Phasen ihres Ziels auf, außer Before und After (kein doppeltes Wachsen)
+  const callJoker = (j: { inst: JokerInstance; def: JokerDef }, phase: JokerPhase, extra: Partial<JokerContext> = {}) => {
+    let target: { inst: JokerInstance; def: JokerDef } | null = j;
+    if (j.def.copies) target = phase === 'before' || phase === 'after' || phase === 'other' ? null : copyTarget(jokers, jokers.indexOf(j));
+    return target?.def.calculate?.({ ...baseCtx, ...extra, phase }, target.inst, target.def.config);
+  };
 
   const apply = (phase: ScorePhase, source: ScoreEventSource, e: Effect | void) => {
     if (!e) return;
@@ -144,7 +153,7 @@ export function scoreHand(input: ScoreInput): ScoreResult {
 
   if (input.boss?.nullify) {
     events.push({ phase: 'debuff', source: { kind: 'rule' }, message: DEBUFF_MESSAGE, chipsTotal: 0, multTotal: 0 });
-    return { handType: type, scoring, contained, chips: 0, mult: 0, total: 0, money: 0, events, destroyed: [] };
+    return { handType: type, scoring, contained, chips: 0, mult: 0, total: 0, money: 0, events, destroyed: [], cardEdits: [], destroyJokers: [] };
   }
 
   const repetitions = (card: Card, area: 'played' | 'held', index?: number) => {
@@ -195,6 +204,10 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     if (ed && (ed.chips || ed.mult)) apply('joker', src, { chips: ed.chips, mult: ed.mult });
     apply('joker', src, callJoker(j, 'main'));
     if (ed?.xMult) apply('joker', src, { xMult: ed.xMult });
+    // Jokers, die auf diesen Joker reagieren
+    for (const k of jokers) {
+      if (k !== j) apply('joker', { kind: 'joker', jokerUid: k.inst.uid }, callJoker(k, 'other', { otherJoker: j.def }));
+    }
   }
 
   // 6) Consumable Phase: Sternbilder im Slot, deren Hand gespielt wird
@@ -216,11 +229,21 @@ export function scoreHand(input: ScoreInput): ScoreResult {
   const total = Math.floor(chips * mult);
 
   // 9) After: Jokers, zerbrechliche Karten
-  for (const j of jokers) callJoker(j, 'after');
+  const cardEdits: ScoreResult['cardEdits'] = [];
+  const destroyJokers: number[] = [];
+  const editable = scoring.filter((c) => !c.debuffed);
+  for (const j of jokers) {
+    const e = callJoker(j, 'after');
+    if (!e) continue;
+    if (e.cardChips) for (const c of editable) cardEdits.push({ cardId: c.id, extraChips: e.cardChips });
+    const first = editable.find((c) => !c.enhancement && !cardEdits.some((x) => x.cardId === c.id && x.enhancement));
+    if (e.enhanceFirst && first) cardEdits.push({ cardId: first.id, enhancement: e.enhanceFirst });
+    if (e.destroySelf) destroyJokers.push(j.inst.uid);
+  }
   const destroyed = scoring.filter((card) => {
     const bc = card.enhancement ? ENHANCEMENTS[card.enhancement]?.breakChance : undefined;
     return !!bc && !card.debuffed && chance(bc.num, bc.den, 'card_break');
   });
 
-  return { handType: type, scoring, contained, chips, mult, total, money, events, destroyed };
+  return { handType: type, scoring, contained, chips, mult, total, money, events, destroyed, cardEdits, destroyJokers };
 }

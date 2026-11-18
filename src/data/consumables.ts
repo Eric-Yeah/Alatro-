@@ -136,6 +136,7 @@ const OMEN: ConsumableDef[] = [
   omen('kometenstaub', 'Kometenstaub', 'Eine Karte erhält eine zufällige Edition, dauerhaft -1 Hand Size', { kind: 'randomEdition', handSizeDelta: -1 }, { min: 1, max: 1 }),
   omen('siegelsturm', 'Siegelsturm', 'Eine Karte erhält ein zufälliges Seal, 2 zufällige andere Karten werden zerstört', { kind: 'randomSeal', destroyOthers: 2 }, { min: 1, max: 1 }),
   omen('nachtpakt', 'Nachtpakt', 'Dauerhaft +1 Hand und -1 Discard pro Runde', { kind: 'tradeDiscardForHand' }),
+  omen('ahnenruf', 'Ahnenruf', 'Erzeugt einen zufälligen Legendary Joker, dein Geld sinkt auf $0', { kind: 'jokerForMoney', rarity: 'legendary' }),
   omen('spiegelsaal', 'Spiegelsaal', 'Eine Karte wird 2 Mal kopiert, 2 zufällige andere Karten werden zerstört', { kind: 'clone', copies: 2, destroyOthers: 2 }, { min: 1, max: 1 }),
 ];
 

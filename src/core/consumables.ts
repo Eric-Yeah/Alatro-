@@ -7,7 +7,7 @@ import { CONSUMABLE_BY_ID, CONSUMABLES, MIN_HAND_SIZE, OMEN_EDITIONS, type Consu
 import { SEALS } from '../data/modifiers';
 import { rollConsumable, rollEnhancedCard, rollJoker } from './generate';
 import { levelUp, levelUpAll } from './hands';
-import { addJoker, isCardDebuffed, jokerCapacity, rngOf, type ConsumableInstance, type RunState } from './run';
+import { addJoker, isCardDebuffed, jokerCapacity, jokerPassive, modifyCardById as modifyCard, rngOf, type ConsumableInstance, type RunState } from './run';
 import { sellValue } from './shop';
 import type { Card, HandType, Rank } from './types';
 
@@ -18,7 +18,7 @@ export function consumableDef(id: string): ConsumableDef | undefined {
 }
 
 export function consumableCapacity(run: RunState): number {
-  return run.consumableSlots;
+  return run.consumableSlots + jokerPassive(run).consumableSlots;
 }
 
 export function freeConsumableSlots(run: RunState): number {
@@ -58,23 +58,6 @@ export function poolCards(run: RunState): Card[] {
     return run.pack.handIds.map((id) => run.deck.find((c) => c.id === id)).filter((c): c is Card => !!c);
   }
   return [];
-}
-
-/** Alle Objekte einer Karte (Deck, Hand, Stapel). Nach dem Laden eines Spielstands sind es getrennte Kopien. */
-function cardObjects(run: RunState, id: number): Card[] {
-  const out = new Set<Card>();
-  const scan = (list?: Card[]) => list?.forEach((c) => { if (c.id === id) out.add(c); });
-  scan(run.deck);
-  if (run.round) {
-    scan(run.round.hand);
-    scan(run.round.drawPile);
-    scan(run.round.discardPile);
-  }
-  return [...out];
-}
-
-function modifyCard(run: RunState, id: number, fn: (c: Card) => void) {
-  for (const c of cardObjects(run, id)) fn(c);
 }
 
 function removeCards(run: RunState, ids: number[]) {

@@ -33,8 +33,8 @@ import { rollConsumable, rollJoker, rollJokerEdition, rollPlayingCard } from './
 import { getJoker } from './jokers';
 import type { RngStreams } from './rng';
 import {
-  addJoker, canAddJoker, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon, jokerSellValue, newRun,
-  playCards, rngOf, startRound, type PackOption, type RoundEarnings, type RunState, type ShopItem,
+  addJoker, canAddJoker, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon, jokerPassive, jokerSellValue, newRun,
+  playCards, rngOf, runJokerHook, startRound, type PackOption, type RoundEarnings, type RunState, type ShopItem,
 } from './run';
 import { buyPrice } from './shop';
 import type { ScoreResult } from './scoring';
@@ -152,13 +152,30 @@ function takePending(run: RunState, kind: string): TagDef[] {
   return taken;
 }
 
-export function selectBlind(run: RunState) {
+export interface BlindSelectResult {
+  /** Geld durch Jokers bei der Blind Wahl */
+  money: number;
+  /** durch Jokers erzeugte Consumables (Definitions IDs) */
+  consumables: string[];
+}
+
+export function selectBlind(run: RunState): BlindSelectResult {
   if (run.phase !== 'blindSelect') throw new Error('not in blind select');
   const extraHands = takePending(run, 'extraHands').reduce((s, t) => s + (t.effect.kind === 'extraHands' ? t.effect.amount : 0), 0);
   const isBoss = BLIND_KINDS[run.blindIndex] === 'boss';
   const bossDisabled = isBoss && takePending(run, 'disableBoss').length > 0;
   startRound(run, { extraHands, bossDisabled });
   run.phase = 'round';
+  // Jokers mit Effekt bei der Blind Wahl: Geld und Consumables
+  const hook = runJokerHook(run, 'blindSelected');
+  run.money += hook.money;
+  const rng = rngOf(run);
+  const consumables: string[] = [];
+  for (const type of hook.consumables) {
+    const def = rollConsumable(run, rng, type, `joker_blind_${type}_a${run.ante}`);
+    if (def && addConsumable(run, def.id, def.cost)) consumables.push(def.id);
+  }
+  return { money: hook.money, consumables };
 }
 
 export interface SkipResult {
@@ -214,8 +231,26 @@ export function afterHand(run: RunState): Card[] {
     return [];
   }
   const drawn = drawToHandSize(run);
-  if (isRoundLost(run)) run.phase = 'gameOver';
+  if (isRoundLost(run) && !rescueRound(run)) run.phase = 'gameOver';
   return drawn;
+}
+
+/**
+ * Ein Joker mit Rettung verhindert die Niederlage, wenn der Score mindestens seinen Anteil des
+ * Ziels erreicht hat. Der Joker verbraucht sich, die Runde zählt als geschafft.
+ */
+function rescueRound(run: RunState): boolean {
+  const r = run.round;
+  if (!r) return false;
+  for (const inst of run.jokers) {
+    const def = getJoker(inst.defId);
+    if (!def?.rescue || r.score < r.target * (def.config.fraction ?? 1)) continue;
+    run.jokers = run.jokers.filter((j) => j.uid !== inst.uid);
+    r.rescuedBy = def.name;
+    run.phase = 'roundWon';
+    return true;
+  }
+  return false;
 }
 
 /** Auszahlung, nächster Blind, Shop öffnen. Nach einem Boss beginnt eine neue Ante. */
@@ -231,9 +266,14 @@ export function cashOut(run: RunState): RoundEarnings & { starSealCreated: strin
 
 // ─────────────────────────────────────────────── Shop
 
+/** Karten Slots im Shop: Regel plus Jokers */
+function shopSlotCount(run: RunState): number {
+  return run.rules.shopSlots + jokerPassive(run).shopSlots;
+}
+
 function priceWithDiscount(run: RunState, base: number, surcharge = 0): number {
   const tag = run.shop?.tagDiscount ?? 1;
-  return buyPrice({ base, editionSurcharge: surcharge, discount: run.rules.discount * tag });
+  return buyPrice({ base, editionSurcharge: surcharge, discount: run.rules.discount * tag * jokerPassive(run).discount });
 }
 
 function rollShopCard(run: RunState, rng: RngStreams, exclude: Set<string>): ShopItem | null {
@@ -256,13 +296,13 @@ function rollShopCard(run: RunState, rng: RngStreams, exclude: Set<string>): Sho
 
 export function openShop(run: RunState) {
   const rng = rngOf(run);
-  const freeRerolls = takePending(run, 'freeRerolls').reduce((s, t) => s + (t.effect.kind === 'freeRerolls' ? t.effect.count : 0), 0);
+  const freeRerolls = jokerPassive(run).freeRerolls + takePending(run, 'freeRerolls').reduce((s, t) => s + (t.effect.kind === 'freeRerolls' ? t.effect.count : 0), 0);
   const discounts = takePending(run, 'shopDiscount');
   const tagDiscount = discounts.reduce((f, t) => f * (t.effect.kind === 'shopDiscount' ? t.effect.factor : 1), 1);
   run.shop = { cards: [], packs: [], voucher: null, rerollsUsed: 0, freeRerolls, tagDiscount };
 
   const exclude = new Set<string>();
-  for (let i = 0; i < run.rules.shopSlots; i++) run.shop.cards.push(rollShopCard(run, rng, exclude));
+  for (let i = 0; i < shopSlotCount(run); i++) run.shop.cards.push(rollShopCard(run, rng, exclude));
   for (const t of takePending(run, 'freeJoker')) {
     if (t.effect.kind !== 'freeJoker') continue;
     const def = rollJoker(run, rng, `tag_joker_a${run.ante}`, exclude, t.effect.rarity);
@@ -301,7 +341,7 @@ export function reroll(run: RunState): boolean {
   const exclude = new Set(keepFree.map((c) => c.defId));
   const rng = rngOf(run);
   s.cards = [];
-  for (let i = 0; i < run.rules.shopSlots; i++) s.cards.push(rollShopCard(run, rng, exclude));
+  for (let i = 0; i < shopSlotCount(run); i++) s.cards.push(rollShopCard(run, rng, exclude));
   s.cards.push(...keepFree);
   return true;
 }
@@ -366,7 +406,8 @@ export function buyPack(run: RunState, index: number): boolean {
 export function sellJoker(run: RunState, uid: number): boolean {
   const idx = run.jokers.findIndex((j) => j.uid === uid);
   if (idx < 0) return false;
-  run.money += jokerSellValue(run.jokers[idx]);
+  const inst = run.jokers[idx];
+  run.money += jokerSellValue(inst) + runJokerHook(run, 'sell', {}, true, [inst]).money;
   run.jokers.splice(idx, 1);
   return true;
 }

@@ -18,7 +18,8 @@ Stand: Audit vor Beginn der Umbauten.
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
-| M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün (gesamt 134 in `src`) |
+| M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün |
+| M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün (gesamt 231 in `src`) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -70,8 +71,8 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | J1 | Mehrere Hook Funktionen pro Joker, Zahlen direkt im Code | `JokerDef` mit `config` (Zahlen als Daten) und einem `calculate(ctx)` Hook mit Phase im Kontext, Adapter für die 9 vorhandenen Jokers (8.2) | Architektur | mittel | erledigt |
-| J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | in Arbeit |
-| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | offen |
+| J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | erledigt (`copyCompat` und `minAnte` als Spawn Bedingung, Sticker gibt es nicht, siehe O47) |
+| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | erledigt (79 Jokers) |
 | J4 | Joker Editions fehlen | Eigene Editions mit Phase vor bzw. nach dem Joker (3.4, 6.4) | Feature | mittel | erledigt |
 
 ### Consumables, Vouchers, Tags, Bosse, Decks, Stakes (4.3 bis 4.9)
@@ -164,9 +165,25 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * Spielstand Version 3 mit Migration.
 * Consumable Packs und der Typ Wurf der Shop Slots folgen mit den Consumables in M4.
 
+### M3 (abgeschlossen, nach M4 nachgeholt)
+
+* **Katalog** (`data/jokers.ts`): 79 Jokers, 45 Common, 23 Uncommon, 8 Rare, 3 Legendary (59, 30 und 11 Prozent der normalen Jokers). Die 9 alten IDs sind unverändert.
+* **Gruppen:** 1 Einfache MAIN (14), 2 SCORED und HELD (16), 3 Retrigger (6), 4 Skalierend (7), 5 Geld (9), 6 Blind und Shop (7), 7 Passiv (11), 8 Spezial (6 plus 3 Legendary). Jede Gruppe hat Tests in `src/core/m3.test.ts`, dazu Katalog Tests und ein Rauchtest, der jeden Joker durch Hand, Discard, Auszahlung und Shop schickt.
+* **Engine Erweiterungen:**
+  * neue Phasen `other`, `discard`, `blindSelected`, `roundEnd`, `sell`. Außerhalb des Scorings ruft `runJokerHook` (`core/run.ts`) die Jokers auf. `roundEnd` rechnet für die Anzeige auf Kopien, nur das Einkassieren verändert den Zustand.
+  * Kopierende Jokers (`copies: 'right' | 'leftmost'`), wirksam in allen Phasen außer Before, After und Other, nie verkettet, nur bei `copyCompat`.
+  * Passive (`passive(cfg)`): Hands, Discards, Hand Size, Joker und Consumable Slots, Zinsdeckel, Shop Slots, gratis Rerolls, Rabatt, Wahrscheinlichkeit verdoppeln. Dazu `rules` (4 Karten, Lücken, gleichfarbig, Splash, jede Karte Face Card).
+  * Rettung (`rescue`): verhindert die Niederlage ab einem Anteil des Ziels und verbraucht sich.
+  * After Effekte auf Karten und Jokers: dauerhafte Chips auf gewertete Karten, Enhancement auf die erste gewertete Karte, Joker zerstört sich selbst.
+  * `init(cfg)` für Startwerte skalierender Jokers, damit die Beschreibung vor dem ersten Wachsen den Wert zeigt. `minAnte` als Spawn Bedingung.
+  * `ctx.isFace(card)` berücksichtigt die Regel "jede Karte ist Face Card" (vorher unbeachtet).
+* **Legendary:** nur über das neue Omen Ahnenruf (Omen Gesamtzahl 9), nie im Shop und nie in Packs.
+* **UI:** Joker Zeile in der Auszahlung, Zinsdeckel mit Joker Anteil, Meldungen bei Blind Wahl (Geld, Consumables) und Rettung, Jokers rücken bei mehr als 5 Slots zusammen.
+* **Browser Test:** Run mit 7 Jokers (Anordnung, Tooltip) und Auszahlung mit Münzquelle, Handarbeit und Zinsmeister, keine Konsolenfehler. Die Animation einzelner Joker Effekte wurde nicht Bild für Bild geprüft.
+
 ### M4 (abgeschlossen)
 
-* **Consumables** (`data/consumables.ts`, `core/consumables.ts`): 12 Sternbilder (je eine Hand, +1 Level, geheime Hände erst nach dem ersten Spielen), 21 Elixiere (8 Enhancements, 3 Seals, 4 Suits, Rang +1, Doppelgänger, Auflösung, Erntemond, Sternkarte, Alchemistentisch), 8 Omen mit Risiko (Blutmond, Aschenregen, Teufelsmarkt, Hexenkessel, Kometenstaub, Siegelsturm, Nachtpakt, Spiegelsaal). Effekte sind deklarativ, die Engine wendet sie an.
+* **Consumables** (`data/consumables.ts`, `core/consumables.ts`): 12 Sternbilder (je eine Hand, +1 Level, geheime Hände erst nach dem ersten Spielen), 21 Elixiere (8 Enhancements, 3 Seals, 4 Suits, Rang +1, Doppelgänger, Auflösung, Erntemond, Sternkarte, Alchemistentisch), 8 Omen mit Risiko (Blutmond, Aschenregen, Teufelsmarkt, Hexenkessel, Kometenstaub, Siegelsturm, Nachtpakt, Spiegelsaal), mit M3 kam Ahnenruf als 9. Omen dazu. Effekte sind deklarativ, die Engine wendet sie an.
 * **Slots und Benutzen:** 2 Slots (Voucher Beutel und Rucksack erhöhen), Benutzen aus dem Slot, Verkauf aus dem Kaufpreis. Karten Ziele kommen aus der Hand der Runde, Elixiere und Omen mit Zufallsziel brauchen eine Hand.
 * **Shop:** Typ Wurf über `rules.typeWeights` (Joker, Sternbild, Elixier, Spielkarte, Omen), Kaufen in den Slot oder Kaufen und Benutzen (nur ohne Karten Ziel).
 * **Packs:** 9 neue Packs (Sternbild, Elixier, Omen je Normal, Jumbo, Mega). Eine Wahl wird sofort benutzt. Elixier und Omen Packs zeigen eine Hand aus 8 Deck Karten für die Ziele. 2 neue Tags (Sternschnuppe, Alchemistenkiste).
@@ -251,3 +268,11 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O40 | Seed Eingabe (7.1) | Eigene Bildschirmtastatur. Die Schrift stellt O und 0 sehr ähnlich dar, deshalb soll U9 (eigene Schrift) das lösen |
 | O41 | Editions auf Consumables (3.4) | Nicht in M4. Schatten Slots gelten nur für Jokers |
 | O42 | Seeds nach M4 | Neue Tags und Vouchers verändern die Auswahl aus dem Tag und Voucher Pool, alte Seeds ergeben damit andere Ante Tags und Vouchers als vor M4. Laufende Spielstände behalten ihre Werte |
+| O43 | Ungerade Ränge (Joker Kauz) | 3, 5, 7, 9 und Ace sind ungerade, gerade sind 2, 4, 6, 8, 10. Face Cards sind weder gerade noch ungerade |
+| O44 | Ranglose Karten bei Joker Bedingungen | Karten mit Obsidian (ohne Rang und Suit) lösen keine Rang und Suit Bedingungen aus. Ausnahme ist der ursprüngliche Joker Kleinvieh, dessen Verhalten unverändert blieb |
+| O45 | Kopierende Jokers | Kopien werden nicht verkettet. Ein Kopierer wirkt in allen Phasen des Ziels außer Before, After und Other (kein doppeltes Wachsen). Passive Wirkungen werden nicht kopiert |
+| O46 | Rettung (Schutzengel) | Zählt als geschafft: Einkassieren wie bei einem gewonnenen Blind. Schutzengel erscheint erst ab Ante 2 und verbraucht sich. Bei mehreren Rettern verbraucht der erste in der Reihenfolge |
+| O47 | Sticker Kompatibilität (4.2) | Entfällt, solange es keine Sticker gibt. Das Schema hat nur `copyCompat` und `minAnte` |
+| O48 | Hooks außerhalb des Scorings | `roundEnd` darf keinen Zufall nutzen (Anzeige und Auszahlung müssen gleich sein). Wachstum bei `roundEnd` passiert beim Einkassieren, nicht in der Vorschau |
+| O49 | Joker Passive bei Boss Schwächung | Der vom Boss geschwächte Joker ganz rechts bleibt für Passive, Rettung und Hooks außerhalb des Scorings aktiv, nur das Scoring ignoriert ihn |
+| O50 | Legendary Jokers (4.1) | Nur über das Omen Ahnenruf, 3 Stück in M3 |
