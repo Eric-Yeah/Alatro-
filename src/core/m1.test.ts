@@ -113,10 +113,12 @@ describe('Zufall und Seeds', () => {
 });
 
 describe('Spielstand Migration', () => {
-  it('Version 1 wird zu Version 2 mit Strömen und Regeln', () => {
+  it('Version 1 wird über Version 2 zu Version 3 migriert', () => {
     const v1 = { seed: 'OLDSAVE1', rngState: 123, ante: 2, blindIndex: 1, money: 7, handLevels: initialHandLevels(), jokers: [], deck: [], round: null };
     const run = migrateRun(v1)!;
-    expect(run.version).toBe(2);
+    expect(run.version).toBe(3);
+    expect(run.phase).toBe('blindSelect');
+    expect(run.anteBoss).toBeTruthy();
     expect(run.rules.interestCap).toBe(5);
     expect(run.rng.seed).toBe('OLDSAVE1');
     expect(run.handsPlayed.pair).toBe(0);

@@ -1,15 +1,19 @@
-import { createStandardDeck } from './cards';
+import { createStandardDeck, isFace, isAnySuit, isRankless } from './cards';
+import { BOSSES, type BossDef } from '../data/bosses';
+import { detectHand } from './handEval';
 import { BLIND_KINDS, blindReward, blindTarget, type BlindKind, type Scaling } from './blinds';
 import { FINAL_ANTE } from '../data/blinds';
-import { INTEREST, PAYOUT, START } from '../data/economy';
+import { INTEREST, PAYOUT, REROLL, START } from '../data/economy';
+import { SHOP } from '../data/shop';
 import { initialHandLevels, type HandLevels } from './hands';
 import { allJokers, getJoker, jokerRules, type JokerInstance } from './jokers';
 import { RngStreams, type RngStreamsState } from './rng';
-import { scoreHand, type BossScoreMods, type ScoreResult } from './scoring';
+import { scoreHand, type ScoreResult } from './scoring';
 import { rollRarity, sellValue as sellFromPrice } from './shop';
-import type { Card, HandType } from './types';
+import { EDITIONS } from '../data/modifiers';
+import type { Card, HandType, Suit } from './types';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** Regeln eines Runs. Decks, Stakes und Vouchers verändern diese Werte (M2). */
 export interface RunRules {
@@ -27,6 +31,14 @@ export interface RunRules {
   balance: boolean;
   /** Faktor auf alle "num in den" Chancen */
   probMult: number;
+  /** Karten Slots im Shop */
+  shopSlots: number;
+  /** Startpreis eines Rerolls */
+  rerollBase: number;
+  /** Rabatt Faktor auf Karten und Packs */
+  discount: number;
+  /** Faktor auf Editions Chancen */
+  editionRate: number;
 }
 
 export function defaultRules(): RunRules {
@@ -41,6 +53,10 @@ export function defaultRules(): RunRules {
     blindTargetFactor: 1,
     balance: false,
     probMult: 1,
+    shopSlots: SHOP.cardSlots,
+    rerollBase: REROLL.base,
+    discount: 1,
+    editionRate: 1,
   };
 }
 
@@ -53,8 +69,48 @@ export interface RoundState {
   drawPile: Card[];
   hand: Card[];
   discardPile: Card[];
-  /** Boss Modifikatoren dieser Runde (Bosse folgen in M2) */
-  boss?: BossScoreMods;
+  /** Hand Size dieser Runde (Boss Effekte) */
+  handSize: number;
+  /** aktiver Boss dieser Runde, undefined wenn kein Boss oder deaktiviert */
+  bossId?: string;
+  /** vom Boss gewählte Suit für Debuffs */
+  debuffSuit?: Suit;
+  /** in dieser Runde gespielte Handtypen */
+  playedTypes: HandType[];
+}
+
+export type Phase = 'blindSelect' | 'round' | 'roundWon' | 'shop' | 'pack' | 'gameOver';
+
+export interface ShopItem {
+  kind: 'joker';
+  defId: string;
+  edition?: string;
+  price: number;
+  /** gratis durch einen Tag */
+  free?: boolean;
+}
+
+export interface ShopState {
+  /** null = gekauft */
+  cards: (ShopItem | null)[];
+  packs: ({ packId: string; price: number } | null)[];
+  voucher: { voucherId: string; price: number } | null;
+  rerollsUsed: number;
+  freeRerolls: number;
+  /** zusätzlicher Rabatt aus Tags für diesen Shop */
+  tagDiscount: number;
+}
+
+export type PackOption =
+  | { kind: 'joker'; defId: string; edition?: string }
+  | { kind: 'card'; card: Card };
+
+export interface PackState {
+  packId: string;
+  options: (PackOption | null)[];
+  picksLeft: number;
+  /** wohin es nach dem Pack weitergeht */
+  returnPhase: Phase;
 }
 
 export interface RunState {
@@ -77,7 +133,25 @@ export interface RunState {
   nextUid: number;
   round: RoundState | null;
   won: boolean;
+  /** Sieg Bildschirm wurde gezeigt */
+  winShown: boolean;
   rules: RunRules;
+  phase: Phase;
+  deckId: string;
+  stakeId: string;
+  vouchers: string[];
+  /** Tags, die auf ihr Ereignis warten */
+  pendingTags: string[];
+  skips: number;
+  bossesSeen: string[];
+  /** Boss, Skip Tags und Voucher der aktuellen Ante */
+  anteBoss: string | null;
+  anteTags: { small: string; big: string } | null;
+  anteVoucher: string | null;
+  shop: ShopState | null;
+  pack: PackState | null;
+  shopsVisited: number;
+  nextCardId: number;
 }
 
 export interface RoundEarnings {
@@ -115,7 +189,22 @@ export function newRun(seed: string): RunState {
     nextUid: 1,
     round: null,
     won: false,
+    winShown: false,
     rules: defaultRules(),
+    phase: 'blindSelect',
+    deckId: 'nachthimmel',
+    stakeId: 'daemmerung',
+    vouchers: [],
+    pendingTags: [],
+    skips: 0,
+    bossesSeen: [],
+    anteBoss: null,
+    anteTags: null,
+    anteVoucher: null,
+    shop: null,
+    pack: null,
+    shopsVisited: 0,
+    nextCardId: 53,
   };
 }
 
@@ -132,31 +221,66 @@ export function currentBlind(run: RunState): BlindKind {
 }
 
 export function currentTarget(run: RunState, kind: BlindKind = currentBlind(run)): number {
-  return blindTarget(run.ante, kind, { scaling: run.rules.scaling, deckFactor: run.rules.blindTargetFactor });
+  const boss = kind === 'boss' && run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined;
+  return blindTarget(run.ante, kind, { scaling: run.rules.scaling, deckFactor: run.rules.blindTargetFactor, bossFactor: boss?.factor });
 }
 
-export function startRound(run: RunState): RoundState {
+export const BOSS_BY_ID: Record<string, BossDef> = Object.fromEntries(BOSSES.map((b) => [b.id, b]));
+
+/** Startet eine Runde. Boss Effekte und Runden Tags verändern Hands, Discards und Hand Size. */
+export function startRound(run: RunState, opts: { extraHands?: number; bossDisabled?: boolean } = {}): RoundState {
   const blind = currentBlind(run);
-  const drawPile = rngOf(run).shuffle(`shuffle_a${run.ante}_${blind}`, [...run.deck]);
+  const rng = rngOf(run);
+  const drawPile = rng.shuffle(`shuffle_a${run.ante}_${blind}`, [...run.deck]);
+  const boss = blind === 'boss' && run.anteBoss && !opts.bossDisabled ? BOSS_BY_ID[run.anteBoss] : undefined;
+  const e = boss?.effect ?? {};
   const round: RoundState = {
     blind,
     target: currentTarget(run, blind),
     score: 0,
-    handsLeft: run.hands,
-    discardsLeft: run.discards,
+    handsLeft: Math.max(1, run.hands + (e.handsDelta ?? 0) + (opts.extraHands ?? 0)),
+    discardsLeft: Math.max(0, e.setDiscards ?? run.discards),
     drawPile,
     hand: [],
     discardPile: [],
+    handSize: Math.max(1, run.handSize + (e.handSizeDelta ?? 0)),
+    bossId: boss?.id,
+    playedTypes: [],
   };
+  if (e.debuffRandomSuit) round.debuffSuit = rng.pick(`boss_suit_a${run.ante}`, ['S', 'H', 'D', 'C'] as Suit[]);
   run.round = round;
   drawToHandSize(run);
   return round;
 }
 
+export function activeBoss(run: RunState): BossDef | undefined {
+  const id = run.round?.bossId;
+  return id ? BOSS_BY_ID[id] : undefined;
+}
+
+/** Ist die Karte durch den aktiven Boss geschwächt? */
+export function isCardDebuffed(run: RunState, card: Card): boolean {
+  const boss = activeBoss(run);
+  if (!boss || isRankless(card)) return false;
+  const e = boss.effect;
+  const suits = [...(e.debuffSuits ?? []), ...(run.round?.debuffSuit ? [run.round.debuffSuit] : [])];
+  if (suits.length && (isAnySuit(card) || suits.includes(card.suit))) return true;
+  if (e.debuffFace && isFace(card.rank)) return true;
+  if (e.debuffEvenRanks && card.rank <= 10 && card.rank % 2 === 0) return true;
+  return false;
+}
+
+/** Jokers, die der aktive Boss nicht schwächt */
+export function activeJokers(run: RunState): JokerInstance[] {
+  const boss = activeBoss(run);
+  if (boss?.effect.debuffRightmostJoker && run.jokers.length) return run.jokers.slice(0, -1);
+  return run.jokers;
+}
+
 export function drawToHandSize(run: RunState): Card[] {
   const r = run.round!;
   const drawn: Card[] = [];
-  while (r.hand.length < run.handSize && r.drawPile.length > 0) {
+  while (r.hand.length < r.handSize && r.drawPile.length > 0) {
     const c = r.drawPile.pop()!;
     r.hand.push(c);
     drawn.push(c);
@@ -178,21 +302,28 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
   const played = takeFromHand(r, ids);
   r.handsLeft--;
   const rng = rngOf(run);
+  const jokers = activeJokers(run);
+  const rules = jokerRules(jokers);
+  const withDebuff = (c: Card): Card => (isCardDebuffed(run, c) ? { ...c, debuffed: true } : c);
+  const boss = activeBoss(run)?.effect;
+  const type = detectHand(played, rules).type;
+  const nullify = !!boss && ((boss.uniqueHandTypes && r.playedTypes.includes(type)) || (boss.minCards !== undefined && played.length < boss.minCards));
   const result = scoreHand({
-    played,
-    held: r.hand,
+    played: played.map(withDebuff),
+    held: r.hand.map(withDebuff),
     handLevels: run.handLevels,
-    jokers: run.jokers,
+    jokers,
     money: run.money,
     handsLeft: r.handsLeft,
     discardsLeft: r.discardsLeft,
-    rules: jokerRules(run.jokers),
-    boss: r.boss,
+    rules,
+    boss: boss ? { levelDown: boss.levelDown, halveBase: boss.halveBase, nullify } : undefined,
     balance: run.rules.balance,
     chance: (num, den, key) => rng.chance(num, den, `${key}_a${run.ante}`, run.rules.probMult),
   });
+  r.playedTypes.push(type);
   r.score += result.total;
-  run.money += result.money;
+  run.money += result.money - (boss?.moneyPerHand ?? 0);
   run.handsPlayed[result.handType] = (run.handsPlayed[result.handType] ?? 0) + 1;
   const destroyedIds = new Set(result.destroyed.map((c) => c.id));
   run.deck = run.deck.filter((c) => !destroyedIds.has(c.id));
@@ -248,16 +379,27 @@ export function finishRound(run: RunState): RoundEarnings {
   return earnings;
 }
 
-export function addJoker(run: RunState, defId: string): JokerInstance | null {
-  if (run.jokers.length >= run.jokerSlots) return null;
-  const inst: JokerInstance = { uid: run.nextUid++, defId, vars: {} };
+/** Kann ein Joker (mit dieser Edition) aufgenommen werden? */
+export function canAddJoker(run: RunState, edition?: string): boolean {
+  const extra = edition ? EDITIONS[edition]?.extraSlot ?? 0 : 0;
+  return run.jokers.length < jokerCapacity(run) + extra;
+}
+
+export function addJoker(run: RunState, defId: string, opts: { edition?: string; buyPrice?: number } = {}): JokerInstance | null {
+  if (!canAddJoker(run, opts.edition)) return null;
+  const inst: JokerInstance = { uid: run.nextUid++, defId, vars: {}, ...(opts.edition ? { edition: opts.edition } : {}), ...(opts.buyPrice !== undefined ? { buyPrice: opts.buyPrice } : {}) };
   run.jokers.push(inst);
   return inst;
 }
 
-/** Verkaufswert eines Jokers aus seinem Basispreis (Shop Preise folgen in M2). */
+/** Verkaufswert eines Jokers aus seinem Kaufpreis (Briefing 1.4) */
 export function jokerSellValue(inst: JokerInstance): number {
-  return sellFromPrice(getJoker(inst.defId)?.cost ?? 0);
+  return sellFromPrice(inst.buyPrice ?? getJoker(inst.defId)?.cost ?? 0);
+}
+
+/** Joker Slots inklusive Schatten Edition (+1 Slot) */
+export function jokerCapacity(run: RunState): number {
+  return run.jokerSlots + run.jokers.filter((j) => j.edition && EDITIONS[j.edition]?.extraSlot).reduce((s, j) => s + (EDITIONS[j.edition!].extraSlot ?? 0), 0);
 }
 
 /** Kompatibilität: Verkaufswert aus einem Preis. */

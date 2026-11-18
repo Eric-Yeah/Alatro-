@@ -37,6 +37,8 @@ export interface JokerInstance {
   /** veränderliche Werte skalierender Jokers. Serialisierbar. */
   vars: Record<string, number>;
   edition?: string;
+  /** Kaufpreis, Grundlage für den Verkaufswert */
+  buyPrice?: number;
 }
 
 export interface JokerDef {
