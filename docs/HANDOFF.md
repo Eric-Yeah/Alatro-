@@ -81,6 +81,10 @@ Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT
 * Die Score Animation kennt jetzt `source.kind === 'consumable'` (Fernrohr). Das Popup erscheint unter dem Slot, ob der Zeitpunkt gut wirkt, wurde nur im Code geprüft, nicht Bild für Bild.
 * Seed Eingabe: O und 0 sehen in der Systemschrift fast gleich aus (AUDIT O40).
 
+## Home Bildschirm (Version 0.2.1)
+
+`src/ui/HomeView.ts` baut den Vollbild Home Bildschirm (`buildHome`), Zahlen und Layout stehen oben in der Datei (`HOME`). `Game.showMainMenu()` legt ihn in `homeLayer` (über dem Tisch, unter den Fenstern) und blendet den Spieltisch aus (`setTableVisible`). Nebenmenüs (Optionen, Anleitung, Sammlung, Neuigkeiten, Run Setup) öffnen als Fenster darüber, ihr Zurück ruft wieder `showMainMenu()`. `resume` und `beginNewRun` rufen `hideHome()`. Der Menü Knopf im Spiel führt ebenfalls hierher.
+
 ## Handy Version
 
 Gleiche App und gleiche URL wie auf dem iPad. Das Spielfeld bleibt 1440 mal 1000 und wird eingepasst. Auf dem Handy (kürzere Bildschirmseite bis `PHONE_MAX_SHORT_SIDE`) wird das Spielfeld im Hochformat um 90 Grad gedreht, damit es standardmäßig im Querformat erscheint (iOS erlaubt keine feste Ausrichtung, Manifest `orientation: landscape` gilt nur auf Android). Dreht man das Handy ins Querformat, wird nicht mehr gedreht. Die Berechnung steht in `src/ui/viewport.ts` (mit Test), der Einbau in `src/main.ts`. Auf Android wird zusätzlich beim ersten Tippen `screen.orientation.lock('landscape')` versucht. Das iPad verhält sich wie vorher.
