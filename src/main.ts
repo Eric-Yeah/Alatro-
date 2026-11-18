@@ -3,7 +3,7 @@ import { Application, Ticker } from 'pixi.js';
 import { registerSW } from 'virtual:pwa-register';
 import { Background } from './ui/Background';
 import { Game } from './ui/Game';
-import { VIEW_H, VIEW_W } from './ui/theme';
+import { computeView, isPhone } from './ui/viewport';
 
 async function main() {
   const app = new Application();
@@ -25,12 +25,20 @@ async function main() {
     const w = app.screen.width;
     const h = app.screen.height;
     bg.resize(w, h);
-    const s = Math.min(w / VIEW_W, h / VIEW_H);
-    game.root.scale.set(s);
-    game.root.position.set((w - VIEW_W * s) / 2, (h - VIEW_H * s) / 2);
+    // Handy im Hochformat: Spielfeld wird gedreht, damit es im Querformat erscheint.
+    const t = computeView(w, h, isPhone(window.screen.width, window.screen.height));
+    game.root.rotation = t.rotation;
+    game.root.scale.set(t.scale);
+    game.root.position.set(t.x, t.y);
   };
   app.renderer.on('resize', resize);
   resize();
+
+  // Android (installiert als PWA): Querformat fest anfordern, wo es erlaubt ist. iOS ignoriert das.
+  const lockLandscape = () => {
+    try { (screen.orientation as any)?.lock?.('landscape')?.catch(() => {}); } catch { /* nicht unterstützt */ }
+  };
+  window.addEventListener('pointerdown', lockLandscape, { once: true });
 
   Ticker.shared.add((t) => bg.update(t.deltaMS));
 }
