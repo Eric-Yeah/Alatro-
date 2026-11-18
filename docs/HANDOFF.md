@@ -55,6 +55,12 @@ Einen neuen Joker anlegen:
 
 Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
 
+## Tempo, Anleitung und Patch Notes (Version 0.2.0)
+
+* **Animationstempo:** `src/settings.ts` (Einstellung, localStorage `alatro.settings.v1`), Stufen in `src/data/options.ts`. `tween` und `wait` in `src/ui/tween.ts` multiplizieren die Zeit mit `getSpeed()`. Wer eine Animation vom Tempo ausnehmen will, übergibt `scaled = false`. Bedienung über Optionen im Hauptmenü und den Tempo Knopf in der Seitenleiste.
+* **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/settings.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
+* **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit Optionen und Patch Notes). Bei Regeländerungen die Texte mitpflegen.
+
 ## Hinweise für M5
 
 * Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`, Symbole aus Grafikprimitiven: Stern, Kolben, Mond). Eigene Grafiken und Sounds für Benutzen und Elixier Effekte gehören zu M5.

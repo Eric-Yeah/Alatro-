@@ -16,6 +16,7 @@ Stand: Audit vor Beginn der Umbauten.
 |---|---|---|
 | Vorhandene Unit Tests (`src/core/core.test.ts`) | `npm test` | 26 von 26 grün |
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
+| Optionen, Patch Notes, Anleitung (`src/settings.test.ts`) | `npm test` | 6 von 6 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 | M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün |
@@ -135,7 +136,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | offen |
 | U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | offen |
 | U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
-| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | offen |
+| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | in Arbeit (Animationstempo 1x bis 10x mit Optionen und Tempo Knopf ist da, CRT und Lautstärke folgen mit M5 und M6) |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
 ## Fortschritt
@@ -276,3 +277,6 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O48 | Hooks außerhalb des Scorings | `roundEnd` darf keinen Zufall nutzen (Anzeige und Auszahlung müssen gleich sein). Wachstum bei `roundEnd` passiert beim Einkassieren, nicht in der Vorschau |
 | O49 | Joker Passive bei Boss Schwächung | Der vom Boss geschwächte Joker ganz rechts bleibt für Passive, Rettung und Hooks außerhalb des Scorings aktiv, nur das Scoring ignoriert ihn |
 | O50 | Legendary Jokers (4.1) | Nur über das Omen Ahnenruf, 3 Stück in M3 |
+| O51 | Animationstempo | Das Tempo skaliert alle Tweens und Wartezeiten (`tween`, `wait`), die Rechnung der Engine bleibt unberührt. Dauerschleifen wie das Wackeln des Titels laufen im Normaltempo. Gespeichert unter `alatro.settings.v1`, gewählt aus `SPEED_OPTIONS` in `src/data/options.ts` |
+| O52 | Patch Notes | Einträge in `src/data/patchnotes.ts`, Version steht dort und in `package.json` (ein Test prüft Gleichheit). Nach einem Update erscheinen sie einmal automatisch, gemerkt unter `alatro.patchSeen.v1`. Bei jedem Release einen Eintrag ergänzen |
+| O53 | Anleitung | Texte in `src/data/tutorial.ts`. Bei Regeländerungen (Startwerte, Blinds, Shop) die Seiten mit anpassen |

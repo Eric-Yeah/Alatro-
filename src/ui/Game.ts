@@ -17,11 +17,15 @@ import { previewHand, type ScoreEvent } from '../core/scoring';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import { speedLabel } from '../data/options';
+import { APP_VERSION } from '../data/patchnotes';
 import { STAKES } from '../data/stakes';
 import { loadRun, saveRun } from '../save';
+import { cycleSpeed, getSpeed, loadPatchSeen, savePatchSeen } from '../settings';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
+import { buildOptions, buildPatchNotes, buildTutorial, OPTIONS_H, OPTIONS_W, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
@@ -101,6 +105,7 @@ export class Game {
   private discardBtn!: Button;
   private sortRankBtn!: Button;
   private sortSuitBtn!: Button;
+  private speedBtn!: Button;
 
   constructor() {
     this.handLayer.sortableChildren = true;
@@ -108,6 +113,7 @@ export class Game {
     this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.overlayLayer);
     this.buildTable();
     this.showMainMenu();
+    if (loadPatchSeen() !== APP_VERSION) this.showPatchNotes();
   }
 
   // ────────────────────────────────────────────────────────────── static layout
@@ -219,6 +225,10 @@ export class Game {
     const infoBtn = new Button('Run Info', 160, 60, 0x6b5a9e, () => { if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
     t.addChild(menuBtn, infoBtn);
+    this.speedBtn = new Button('', 330, 54, 0x3f6fa8, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
+    this.refreshSpeedBtn();
+    this.speedBtn.position.set(185, 872);
+    t.addChild(this.speedBtn);
 
     this.seedText = label('', 16, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -1001,17 +1011,19 @@ export class Game {
   private showMainMenu() {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
-    const { box } = this.modal(620, canResume ? 620 : 520, C.panelDark);
+    const { box } = this.modal(620, canResume ? 720 : 620, C.panelDark);
     const title = label('ALATRO', 110, C.text, { stroke: { color: C.mult, width: 10 }, letterSpacing: 6 });
     title.position.set(310, 130);
     const wobble = (): void => {
       if (title.destroyed) return;
-      tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic).then(wobble);
+      tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic, false).then(wobble);
     };
     wobble();
     const sub = label('Roguelike Poker Deckbuilder', 24, C.textDim);
     sub.position.set(310, 215);
-    box.addChild(title, sub);
+    const ver = label(`Version ${APP_VERSION}`, 16, C.textDim, { fontWeight: '600' });
+    ver.position.set(310, canResume ? 700 : 600);
+    box.addChild(title, sub, ver);
     let y = 310;
     if (canResume) {
       const cont = new Button(`Fortsetzen · Ante ${saved!.ante}`, 400, 76, C.chips, () => this.resume(saved!), 28);
@@ -1024,6 +1036,35 @@ export class Game {
     const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
     coll.position.set(310, y + 100);
     box.addChild(nr, coll);
+    const small = (text: string, x: number, fn: () => void) => {
+      const b = new Button(text, 180, 64, 0x4a3f6b, fn, 22);
+      b.position.set(x, y + 200);
+      box.addChild(b);
+    };
+    small('Anleitung', 120, () => this.showTutorial());
+    small('Optionen', 310, () => this.showOptions());
+    small('Neuigkeiten', 500, () => this.showPatchNotes());
+  }
+
+  private refreshSpeedBtn() {
+    this.speedBtn.setText(`Tempo ${speedLabel(getSpeed())}`);
+  }
+
+  private showTutorial() {
+    const { box } = this.modal(TUTORIAL_W, TUTORIAL_H, C.panelDark);
+    buildTutorial(box, () => this.showMainMenu());
+  }
+
+  private showOptions() {
+    const { box } = this.modal(OPTIONS_W, OPTIONS_H, C.panelDark);
+    buildOptions(box, () => { this.refreshSpeedBtn(); this.showMainMenu(); });
+  }
+
+  /** Patch Notes, beim ersten Anzeigen einer neuen Version wird sie als gesehen gemerkt */
+  private showPatchNotes() {
+    savePatchSeen(APP_VERSION);
+    const { box } = this.modal(PATCH_W, PATCH_H, C.panelDark);
+    buildPatchNotes(box, () => this.showMainMenu());
   }
 
   /** Sammlung aller gesehenen Inhalte, Zurück führt ins Hauptmenü */

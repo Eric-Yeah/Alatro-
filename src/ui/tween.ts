@@ -1,4 +1,5 @@
 import { Ticker } from 'pixi.js';
+import { getSpeed } from '../settings';
 
 export type Ease = (t: number) => number;
 export const linear: Ease = (t) => t;
@@ -20,8 +21,9 @@ function setPath(obj: any, path: string, v: number) {
 
 const active = new Map<object, Map<string, () => void>>();
 
-/** Animate numeric (dotted-path) properties. Resolves when done. A newer tween on the same prop cancels the old one. */
-export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic): Promise<void> {
+/** Animate numeric (dotted-path) properties. Resolves when done. A newer tween on the same prop cancels the old one.
+ * `scaled = false` ignoriert das Animationstempo (Dauerschleifen wie das Wackeln des Titels). */
+export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic, scaled = true): Promise<void> {
   if (!target || target.destroyed) return Promise.resolve();
   return new Promise((resolve) => {
     const from: Record<string, number> = {};
@@ -35,7 +37,7 @@ export function tween(target: any, to: Record<string, number>, ms: number, ease:
     const tick = (ticker: Ticker) => {
       if (cancelled) return;
       if (target.destroyed) { cancel(); return; }
-      elapsed += ticker.deltaMS;
+      elapsed += ticker.deltaMS * (scaled ? getSpeed() : 1);
       const p = ms <= 0 ? 1 : Math.min(1, elapsed / ms);
       const e = ease(p);
       for (const k in to) setPath(target, k, from[k] + (to[k] - from[k]) * e);
@@ -53,7 +55,7 @@ export function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     let elapsed = 0;
     const tick = (ticker: Ticker) => {
-      elapsed += ticker.deltaMS;
+      elapsed += ticker.deltaMS * getSpeed();
       if (elapsed >= ms) { Ticker.shared.remove(tick); resolve(); }
     };
     Ticker.shared.add(tick);
