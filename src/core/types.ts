@@ -35,6 +35,20 @@ export interface Effect {
   /** zusätzliche Auswertungen einer Karte (nur in der Retrigger Phase) */
   retrigger?: number;
   message?: string;
+  // Joker Effekte mit Folgen für den Run (werden von der Engine angewendet)
+  /** Enhancement von Karten dauerhaft setzen */
+  setEnhancement?: { cardId: number; enhancement: string }[];
+  /** der Joker zerstört sich selbst (ignoriert bei Kopien) */
+  destroySelf?: boolean;
+  /** erzeugt einen zufälligen Joker dieser Rarity, wenn ein Slot frei ist */
+  createJoker?: Rarity;
+  /** Hands bzw. Discards der laufenden Runde */
+  handsDelta?: number;
+  discardsDelta?: number;
+  /** gratis Rerolls im aktuellen Shop */
+  freeRerolls?: number;
+  /** verhindert die Niederlage (Phase rescue) */
+  rescue?: boolean;
 }
 
 /** Regeln der Hand Erkennung, werden von Jokers gesetzt. */

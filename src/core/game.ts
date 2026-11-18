@@ -22,13 +22,14 @@ import { VOUCHERS, type VoucherDef } from '../data/vouchers';
 import { REROLL } from '../data/economy';
 import { BLIND_KINDS, isShowdown } from './blinds';
 import { createStandardDeck } from './cards';
-import { allJokers, getJoker, type JokerDef } from './jokers';
+import { getJoker, jokerPassives } from './jokers';
 import type { RngStreams } from './rng';
 import {
-  addJoker, canAddJoker, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon, jokerSellValue, newRun,
-  playCards, rngOf, startRound, type PackOption, type RoundEarnings, type RunState, type ShopItem,
+  addJoker, applyJokerEvents, canAddJoker, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon, jokerSellValue,
+  newRun, playCards, rngOf, rollJoker, runJokerEvent, startRound,
+  type JokerEventResult, type PackOption, type RoundEarnings, type RunState, type ShopItem,
 } from './run';
-import { buyPrice, rollRarity } from './shop';
+import { buyPrice } from './shop';
 import type { ScoreResult } from './scoring';
 import type { Card } from './types';
 
@@ -141,13 +142,16 @@ function takePending(run: RunState, kind: string): TagDef[] {
   return taken;
 }
 
-export function selectBlind(run: RunState) {
+export function selectBlind(run: RunState): JokerEventResult[] {
   if (run.phase !== 'blindSelect') throw new Error('not in blind select');
   const extraHands = takePending(run, 'extraHands').reduce((s, t) => s + (t.effect.kind === 'extraHands' ? t.effect.amount : 0), 0);
   const isBoss = BLIND_KINDS[run.blindIndex] === 'boss';
   const bossDisabled = isBoss && takePending(run, 'disableBoss').length > 0;
   startRound(run, { extraHands, bossDisabled });
   run.phase = 'round';
+  const events = runJokerEvent(run, 'blindSelected');
+  applyJokerEvents(run, events);
+  return events;
 }
 
 export interface SkipResult {
@@ -191,19 +195,36 @@ export function playHand(run: RunState, ids: number[]): ScoreResult {
   return playCards(run, ids);
 }
 
-export function discardHand(run: RunState, ids: number[]) {
+export function discardHand(run: RunState, ids: number[]): JokerEventResult[] {
   if (run.phase !== 'round') throw new Error('not in round');
-  discardCards(run, ids);
+  const cards = discardCards(run, ids);
+  const events = runJokerEvent(run, 'discard', { cards });
+  applyJokerEvents(run, events);
+  return events;
 }
 
-/** Nach Play oder Discard: gewonnen, sonst nachziehen und Niederlage prüfen. */
+/**
+ * Nach Play oder Discard: gewonnen, sonst nachziehen und Niederlage prüfen.
+ * Vor der Niederlage dürfen Jokers die Runde retten (Phase rescue).
+ */
 export function afterHand(run: RunState): Card[] {
   if (isRoundWon(run)) {
     run.phase = 'roundWon';
     return [];
   }
   const drawn = drawToHandSize(run);
-  if (isRoundLost(run)) run.phase = 'gameOver';
+  if (isRoundLost(run)) {
+    const r = run.round!;
+    const events = runJokerEvent(run, 'rescue', { score: r.score, target: r.target });
+    const saver = events.find((x) => x.effect.rescue);
+    if (saver) {
+      applyJokerEvents(run, [saver]);
+      r.rescued = true;
+      run.phase = 'roundWon';
+    } else {
+      run.phase = 'gameOver';
+    }
+  }
   return drawn;
 }
 
@@ -221,7 +242,8 @@ export function cashOut(run: RunState): RoundEarnings {
 
 function priceWithDiscount(run: RunState, base: number, surcharge = 0): number {
   const tag = run.shop?.tagDiscount ?? 1;
-  return buyPrice({ base, editionSurcharge: surcharge, discount: run.rules.discount * tag });
+  const jokers = jokerPassives(run.jokers).discount;
+  return buyPrice({ base, editionSurcharge: surcharge, discount: run.rules.discount * tag * jokers });
 }
 
 function rollJokerEdition(run: RunState, rng: RngStreams, key: string): string | undefined {
@@ -232,16 +254,6 @@ function rollJokerEdition(run: RunState, rng: RngStreams, key: string): string |
   if (r > 1 - JOKER_EDITION_ROLL.aura * rate) return 'aura';
   if (r > 1 - JOKER_EDITION_ROLL.schimmer * rate) return 'schimmer';
   return undefined;
-}
-
-/** Zieht einen Joker: Rarity Wurf, keine Duplikate, Resample auf alle freien Jokers. */
-function rollJoker(run: RunState, rng: RngStreams, keyBase: string, exclude: Set<string>, rarity?: JokerDef['rarity']): JokerDef | null {
-  const owned = new Set(run.jokers.map((j) => j.defId));
-  const free = allJokers().filter((j) => !owned.has(j.id) && !exclude.has(j.id) && j.rarity !== 'legendary');
-  if (!free.length) return null;
-  const want = rarity ?? rollRarity(rng, `${keyBase}_rarity`);
-  const pool = free.filter((j) => j.rarity === want);
-  return rng.pick(`${keyBase}_pick`, pool.length ? pool : free);
 }
 
 function rollShopCard(run: RunState, rng: RngStreams, exclude: Set<string>): ShopItem | null {
@@ -279,6 +291,7 @@ export function openShop(run: RunState) {
   if (run.anteVoucher) run.shop.voucher = { voucherId: run.anteVoucher, price: VOUCHER_BY_ID[run.anteVoucher].cost };
   run.shopsVisited++;
   run.phase = 'shop';
+  applyJokerEvents(run, runJokerEvent(run, 'shopOpen'));
 }
 
 export function rerollCost(run: RunState): number {
@@ -302,6 +315,7 @@ export function reroll(run: RunState): boolean {
   s.cards = [];
   for (let i = 0; i < run.rules.shopSlots; i++) s.cards.push(rollShopCard(run, rng, exclude));
   s.cards.push(...keepFree);
+  applyJokerEvents(run, runJokerEvent(run, 'shopReroll'));
   return true;
 }
 
@@ -339,11 +353,15 @@ export function buyPack(run: RunState, index: number): boolean {
   return true;
 }
 
+/** Verkauft einen Joker. Danach löst dessen eigener sell Effekt aus (der Slot ist dann frei). */
 export function sellJoker(run: RunState, uid: number): boolean {
   const idx = run.jokers.findIndex((j) => j.uid === uid);
   if (idx < 0) return false;
-  run.money += jokerSellValue(run.jokers[idx]);
+  const inst = run.jokers[idx];
+  run.money += jokerSellValue(inst);
+  const events = runJokerEvent(run, 'sell', {}, inst);
   run.jokers.splice(idx, 1);
+  applyJokerEvents(run, events.map((x) => ({ ...x, effect: { ...x.effect, destroySelf: false } })));
   return true;
 }
 

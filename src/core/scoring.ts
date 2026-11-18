@@ -2,8 +2,8 @@ import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { chipValue, isRankless } from './cards';
 import { detectHand } from './handEval';
 import { handBase, type HandLevels } from './hands';
-import { getJoker, jokerRules, type JokerContext, type JokerDef, type JokerInstance, type JokerPhase } from './jokers';
-import type { Card, DetectRules, Effect, HandType } from './types';
+import { invokeJoker, isFaceCard, jokerRules, resolveJokers, type JokerContext, type JokerInstance, type JokerPhase } from './jokers';
+import type { BlindKind, Card, DetectRules, Effect, HandType } from './types';
 
 /** Boss Modifikatoren, die den Handwert verändern (Briefing 3.1 Schritt 0). */
 export interface BossScoreMods {
@@ -49,6 +49,10 @@ export interface ScoreResult {
   events: ScoreEvent[];
   /** Karten, die nach dem Scoring zerstört werden */
   destroyed: Card[];
+  /** von Jokers dauerhaft veränderte Karten */
+  modified: { cardId: number; enhancement: string }[];
+  /** Jokers, die sich selbst zerstört haben (uid) */
+  destroyedJokers: number[];
 }
 
 export interface ScoreInput {
@@ -67,6 +71,12 @@ export interface ScoreInput {
   balance?: boolean;
   /** Zufallsentscheidungen, Standard: nie */
   chance?: (num: number, den: number, key: string) => boolean;
+  /** Run Werte für Joker Bedingungen */
+  jokerCount?: number;
+  emptySlots?: number;
+  deckLeft?: number;
+  ante?: number;
+  blind?: BlindKind;
 }
 
 export const RETRIGGER_MESSAGE = 'Nochmal!';
@@ -94,9 +104,9 @@ export function scoreHand(input: ScoreInput): ScoreResult {
   let mult = 0;
   let money = 0;
 
-  const jokers = input.jokers
-    .map((inst) => ({ inst, def: getJoker(inst.defId) }))
-    .filter((j): j is { inst: JokerInstance; def: JokerDef } => !!j.def);
+  const jokers = resolveJokers(input.jokers);
+  const modified: ScoreResult['modified'] = [];
+  const destroyedJokers: number[] = [];
 
   const baseCtx: Omit<JokerContext, 'phase'> = {
     handType: type,
@@ -108,9 +118,28 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     handsLeft: input.handsLeft,
     discardsLeft: input.discardsLeft,
     chance,
+    isFace: (card) => isFaceCard(card, rules),
+    jokerCount: input.jokerCount ?? input.jokers.length,
+    emptySlots: input.emptySlots ?? 0,
+    deckLeft: input.deckLeft ?? 0,
+    ante: input.ante ?? 1,
+    blind: input.blind,
   };
-  const callJoker = (j: { inst: JokerInstance; def: JokerDef }, phase: JokerPhase, extra: Partial<JokerContext> = {}) =>
-    j.def.calculate?.({ ...baseCtx, ...extra, phase }, j.inst, j.def.config);
+  const callJoker = (i: number, phase: JokerPhase, extra: Partial<JokerContext> = {}) => {
+    const e = invokeJoker(jokers, i, { ...baseCtx, ...extra, phase });
+    if (e) sideEffects(jokers[i].inst, e);
+    return e;
+  };
+
+  /** Folgen eines Joker Effekts außerhalb von Chips und Mult */
+  const sideEffects = (inst: JokerInstance, e: Effect) => {
+    for (const m of e.setEnhancement ?? []) {
+      const card = input.played.find((c) => c.id === m.cardId) ?? input.held.find((c) => c.id === m.cardId);
+      if (card) card.enhancement = m.enhancement;
+      modified.push(m);
+    }
+    if (e.destroySelf && !destroyedJokers.includes(inst.uid)) destroyedJokers.push(inst.uid);
+  };
 
   const apply = (phase: ScorePhase, source: ScoreEventSource, e: Effect | void) => {
     if (!e) return;
@@ -123,8 +152,11 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     events.push({ phase, source, ...e, chipsTotal: chips, multTotal: mult });
   };
 
-  // 1) Before: nur Zustand
-  for (const j of jokers) callJoker(j, 'before');
+  // 1) Before: Zustand und Karten Veränderungen
+  jokers.forEach((j, i) => {
+    const e = callJoker(i, 'before');
+    if (e?.message) apply('joker', { kind: 'joker', jokerUid: j.inst.uid }, { message: e.message });
+  });
 
   // 2) Basis mit Boss Modifikatoren
   const level = input.handLevels[type] - (input.boss?.levelDown ? 1 : 0);
@@ -139,12 +171,12 @@ export function scoreHand(input: ScoreInput): ScoreResult {
 
   if (input.boss?.nullify) {
     events.push({ phase: 'debuff', source: { kind: 'rule' }, message: DEBUFF_MESSAGE, chipsTotal: 0, multTotal: 0 });
-    return { handType: type, scoring, contained, chips: 0, mult: 0, total: 0, money: 0, events, destroyed: [] };
+    return { handType: type, scoring, contained, chips: 0, mult: 0, total: 0, money: 0, events, destroyed: [], modified, destroyedJokers };
   }
 
   const repetitions = (card: Card, area: 'played' | 'held', index?: number) => {
     let n = (card.seal && SEALS[card.seal]?.retrigger) || 0;
-    for (const j of jokers) n += callJoker(j, 'retrigger', { card, area, index })?.retrigger ?? 0;
+    jokers.forEach((_, i) => { n += callJoker(i, 'retrigger', { card, area, index })?.retrigger ?? 0; });
     return n;
   };
 
@@ -163,7 +195,7 @@ export function scoreHand(input: ScoreInput): ScoreResult {
       apply('card', src, card.enhancement ? ENHANCEMENTS[card.enhancement]?.scored : undefined);
       apply('card', src, card.seal ? SEALS[card.seal]?.scored : undefined);
       apply('card', src, card.edition ? EDITIONS[card.edition]?.effect : undefined);
-      for (const j of jokers) apply('joker', { kind: 'joker', jokerUid: j.inst.uid }, callJoker(j, 'scored', { card, area: 'played', index }));
+      jokers.forEach((j, i) => apply('joker', { kind: 'joker', jokerUid: j.inst.uid }, callJoker(i, 'scored', { card, area: 'played', index })));
     }
   });
 
@@ -175,22 +207,25 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     for (let r = 0; r < reps; r++) {
       const steps: [ScorePhase, ScoreEventSource, Effect | void][] = [
         ['held', src, card.enhancement ? ENHANCEMENTS[card.enhancement]?.held : undefined],
-        ...jokers.map((j): [ScorePhase, ScoreEventSource, Effect | void] =>
-          ['joker', { kind: 'joker', jokerUid: j.inst.uid }, callJoker(j, 'held', { card, area: 'held' })]),
+        ...jokers.map((j, i): [ScorePhase, ScoreEventSource, Effect | void] =>
+          ['joker', { kind: 'joker', jokerUid: j.inst.uid }, callJoker(i, 'held', { card, area: 'held' })]),
       ];
       if (r > 0 && steps.some(([, , e]) => e)) apply('retrigger', src, { message: RETRIGGER_MESSAGE });
       for (const [phase, s, e] of steps) apply(phase, s, e);
     }
   }
 
-  // 5) Jokers links nach rechts, mit Edition Phasen
-  for (const j of jokers) {
+  // 5) Jokers links nach rechts: Edition additiv, Effekt, Reaktionen anderer Jokers, Edition multiplikativ
+  jokers.forEach((j, i) => {
     const src = { kind: 'joker', jokerUid: j.inst.uid } as const;
     const ed = j.inst.edition ? EDITIONS[j.inst.edition]?.effect : undefined;
     if (ed && (ed.chips || ed.mult)) apply('joker', src, { chips: ed.chips, mult: ed.mult });
-    apply('joker', src, callJoker(j, 'main'));
+    apply('joker', src, callJoker(i, 'main'));
+    jokers.forEach((k, ki) => {
+      if (ki !== i) apply('joker', { kind: 'joker', jokerUid: k.inst.uid }, callJoker(ki, 'other', { other: j }));
+    });
     if (ed?.xMult) apply('joker', src, { xMult: ed.xMult });
-  }
+  });
 
   // 6) Consumable Phase: folgt mit den Consumables (M4)
 
@@ -205,12 +240,12 @@ export function scoreHand(input: ScoreInput): ScoreResult {
   // 8) Ergebnis abrunden (Offener Punkt O2)
   const total = Math.floor(chips * mult);
 
-  // 9) After: Jokers, zerbrechliche Karten
-  for (const j of jokers) callJoker(j, 'after');
+  // 9) After: Jokers (nur Zustand und Geld), zerbrechliche Karten
+  jokers.forEach((_, i) => { money += callJoker(i, 'after')?.money ?? 0; });
   const destroyed = scoring.filter((card) => {
     const bc = card.enhancement ? ENHANCEMENTS[card.enhancement]?.breakChance : undefined;
     return !!bc && !card.debuffed && chance(bc.num, bc.den, 'card_break');
   });
 
-  return { handType: type, scoring, contained, chips, mult, total, money, events, destroyed };
+  return { handType: type, scoring, contained, chips, mult, total, money, events, destroyed, modified, destroyedJokers };
 }
