@@ -25,7 +25,10 @@ import { VOUCHERS, type VoucherDef } from '../data/vouchers';
 import { REROLL } from '../data/economy';
 import { BLIND_KINDS, isShowdown } from './blinds';
 import { createStandardDeck } from './cards';
-import { addConsumable, canUseConsumable, consumableDef, createStarSealConsumables, freeConsumableSlots, useDirect, type UseResult } from './consumables';
+import {
+  addConsumable, canUseConsumable, consumableDef, createStarSealConsumables, freeConsumableSlots, useConsumable as useFromSlot, useDirect,
+  type UseResult,
+} from './consumables';
 import { rollConsumable, rollJoker, rollJokerEdition, rollPlayingCard } from './generate';
 import { getJoker } from './jokers';
 import type { RngStreams } from './rng';
@@ -433,5 +436,15 @@ export function closePack(run: RunState) {
 }
 
 
-export { sellConsumable, useConsumable, canUseConsumable } from './consumables';
+/**
+ * Benutzt ein Consumable aus dem Slot. Zerstörte Karten können die Hand leeren: dann ist die
+ * Runde verloren, wenn auch der Nachziehstapel leer ist.
+ */
+export function useConsumable(run: RunState, uid: number, targetIds: number[] = []): UseResult | null {
+  const res = useFromSlot(run, uid, targetIds);
+  if (res && run.phase === 'round' && isRoundLost(run)) run.phase = 'gameOver';
+  return res;
+}
+
+export { sellConsumable, canUseConsumable } from './consumables';
 export { CONSUMABLE_COST, CONSUMABLES };

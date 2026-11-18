@@ -1,3 +1,4 @@
+import { recordRun } from './collection';
 import { SAVE_VERSION, defaultRules, isRoundWon, type RunState } from './core/run';
 import { enterAnte } from './core/game';
 import { RngStreams } from './core/rng';
@@ -6,8 +7,10 @@ const KEY = 'alatro.run.v1';
 
 export function saveRun(run: RunState | null) {
   try {
-    if (run) localStorage.setItem(KEY, JSON.stringify(run));
-    else localStorage.removeItem(KEY);
+    if (run) {
+      localStorage.setItem(KEY, JSON.stringify(run));
+      recordRun(run);
+    } else localStorage.removeItem(KEY);
   } catch {
     /* Speicher nicht verfügbar */
   }

@@ -13,7 +13,7 @@ import {
 } from './consumables';
 import {
   afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canBuyAndUse, canBuyCard, canPick, cashOut, createRun, leaveShop, openPack,
-  openShop, pickFromPack, playHand, selectBlind, skipBlind, VOUCHER_BY_ID,
+  openShop, pickFromPack, playHand, selectBlind, skipBlind, useConsumable as useConsumableAction, VOUCHER_BY_ID,
 } from './game';
 import { rollConsumable } from './generate';
 import { rngOf, type RunState } from './run';
@@ -226,6 +226,17 @@ describe('Elixiere', () => {
     expect(res.destroyed).toEqual(t);
     expect(run.deck).toHaveLength(total - 2);
     expect(run.round!.hand.some((c) => t.includes(c.id))).toBe(false);
+  });
+
+  it('Zerstört ein Elixier die letzte Karte, ist die Runde verloren statt festgefahren', () => {
+    const run = inRound('ELIX0012');
+    const last = run.round!.hand[0];
+    run.round!.hand = [last];
+    run.round!.drawPile = [];
+    addConsumable(run, 'elixier_aufloesung', 3);
+    expect(useConsumableAction(run, run.consumables[0].uid, [last.id])).not.toBeNull();
+    expect(run.round!.hand).toHaveLength(0);
+    expect(run.phase).toBe('gameOver');
   });
 
   it('Doppelgänger kopiert die Karte mit neuer ID in Deck und Hand', () => {

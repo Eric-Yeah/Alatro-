@@ -1,5 +1,6 @@
 import type { Suit } from '../core/cards';
 import type { Rarity } from '../core/jokers';
+import type { ConsumableType } from '../data/consumables';
 
 export const VIEW_W = 1440;
 export const VIEW_H = 1000;
@@ -78,4 +79,11 @@ export const EDITION_COLORS: Record<string, number> = {
   aura: 0xff7fd0,
   prisma: 0xffd23f,
   schatten: 0x1a1426,
+};
+
+/** Farben der Consumable Typen */
+export const CONSUMABLE_COLORS: Record<ConsumableType, number> = {
+  sternbild: 0x2a5fa8,
+  elixier: 0x2f9f7a,
+  omen: 0x7a2fa8,
 };

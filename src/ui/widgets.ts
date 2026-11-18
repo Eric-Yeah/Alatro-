@@ -74,6 +74,32 @@ export function popup(parent: Container, x: number, y: number, text: string, col
   tween(box, { y: y - 50 }, 700).then(() => tween(box, { alpha: 0 }, 200)).then(() => box.destroy({ children: true }));
 }
 
+/** Reiter Leiste mit gleich breiten Buttons, der aktive Reiter ist farbig. */
+export function tabBar<T extends string>(
+  tabs: { id: T; name: string }[],
+  width: number,
+  current: T,
+  onSelect: (id: T) => void,
+  size = 20,
+): Container {
+  const bar = new Container();
+  const gap = 8;
+  const w = (width - gap * (tabs.length - 1)) / tabs.length;
+  tabs.forEach((t, i) => {
+    const b = new Button(t.name, w, 46, t.id === current ? C.accent : 0x4a3f6b, () => onSelect(t.id), size);
+    b.position.set(w / 2 + i * (w + gap), 23);
+    bar.addChild(b);
+  });
+  return bar;
+}
+
+/** Mehrzeiliger Text mit Umbruch, Anker oben (mittig oder links) */
+export function wrapText(text: string, width: number, size = 16, color = C.text, align: 'left' | 'center' = 'center'): Text {
+  const t = new Text({ text, style: { fontFamily: FONT, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align } });
+  t.anchor.set(align === 'center' ? 0.5 : 0, 0);
+  return t;
+}
+
 /** Full-screen dimmer that blocks input below it. */
 export function overlay(w: number, h: number): Container {
   const c = new Container();

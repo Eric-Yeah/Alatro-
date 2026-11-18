@@ -1,15 +1,19 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
+import { canBuyAndUse, canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
 import { getJoker, jokerDescription } from '../core/jokers';
 import type { RunState } from '../core/run';
-import { EDITIONS } from '../data/modifiers';
+import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
+import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import { CardView } from './CardView';
+import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
-import { C, FONT, RARITY_COLORS, RARITY_NAMES } from './theme';
+import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES } from './theme';
 import { easeOutBack, tween } from './tween';
 import { Button, label, panel } from './widgets';
 
 export interface ShopCallbacks {
   buyCard(index: number): void;
+  buyAndUse(index: number): void;
   buyPack(index: number): void;
   buyVoucher(): void;
   reroll(): void;
@@ -71,28 +75,74 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       root.addChild(empty);
       return;
     }
-    const def = getJoker(item.defId)!;
-    const jv = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition });
-    jv.position.set(x, 130);
-    jv.eventMode = 'none';
     const tag = priceTag(item.price, run.money >= item.price);
     tag.position.set(x, 40);
-    const rar = new Graphics().roundRect(x - 52, 210, 104, 22, 11).fill(RARITY_COLORS[def.rarity]);
-    const rarT = label(RARITY_NAMES[def.rarity], 13, 0xffffff);
-    rarT.position.set(x, 221);
-    const desc = smallText(jokerDescription(def) + (item.edition ? `\n${EDITIONS[item.edition].name}: ${EDITIONS[item.edition].description}` : ''), spacing - 12, 15);
-    desc.position.set(x, 240);
-    const buy = new Button('Kaufen', 120, 46, C.green, () => cb.buyCard(i), 20);
-    buy.position.set(x, 345);
-    buy.enabled = canBuyCard(run, i);
-    root.addChild(jv, tag, rar, rarT, desc, buy);
+    root.addChild(tag);
+    const badge = (text: string, color: number) => {
+      const g = new Graphics().roundRect(x - 52, 210, 104, 22, 11).fill(color);
+      const t = label(text, 13, 0xffffff);
+      t.position.set(x, 221);
+      root.addChild(g, t);
+    };
+    const buyButton = () => {
+      const buy = new Button('Kaufen', 120, 46, C.green, () => cb.buyCard(i), 20);
+      buy.position.set(x, 345);
+      buy.enabled = canBuyCard(run, i);
+      root.addChild(buy);
+    };
+
+    if (item.kind === 'joker') {
+      const def = getJoker(item.defId)!;
+      const jv = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition });
+      jv.position.set(x, 130);
+      jv.eventMode = 'none';
+      badge(RARITY_NAMES[def.rarity], RARITY_COLORS[def.rarity]);
+      const desc = smallText(jokerDescription(def) + (item.edition ? `\n${EDITIONS[item.edition].name}: ${EDITIONS[item.edition].description}` : ''), spacing - 12, 15);
+      desc.position.set(x, 240);
+      root.addChild(jv, desc);
+      buyButton();
+    } else if (item.kind === 'consumable') {
+      const def = CONSUMABLE_BY_ID[item.defId];
+      const cv = new ConsumableView(item.defId);
+      cv.position.set(x, 130);
+      cv.eventMode = 'none';
+      badge(CONSUMABLE_TYPE_NAMES[def.type], CONSUMABLE_COLORS[def.type]);
+      const desc = smallText(def.description, spacing - 12, 15);
+      desc.position.set(x, 240);
+      root.addChild(cv, desc);
+      if (!def.targets) {
+        // Kaufen in den Slot oder Kaufen und sofort Nutzen, die Breite passt sich dem Abstand an
+        const bw = Math.min(80, (spacing - 8) / 2);
+        const fs = bw < 70 ? 13 : 16;
+        const buy = new Button('Kaufen', bw, 46, C.green, () => cb.buyCard(i), fs);
+        buy.position.set(x - bw / 2 - 2, 345);
+        buy.enabled = canBuyCard(run, i);
+        const use = new Button('Nutzen', bw, 46, C.chips, () => cb.buyAndUse(i), fs);
+        use.position.set(x + bw / 2 + 2, 345);
+        use.enabled = canBuyAndUse(run, i);
+        root.addChild(buy, use);
+      } else {
+        buyButton();
+      }
+    } else {
+      const cv = new CardView(item.card);
+      cv.scale.set(0.9);
+      cv.position.set(x, 130);
+      cv.eventMode = 'none';
+      badge('Spielkarte', 0x6b5a9e);
+      const parts: string[] = [];
+      if (item.card.enhancement) parts.push(`${ENHANCEMENTS[item.card.enhancement].name}: ${ENHANCEMENTS[item.card.enhancement].description}`);
+      if (item.card.seal) parts.push(`${SEALS[item.card.seal].name}: ${SEALS[item.card.seal].description}`);
+      if (item.card.edition) parts.push(`${EDITIONS[item.card.edition].name}: ${EDITIONS[item.card.edition].description}`);
+      const desc = smallText(parts.join('\n') || 'Kommt ins Deck', spacing - 12, 15);
+      desc.position.set(x, 240);
+      root.addChild(cv, desc);
+      buyButton();
+    }
   });
 
   // Voucher
   const vx = 920;
-  const vTitle = label('Voucher', 18, C.textDim);
-  vTitle.position.set(vx, 40);
-  root.addChild(vTitle);
   if (shop.voucher) {
     const v = VOUCHER_BY_ID[shop.voucher.voucherId];
     const card = new Container();
@@ -105,16 +155,19 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     const vn = smallText(v.name, 100, 15, 0xffffff);
     vn.position.set(0, 26);
     card.addChild(vn);
-    const desc = smallText(v.description, 180, 15);
-    desc.position.set(vx, 222);
+    const badge = new Graphics().roundRect(vx - 52, 210, 104, 22, 11).fill(C.money);
+    const badgeT = label('Voucher', 13, 0x2b2540);
+    badgeT.position.set(vx, 221);
+    const desc = smallText(v.description, 190, 15);
+    desc.position.set(vx, 240);
     const tag = priceTag(shop.voucher.price, run.money >= shop.voucher.price);
-    tag.position.set(vx, 290);
+    tag.position.set(vx, 40);
     const buy = new Button('Einlösen', 140, 46, C.green, () => cb.buyVoucher(), 20);
     buy.position.set(vx, 345);
     buy.enabled = run.money >= shop.voucher.price;
-    root.addChild(card, desc, tag, buy);
+    root.addChild(card, badge, badgeT, desc, tag, buy);
   } else {
-    const none = label('ausverkauft', 18, C.textDim);
+    const none = label('Voucher ausverkauft', 18, C.textDim);
     none.position.set(vx, 140);
     root.addChild(none);
   }

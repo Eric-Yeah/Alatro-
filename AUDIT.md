@@ -18,6 +18,7 @@ Stand: Audit vor Beginn der Umbauten.
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
+| M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün (gesamt 134 in `src`) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -49,7 +50,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | H3 | Keine Erkennungsregeln | `detect(cards, rules)` mit Regeln für 4 Karten Flush und Straight, Lücken Straight, gleichfarbige Suits, alle Karten scoren, alle Karten Face (2.2, 8.2) | Feature | mittel | erledigt |
 | H4 | Kein Anzeigename Royal Flush | Straight Flush 10 bis Ace wird als Royal Flush angezeigt, teilt Werte (2.1) | Feature | klein | erledigt |
 | H5 | Keine ranglosen Karten, keine Joker Suit (jede Suit) | Ranglose Karte scort immer, Joker Suit zählt als jede Suit (2.2, 3.6) | Feature | mittel | erledigt |
-| H6 | Kein Konzept "Secret Hand" | Secret Hands bis zum ersten Spielen in der Run Info versteckt (2.2) | Feature | klein | in Arbeit |
+| H6 | Kein Konzept "Secret Hand" | Secret Hands bis zum ersten Spielen in der Run Info versteckt (2.2) | Feature | klein | erledigt |
 | H7 | Debuff fehlt | Debuffte Karten zählen für die Erkennung, liefern aber nichts (2.2, 3.2) | Feature | mittel | erledigt |
 
 ### Scoring Pipeline (3)
@@ -77,7 +78,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
-| K1 | Keine Consumables, Slot Anzeige ist Platzhalter | 3 eigene Consumable Typen (Hand Level, Karten verändern, riskante Effekte), 2 Slots, Benutzen aus Slot und Shop | Feature | groß | offen |
+| K1 | Keine Consumables, Slot Anzeige ist Platzhalter | 3 eigene Consumable Typen (Hand Level, Karten verändern, riskante Effekte), 2 Slots, Benutzen aus Slot und Shop | Feature | groß | erledigt |
 | K2 | Keine Vouchers | Eigene Voucher Paare (Basis und Upgrade), 1 Slot im Shop pro Ante | Feature | mittel | erledigt |
 | K3 | Kein Skip, keine Tags | Skip für Small und Big Blind mit eigenem Tag Katalog (1.1) | Feature | mittel | erledigt |
 | K4 | Boss Blind ohne Effekt | Eigene Bosse mit Regeln, Auswahlregel, Mindest Ante, eigene Showdown Bosse für Ante 8, 16 usw. | Feature | groß | erledigt |
@@ -101,7 +102,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | P1 | Kein Shop, nur Auswahl 1 aus 3 Jokers als Platzhalter | 2 Karten Slots, 2 Pack Slots, 1 Voucher, Reroll 5 plus 1, Next Round (6.1) | Feature | groß | erledigt |
 | P2 | Rarity Gewichte im UI Code | Gewichte 70, 25, 5 und Typgewichte aus Daten (6.2, 6.3) | Zahl | klein | erledigt |
 | P3 | Keine Preisformel | (Basis plus Edition Aufschlag plus Inflation) mal Rabatt, halbe Beträge abrunden, min. 1 (6.5) | Feature | klein | erledigt |
-| P4 | Keine Booster Packs | Eigene Pack Typen in Normal, Jumbo, Mega mit Gewichten und Pack Ansicht (6.6) | Feature | groß | in Arbeit |
+| P4 | Keine Booster Packs | Eigene Pack Typen in Normal, Jumbo, Mega mit Gewichten und Pack Ansicht (6.6) | Feature | groß | erledigt |
 | P5 | Sell Value aus Basispreis | Sell Value aus aktuellem Kaufpreis (1.4) | Zahl | klein | erledigt |
 
 ### Zufall (7)
@@ -110,7 +111,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 |---|---|---|---|---|---|
 | R1 | Ein globaler Strom | Strom pro Key, initial `hash(seed + key)` (7.2) | Architektur | mittel | erledigt |
 | R2 | Kein `chance()` | `chance(num, den, key)` mit Wahrscheinlichkeitsfaktor (7.2, 7.3) | Feature | klein | erledigt |
-| R3 | Keine Seed Eingabe, Seeds ohne O, 0, 1, I | Seed Eingabe 0 bis 8 Zeichen, 0 und O gleich behandeln (7.1) | Feature | klein | in Arbeit |
+| R3 | Keine Seed Eingabe, Seeds ohne O, 0, 1, I | Seed Eingabe 0 bis 8 Zeichen, 0 und O gleich behandeln (7.1) | Feature | klein | erledigt |
 | R4 | Kein Resample und Fallback bei leerem Pool | Resample Strom und Fallback Item pro Typ (7.1) | Feature | klein | erledigt |
 
 ### Architektur (8)
@@ -126,7 +127,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
-| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | offen |
+| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | in Arbeit (Run Info mit Händen, Blinds, Vouchers und Deck ist da, Options Button folgt in M6) |
 | U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | offen |
 | U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | offen |
 | U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | offen |
@@ -162,6 +163,22 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **UI**: Run Setup mit Deck und Stake Auswahl, Blind Auswahl mit Skip und Tag Vorschau, Boss Name und Effekt im Blind Panel, Shop Szene, Pack Ansicht, geschwächte Karten abgedunkelt, Modifikatoren auf Karten sichtbar, offene Tags in der linken Spalte.
 * Spielstand Version 3 mit Migration.
 * Consumable Packs und der Typ Wurf der Shop Slots folgen mit den Consumables in M4.
+
+### M4 (abgeschlossen)
+
+* **Consumables** (`data/consumables.ts`, `core/consumables.ts`): 12 Sternbilder (je eine Hand, +1 Level, geheime Hände erst nach dem ersten Spielen), 21 Elixiere (8 Enhancements, 3 Seals, 4 Suits, Rang +1, Doppelgänger, Auflösung, Erntemond, Sternkarte, Alchemistentisch), 8 Omen mit Risiko (Blutmond, Aschenregen, Teufelsmarkt, Hexenkessel, Kometenstaub, Siegelsturm, Nachtpakt, Spiegelsaal). Effekte sind deklarativ, die Engine wendet sie an.
+* **Slots und Benutzen:** 2 Slots (Voucher Beutel und Rucksack erhöhen), Benutzen aus dem Slot, Verkauf aus dem Kaufpreis. Karten Ziele kommen aus der Hand der Runde, Elixiere und Omen mit Zufallsziel brauchen eine Hand.
+* **Shop:** Typ Wurf über `rules.typeWeights` (Joker, Sternbild, Elixier, Spielkarte, Omen), Kaufen in den Slot oder Kaufen und Benutzen (nur ohne Karten Ziel).
+* **Packs:** 9 neue Packs (Sternbild, Elixier, Omen je Normal, Jumbo, Mega). Eine Wahl wird sofort benutzt. Elixier und Omen Packs zeigen eine Hand aus 8 Deck Karten für die Ziele. 2 neue Tags (Sternschnuppe, Alchemistenkiste).
+* **Vouchers:** 5 neue Paare: Beutel und Rucksack (Slots), Sternenhändler und Sternenmagnat, Kräuterhändler und Apotheker (Typ Gewichte), Fernrohr und Großfernrohr (Consumable Phase im Scoring), Kartentisch und Veredlertisch (Spielkarten im Shop).
+* **Scoring:** Consumable Phase (Schritt 6): Sternbild im Slot gibt X1,5 oder X2 Mult auf seine Hand. Event Phase `consumable`.
+* **Stern Seal:** erzeugt beim Einkassieren das Sternbild der zuletzt gespielten Hand pro gehaltener Karte, solange Slots frei sind.
+* **Run Info** (`core/runInfo.ts`, `ui/RunInfoView.ts`): Hände mit Level, Chips mal Mult und Anzahl (geheime Hände versteckt), Blinds und Ziele aller Antes, Vouchers und offene Tags, Deck Übersicht.
+* **Collection** (`collection.ts`, `ui/CollectionView.ts`): 9 Reiter, Einträge erscheinen, sobald sie gesehen wurden (Besitz, Shop, Pack, Blind Auswahl). Speicherort `alatro.collection.v1`.
+* **Seed Eingabe:** Bildschirmtastatur im Run Setup, 0 bis 8 Zeichen, O gilt als 0, leer bedeutet zufällig.
+* **Spielstand Version 4** mit Migration von Version 3 (Consumables, Typ Gewichte, neue Regeln).
+* **Refactor:** Zufallsziehungen (Joker, Editions, Spielkarten, Consumables) in `core/generate.ts`, `ShopItem` ist eine Union aus Joker, Consumable und Spielkarte.
+* **Browser Test:** Runde mit Slots, Elixier auf zwei Zielkarten, Pair mit Fernrohr (78 Punkte wie berechnet), Shop mit allen Karten Arten, Elixier Pack mit Zielwahl, Run Info, Sammlung, Seed Eingabe. Keine Konsolenfehler.
 
 ## Behalten
 
@@ -219,3 +236,18 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O25 | Geld durch Boss Effekte | darf negativ werden, Käufe sind dann nicht möglich |
 | O26 | Suit Debuff bei Karten mit jeder Suit | Quecksilber Karten sind von jedem Suit Debuff betroffen. "Gerade Ränge" meint nur 2, 4, 6, 8, 10 |
 | O27 | Showdown Ziel Faktor | eigene Showdown Bosse nutzen ihren Faktor (z. B. X5), sonst gilt der Standard Boss Faktor 2 |
+| O28 | Consumables aus Packs (6.6) | Die Wahl wird sofort benutzt und belegt keinen Slot. Erzeugende Elixiere brauchen trotzdem einen freien Slot |
+| O29 | Karten Ziele (4.3) | In der Runde ist die Hand das Ziel Feld. In Elixier und Omen Packs zeigt das Pack eine Hand aus 8 zufälligen Deck Karten. Zufallsziele der Omen kommen aus derselben Hand. Ohne Hand (Shop, Blind Auswahl) sind solche Consumables nicht benutzbar |
+| O30 | Preise der Consumables (6.5) | Sternbild 3, Elixier 3, Omen 4, Spielkarte 1, Verkauf wie bei Jokers aus dem Kaufpreis |
+| O31 | Omen im Shop (6.2) | Omen erscheinen nur in Packs (Gewicht 0 in den Karten Slots) |
+| O32 | Spielkarten im Shop (6.2) | Erst mit dem Voucher Kartentisch (Gewicht 4). Veredlertisch gibt ihnen Modifikatoren, sonst sind sie schlicht |
+| O33 | Fernrohr (3.1 Schritt 6) | Sternbild im Slot gibt X1,5 (Großfernrohr X2) nur, wenn genau seine Hand gespielt wird. Mehrere Sternbilder derselben Hand zählen einzeln |
+| O34 | Stern Seal (Rundenende) | Beim Einkassieren erzeugt jede gehaltene Karte mit dem Seal das Sternbild der zuletzt gespielten Hand dieser Runde, nur in freie Slots, ohne gespielte Hand nichts |
+| O35 | Rang plus 1 bei Elixier Aufstieg | Ace wird zu 2, wie bei O17 |
+| O36 | Hexenkessel, Teufelsmarkt, Nachtpakt (eigene Omen) | Hexenkessel überschreibt eine vorhandene Edition des behaltenen Jokers. Teufelsmarkt setzt Geld auf $0 (negatives Geld bleibt). Nachtpakt wirkt sofort auch in der laufenden Runde |
+| O37 | Zerstörte Karten | Werden aus Deck, Hand, Nachziehstapel und Ablage entfernt. Ist die Hand danach leer und der Stapel leer, ist die Runde verloren. Neue Karten kommen ins Deck und in der Runde zusätzlich in die Hand (Hand darf dabei über die Hand Size wachsen) |
+| O38 | Geheime Hände bei Sternbildern (2.2) | Das Sternbild einer geheimen Hand erscheint erst nach dem ersten Spielen dieser Hand |
+| O39 | Collection (9.1) | Ein Eintrag zählt als entdeckt, sobald er im Besitz, im Shop, in einem Pack oder in der Blind Auswahl sichtbar war. Gespeichert in `alatro.collection.v1`, unabhängig vom Spielstand |
+| O40 | Seed Eingabe (7.1) | Eigene Bildschirmtastatur. Die Schrift stellt O und 0 sehr ähnlich dar, deshalb soll U9 (eigene Schrift) das lösen |
+| O41 | Editions auf Consumables (3.4) | Nicht in M4. Schatten Slots gelten nur für Jokers |
+| O42 | Seeds nach M4 | Neue Tags und Vouchers verändern die Auswahl aus dem Tag und Voucher Pool, alte Seeds ergeben damit andere Ante Tags und Vouchers als vor M4. Laufende Spielstände behalten ihre Werte |

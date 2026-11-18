@@ -2,26 +2,32 @@ import { Container, Graphics, Text, type FederatedPointerEvent } from 'pixi.js';
 import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, type BlindKind } from '../core/blinds';
 import { SUIT_NAMES, sortByRank, sortBySuit, type Card } from '../core/cards';
 import {
-  TAG_BY_ID, PACK_BY_ID, afterHand, buyCard, buyPack, buyVoucher, canPick, cashOut, closePack, createRun, discardHand,
-  leaveShop, pickFromPack, playHand, reroll, selectBlind, sellJoker as sellJokerAction, skipBlind,
+  TAG_BY_ID, PACK_BY_ID, afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canPick, canUseConsumable, cashOut, closePack, createRun,
+  discardHand, leaveShop, pickFromPack, playHand, reroll, selectBlind, sellConsumable, sellJoker as sellJokerAction, skipBlind,
+  useConsumable,
 } from '../core/game';
+import { consumableSellValue, type UseResult } from '../core/consumables';
 import { handDisplayName } from '../core/hands';
 import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
-import { randomSeed } from '../core/rng';
+import { normalizeSeed, randomSeed, SEED_LENGTH } from '../core/rng';
 import {
   BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerSellValue, type RunState,
 } from '../core/run';
 import { previewHand, type ScoreEvent } from '../core/scoring';
+import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { STAKES } from '../data/stakes';
 import { loadRun, saveRun } from '../save';
 import { CARD_H, CardView, cardBack } from './CardView';
+import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
+import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { JokerView } from './JokerView';
+import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
-import { C, FONT, RARITY_COLORS, RARITY_NAMES, VIEW_H, VIEW_W, fmt, fmtMult } from './theme';
+import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES, VIEW_H, VIEW_W, fmt, fmtMult } from './theme';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
-import { Button, label, overlay, panel, popup } from './widgets';
+import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
 const MX = 850; // centre of the play area
 const HAND_Y = 775;
@@ -32,6 +38,8 @@ const JOKER_Y = 118;
 const JOKER_TRAY_X = 380;
 const JOKER_TRAY_W = 760;
 const JOKER_SPACING = 122;
+const CONS_TRAY_X = 1160;
+const CONS_TRAY_W = 260;
 
 const BLIND_COLORS: Record<BlindKind, number> = { small: 0x2a7f8f, big: 0xc9822b, boss: 0xa8324a };
 
@@ -57,6 +65,9 @@ export class Game {
 
   private cardViews = new Map<number, CardView>();
   private jokerViews = new Map<number, JokerView>();
+  private consumableViews = new Map<number, ConsumableView>();
+  /** Seed für den nächsten Run, leer = zufällig */
+  private setupSeed = '';
   private tooltip: Container | null = null;
 
   // Sidebar
@@ -201,9 +212,11 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button('Menü', 330, 60, 0x4a3f6b, () => { if (!this.busy) this.showMainMenu(); }, 24);
-    menuBtn.position.set(185, 800);
-    t.addChild(menuBtn);
+    const menuBtn = new Button('Menü', 160, 60, 0x4a3f6b, () => { if (!this.busy) this.showMainMenu(); }, 24);
+    menuBtn.position.set(100, 800);
+    const infoBtn = new Button('Run Info', 160, 60, 0x6b5a9e, () => { if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    infoBtn.position.set(270, 800);
+    t.addChild(menuBtn, infoBtn);
 
     this.seedText = label('', 16, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -219,9 +232,9 @@ export class Game {
     this.jokerCount = label('', 16, C.textDim);
     this.jokerCount.anchor.set(0, 0.5);
     this.jokerCount.position.set(JOKER_TRAY_X + 12, 220);
-    const ct = panel(260, 180, C.panelDark);
+    const ct = panel(CONS_TRAY_W, 180, C.panelDark);
     ct.alpha = 0.85;
-    ct.position.set(1160, 24);
+    ct.position.set(CONS_TRAY_X, 24);
     this.consLabel = label('Consumables 0/2', 16, C.textDim);
     this.consLabel.anchor.set(1, 0.5);
     this.consLabel.position.set(1408, 220);
@@ -286,7 +299,7 @@ export class Game {
     this.roundText.text = String((run.ante - 1) * 3 + run.blindIndex + 1);
     this.seedText.text = 'Seed ' + run.seed;
     this.jokerCount.text = `Joker ${run.jokers.length}/${jokerCapacity(run)}`;
-    this.consLabel.text = `Consumables 0/${run.consumableSlots}`;
+    this.consLabel.text = `Consumables ${run.consumables.length}/${run.consumableSlots}`;
     this.tagsText.text = run.pendingTags.length ? 'Tags: ' + run.pendingTags.map((id) => TAG_BY_ID[id]?.name ?? id).join(', ') : '';
     this.deckCount.text = r ? `${r.drawPile.length}/${run.deck.length}` : `${run.deck.length}/${run.deck.length}`;
     this.handControls.visible = run.phase === 'round' || run.phase === 'roundWon';
@@ -565,6 +578,134 @@ export class Game {
     if (run.phase === 'shop') this.renderShop();
   }
 
+  // ────────────────────────────────────────────────────────────── consumables
+
+  private consumableX(i: number, n: number) {
+    const spacing = Math.min(124, (CONS_TRAY_W - 40) / Math.max(n, 1));
+    return CONS_TRAY_X + CONS_TRAY_W / 2 + (i - (n - 1) / 2) * spacing;
+  }
+
+  private syncConsumables() {
+    const run = this.run;
+    const list = run?.consumables ?? [];
+    const ids = new Set(list.map((c) => c.uid));
+    for (const [uid, v] of [...this.consumableViews]) {
+      if (ids.has(uid)) continue;
+      v.destroy({ children: true });
+      this.consumableViews.delete(uid);
+    }
+    list.forEach((c, i) => {
+      let v = this.consumableViews.get(c.uid);
+      if (!v) {
+        v = new ConsumableView(c.defId);
+        v.position.set(this.consumableX(i, list.length), JOKER_Y);
+        v.on('pointertap', () => { if (!this.busy) this.showConsumableTooltip(c.uid); });
+        this.consumableViews.set(c.uid, v);
+        this.jokerLayer.addChild(v);
+      }
+      v.zIndex = i;
+      tween(v, { x: this.consumableX(i, list.length), y: JOKER_Y }, 220, easeOutBack);
+    });
+    this.refreshInfo();
+  }
+
+  private showConsumableTooltip(uid: number) {
+    const run = this.run!;
+    const v = this.consumableViews.get(uid);
+    const inst = run.consumables.find((c) => c.uid === uid);
+    if (!v || !inst) return;
+    const wasSame = this.tooltip && (this.tooltip as any).consumableUid === uid;
+    this.closeTooltip();
+    if (wasSame) return;
+    const def = CONSUMABLE_BY_ID[inst.defId];
+    const tip = new Container() as Container & { consumableUid?: number };
+    tip.consumableUid = uid;
+    const w = 300;
+    const desc = wrapText(def.description, w - 30, 19, C.cardEdge);
+    const targets = this.selected().map((c) => c.card.id);
+    const usable = canUseConsumable(run, inst.defId, targets, 'slot');
+    let hint = '';
+    if (!usable) {
+      if (def.targets && run.phase !== 'round') hint = 'Braucht Karten in der Hand, nur in einer Runde';
+      else if (def.targets) hint = def.targets.min === def.targets.max ? `Wähle ${def.targets.min} Karte in der Hand` : `Wähle ${def.targets.min} bis ${def.targets.max} Karten in der Hand`;
+      else hint = 'Gerade nicht benutzbar';
+    }
+    const hintText = hint ? wrapText(hint, w - 30, 15, 0xa8324a) : null;
+    desc.position.set(0, 84);
+    if (hintText) hintText.position.set(0, 84 + desc.height + 8);
+    const h = 84 + desc.height + (hintText ? hintText.height + 16 : 8) + 124;
+    const bg = new Graphics()
+      .roundRect(-w / 2, 4, w, h, 14).fill({ color: 0, alpha: 0.4 })
+      .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
+    bg.eventMode = 'static';
+    const name = label(def.name, 24, C.cardEdge);
+    name.position.set(0, 24);
+    const badge = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(CONSUMABLE_COLORS[def.type]);
+    const badgeT = label(CONSUMABLE_TYPE_NAMES[def.type], 14, 0xffffff);
+    badgeT.position.set(0, 56);
+    const use = new Button('Benutzen', 220, 46, C.chips, () => this.useConsumableUI(uid), 20);
+    use.position.set(0, h - 86);
+    use.enabled = usable;
+    const sell = new Button(`Verkaufen $${consumableSellValue(inst)}`, 220, 46, C.green, () => this.sellConsumableUI(uid), 20);
+    sell.position.set(0, h - 34);
+    tip.addChild(bg, name, badge, badgeT, desc, use, sell);
+    if (hintText) tip.addChild(hintText);
+    tip.position.set(Math.min(v.x, VIEW_W - w / 2 - 10), JOKER_Y + CONSUMABLE_H / 2 + 20);
+    tip.scale.set(0.8);
+    tween(tip, { 'scale.x': 1, 'scale.y': 1 }, 160, easeOutBack);
+    this.fxLayer.addChild(tip);
+    this.tooltip = tip;
+  }
+
+  private sellConsumableUI(uid: number) {
+    const run = this.run!;
+    if (this.busy || !sellConsumable(run, uid)) return;
+    this.closeTooltip();
+    this.syncConsumables();
+    juice(this.moneyText);
+    saveRun(run);
+    if (run.phase === 'shop') this.renderShop();
+  }
+
+  private useConsumableUI(uid: number) {
+    const run = this.run!;
+    if (this.busy) return;
+    const targets = this.selected().map((c) => c.card.id);
+    const res = useConsumable(run, uid, targets);
+    if (!res) return;
+    this.closeTooltip();
+    this.afterConsumableUse(res);
+  }
+
+  /** Gemeinsame Nachbereitung nach dem Benutzen: Anzeige, Meldung, Speichern. */
+  private afterConsumableUse(res: UseResult) {
+    const run = this.run!;
+    this.syncConsumables();
+    this.syncJokers();
+    if (run.round && (res.changed.length || res.destroyed.length || res.created.length)) this.rebuildHand();
+    juice(this.moneyText);
+    const extra: string[] = [];
+    if (res.destroyed.length) extra.push(`${res.destroyed.length} zerstört`);
+    if (res.created.length) extra.push(`${res.created.length} neu`);
+    if (res.destroyedJokers) extra.push(`${res.destroyedJokers} Jokers zerstört`);
+    if (res.consumables.length) extra.push(`${res.consumables.length} erzeugt`);
+    this.toast(res.message + (extra.length ? ` (${extra.join(', ')})` : ''), C.accent);
+    saveRun(run);
+    if (run.phase === 'gameOver') this.showGameOver();
+    else if (run.phase === 'shop') this.renderShop();
+  }
+
+  /** Baut alle Karten Ansichten der Hand neu auf, z. B. nachdem ein Elixier Karten verändert hat. */
+  private rebuildHand() {
+    const r = this.run?.round;
+    if (!r) return;
+    this.clearCardViews();
+    this.applySort();
+    for (const c of r.hand) this.makeCardView(c.id);
+    this.layoutHand(0);
+    this.refreshInfo();
+  }
+
   // ────────────────────────────────────────────────────────────── actions
 
   private async play() {
@@ -647,12 +788,13 @@ export class Game {
     let target: Container | undefined;
     if (ev.source.kind === 'card' || ev.source.kind === 'held') target = this.cardViews.get(ev.source.cardId);
     else if (ev.source.kind === 'joker') target = this.jokerViews.get(ev.source.jokerUid);
+    else if (ev.source.kind === 'consumable') target = this.consumableViews.get(ev.source.uid);
     if (target) {
       juice(target);
       const g = target.getGlobalPosition();
       const p = this.fxLayer.toLocal(g);
-      const above = ev.source.kind === 'joker' ? 100 : CARD_H / 2 + 40;
-      const below = ev.source.kind === 'joker';
+      const below = ev.source.kind === 'joker' || ev.source.kind === 'consumable';
+      const above = below ? 100 : CARD_H / 2 + 40;
       const y = below ? p.y + above : p.y - above;
       if (ev.chips) popup(this.fxLayer, p.x, y, `+${fmt(ev.chips)}`, C.chips);
       if (ev.mult) popup(this.fxLayer, p.x, y, `+${fmtMult(ev.mult)} Mult`, C.mult, 28);
@@ -753,8 +895,10 @@ export class Game {
   private beginNewRun(deckId: string, stakeId: string) {
     this.clearCardViews();
     this.clearScreen();
-    this.run = createRun({ seed: randomSeed(), deckId, stakeId });
+    this.run = createRun({ seed: this.setupSeed || randomSeed(), deckId, stakeId });
+    this.setupSeed = '';
     this.syncJokers();
+    this.syncConsumables();
     saveRun(this.run);
     this.refreshInfo();
     this.showPhase();
@@ -765,6 +909,7 @@ export class Game {
     this.clearScreen();
     this.run = run;
     this.syncJokers();
+    this.syncConsumables();
     this.clearOverlay();
     if (run.round && (run.phase === 'round' || run.phase === 'roundWon')) {
       for (const c of run.round.hand) this.makeCardView(c.id).position.set(DECK_X, DECK_Y);
@@ -778,7 +923,7 @@ export class Game {
     const pref = loadSetupPref();
     let deckIdx = Math.max(0, DECKS.findIndex((d) => d.id === pref.deckId));
     let stakeIdx = Math.max(0, STAKES.findIndex((s) => s.id === pref.stakeId));
-    const { box } = this.modal(760, 600, C.panelDark);
+    const { box } = this.modal(760, 700, C.panelDark);
     const head = label('Neuer Run', 44, C.text);
     head.position.set(380, 50);
     box.addChild(head);
@@ -816,12 +961,19 @@ export class Game {
       arrow('›', 650, 220, () => { deckIdx = (deckIdx + 1) % DECKS.length; render(); });
       arrow('‹', 110, 440, () => { stakeIdx = (stakeIdx + STAKES.length - 1) % STAKES.length; render(); });
       arrow('›', 650, 440, () => { stakeIdx = (stakeIdx + 1) % STAKES.length; render(); });
+      const seedLbl = label('Seed', 20, C.textDim);
+      seedLbl.position.set(380, 520);
+      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 56, 0x4a3f6b, () => {
+        saveSetupPref({ deckId: deck.id, stakeId: stake.id });
+        this.showSeedEntry();
+      }, 26);
+      seedBtn.position.set(380, 566);
       const start = new Button('Start', 300, 70, C.chips, () => {
         saveSetupPref({ deckId: deck.id, stakeId: stake.id });
         this.beginNewRun(deck.id, stake.id);
       }, 30);
-      start.position.set(380, 545);
-      content.addChild(start);
+      start.position.set(380, 645);
+      content.addChild(seedLbl, seedBtn, start);
     };
     render();
   }
@@ -829,7 +981,7 @@ export class Game {
   private showMainMenu() {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
-    const { box } = this.modal(620, canResume ? 520 : 420, C.panelDark);
+    const { box } = this.modal(620, canResume ? 620 : 520, C.panelDark);
     const title = label('ALATRO', 110, C.text, { stroke: { color: C.mult, width: 10 }, letterSpacing: 6 });
     title.position.set(310, 130);
     const wobble = (): void => {
@@ -849,7 +1001,69 @@ export class Game {
     }
     const nr = new Button('Neuer Run', 400, 76, C.mult, () => this.startNewRun(), 30);
     nr.position.set(310, y);
-    box.addChild(nr);
+    const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
+    coll.position.set(310, y + 100);
+    box.addChild(nr, coll);
+  }
+
+  /** Sammlung aller gesehenen Inhalte, Zurück führt ins Hauptmenü */
+  private showCollection() {
+    const { box } = this.modal(COLLECTION_W, COLLECTION_H, C.panelDark);
+    buildCollection(box, () => this.showMainMenu());
+  }
+
+  /** Run Info (Hände, Blinds, Vouchers, Deck) über dem laufenden Run */
+  private showRunInfo(tab: RunInfoTab = 'hands') {
+    const run = this.run;
+    if (!run) return;
+    const { box } = this.modal(RUN_INFO_W, RUN_INFO_H, C.panelDark);
+    buildRunInfo(box, run, () => this.clearOverlay(), tab);
+  }
+
+  /** Seed Eingabe mit eigener Tastatur: 0 bis 8 Zeichen, O gilt als 0, leer = zufällig */
+  private showSeedEntry() {
+    let seed = this.setupSeed;
+    const W = 760;
+    const { box } = this.modal(W, 720, C.panelDark);
+    const head = label('Seed', 44, C.text);
+    head.position.set(W / 2, 50);
+    const hint = label(`0 bis ${SEED_LENGTH} Zeichen, leer lassen für einen Zufalls Seed`, 18, C.textDim);
+    hint.position.set(W / 2, 100);
+    box.addChild(head, hint);
+    const dyn = new Container();
+    box.addChild(dyn);
+
+    const render = () => {
+      for (const c of [...dyn.children]) c.destroy({ children: true });
+      for (let i = 0; i < SEED_LENGTH; i++) {
+        const x = W / 2 + (i - (SEED_LENGTH - 1) / 2) * 76;
+        dyn.addChild(new Graphics().roundRect(x - 32, 130, 64, 76, 10).fill(0x15111f).stroke({ width: 3, color: i === seed.length ? C.accent : C.panelLine }));
+        if (seed[i]) {
+          const ch = label(seed[i], 40, C.text);
+          ch.position.set(x, 168);
+          dyn.addChild(ch);
+        }
+      }
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      [...chars].forEach((ch, i) => {
+        const b = new Button(ch, 66, 66, 0x4a3f6b, () => { seed = normalizeSeed(seed + ch); render(); }, 30);
+        b.position.set(W / 2 + ((i % 9) - 4) * 76, 270 + Math.floor(i / 9) * 76);
+        b.enabled = seed.length < SEED_LENGTH;
+        dyn.addChild(b);
+      });
+      const del = new Button('Löschen', 200, 62, C.mult, () => { seed = seed.slice(0, -1); render(); }, 24);
+      del.position.set(W / 2 - 230, 620);
+      del.enabled = seed.length > 0;
+      const rnd = new Button('Zufällig', 200, 62, 0x6b5a9e, () => { seed = ''; render(); }, 24);
+      rnd.position.set(W / 2, 620);
+      const ok = new Button('Fertig', 200, 62, C.green, () => {
+        this.setupSeed = seed;
+        this.showRunSetup();
+      }, 24);
+      ok.position.set(W / 2 + 230, 620);
+      dyn.addChild(del, rnd, ok);
+    };
+    render();
   }
 
   private showBlindSelect() {
@@ -973,11 +1187,12 @@ export class Game {
     const btn = new Button(`Einkassieren $${e.total}`, 360, 76, C.money, async () => {
       btn.enabled = false;
       const remaining = run.round!.hand.map((c) => this.cardViews.get(c.id)!).filter(Boolean);
-      cashOut(run);
+      const paid = cashOut(run);
       saveRun(run);
-      this.refreshInfo();
+      this.syncConsumables();
       juice(this.moneyText);
       this.clearOverlay();
+      if (paid.starSealCreated.length) this.toast(`Stern Seal: ${paid.starSealCreated.length} Sternbild erzeugt`, C.chips);
       await this.flyAway(remaining);
       this.clearCardViews();
       if (run.won && !run.winShown) {
@@ -1010,9 +1225,14 @@ export class Game {
       buyCard: (i) => {
         if (buyCard(run, i)) {
           this.syncJokers();
+          this.syncConsumables();
           juice(this.moneyText);
           after();
         }
+      },
+      buyAndUse: (i) => {
+        const res = buyAndUse(run, i);
+        if (res) this.afterConsumableUse(res);
       },
       buyPack: (i) => {
         if (buyPack(run, i)) {
@@ -1044,55 +1264,101 @@ export class Game {
     const p = run.pack;
     if (!p) return this.showPhase();
     const def = PACK_BY_ID[p.packId];
-    const { box } = this.modal(1040, 600, C.panelDark);
-    const head = label(def.name, 40, def.kind === 'joker' ? C.mult : C.chips);
-    head.position.set(520, 50);
-    const sub = label(`Wähle noch ${p.picksLeft}`, 20, C.textDim);
-    sub.position.set(520, 92);
-    box.addChild(head, sub);
-    const n = p.options.length;
-    const spacing = Math.min(200, 960 / Math.max(n, 1));
-    p.options.forEach((o, i) => {
-      const x = 520 + (i - (n - 1) / 2) * spacing;
-      if (!o) return;
-      let view: Container;
-      let text: string;
-      if (o.kind === 'joker') {
-        view = new JokerView({ uid: -1, defId: o.defId, vars: {}, edition: o.edition });
-        const jd = getJoker(o.defId)!;
-        text = `${jd.name}\n${jokerDescription(jd)}` + (o.edition ? `\n${EDITIONS[o.edition].name}: ${EDITIONS[o.edition].description}` : '');
-      } else {
-        view = new CardView(o.card);
-        const parts: string[] = [];
-        if (o.card.enhancement) parts.push(`${ENHANCEMENTS[o.card.enhancement].name}: ${ENHANCEMENTS[o.card.enhancement].description}`);
-        if (o.card.seal) parts.push(`${SEALS[o.card.seal].name}: ${SEALS[o.card.seal].description}`);
-        if (o.card.edition) parts.push(`${EDITIONS[o.card.edition].name}: ${EDITIONS[o.card.edition].description}`);
-        text = parts.join('\n') || 'Normale Karte';
+    // Elixier und Omen Packs zeigen zusätzlich eine Hand, aus der die Ziel Karten gewählt werden
+    const withHand = !!p.handIds;
+    const W = 1040;
+    const H = withHand ? 800 : 600;
+    const { box } = this.modal(W, H, C.panelDark);
+    const typeColor = def.kind === 'joker' ? C.mult : def.kind === 'karten' ? C.chips : CONSUMABLE_COLORS[def.kind];
+    const head = label(def.name, 40, typeColor);
+    head.position.set(W / 2, 50);
+    box.addChild(head);
+    const dyn = new Container();
+    box.addChild(dyn);
+    /** gewählte Ziel Karten der Pack Hand (Reihenfolge der Wahl) */
+    const targets: number[] = [];
+
+    const render = () => {
+      for (const c of [...dyn.children]) c.destroy({ children: true });
+      const sub = label(`Wähle noch ${p.picksLeft}`, 20, C.textDim);
+      sub.position.set(W / 2, 92);
+      dyn.addChild(sub);
+      const n = p.options.length;
+      const spacing = Math.min(200, 960 / Math.max(n, 1));
+      p.options.forEach((o, i) => {
+        const x = W / 2 + (i - (n - 1) / 2) * spacing;
+        if (!o) return;
+        let view: Container;
+        let text: string;
+        if (o.kind === 'joker') {
+          view = new JokerView({ uid: -1, defId: o.defId, vars: {}, edition: o.edition });
+          const jd = getJoker(o.defId)!;
+          text = `${jd.name}\n${jokerDescription(jd)}` + (o.edition ? `\n${EDITIONS[o.edition].name}: ${EDITIONS[o.edition].description}` : '');
+        } else if (o.kind === 'consumable') {
+          view = new ConsumableView(o.defId);
+          const cd = CONSUMABLE_BY_ID[o.defId];
+          text = `${cd.name}\n${cd.description}`;
+          if (cd.targets) text += `\nZiele: ${targets.length} von ${cd.targets.min === cd.targets.max ? cd.targets.min : `${cd.targets.min} bis ${cd.targets.max}`}`;
+        } else {
+          view = new CardView(o.card);
+          const parts: string[] = [];
+          if (o.card.enhancement) parts.push(`${ENHANCEMENTS[o.card.enhancement].name}: ${ENHANCEMENTS[o.card.enhancement].description}`);
+          if (o.card.seal) parts.push(`${SEALS[o.card.seal].name}: ${SEALS[o.card.seal].description}`);
+          if (o.card.edition) parts.push(`${EDITIONS[o.card.edition].name}: ${EDITIONS[o.card.edition].description}`);
+          text = parts.join('\n') || 'Normale Karte';
+        }
+        view.eventMode = 'none';
+        view.position.set(x, 200);
+        const t = new Text({ text, style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: spacing - 14, align: 'center' } });
+        t.anchor.set(0.5, 0);
+        t.position.set(x, 295);
+        const pick = new Button('Wählen', 130, 50, C.green, () => this.pickPackOption(i, targets), 20);
+        pick.position.set(x, withHand ? 460 : 470);
+        pick.enabled = canPick(run, i, targets);
+        dyn.addChild(view, t, pick);
+      });
+
+      if (p.handIds) {
+        const hl = label('Deine Karten, wähle die Ziele', 18, C.textDim);
+        hl.position.set(W / 2, 520);
+        dyn.addChild(hl);
+        const cards = p.handIds.map((id) => run.deck.find((c) => c.id === id)).filter((c): c is Card => !!c);
+        const cs = Math.min(112, 880 / Math.max(cards.length, 1));
+        cards.forEach((card, i) => {
+          const cv = new CardView(card);
+          cv.scale.set(0.7);
+          const on = targets.includes(card.id);
+          cv.position.set(W / 2 + (i - (cards.length - 1) / 2) * cs, 620 - (on ? 16 : 0));
+          cv.on('pointertap', () => {
+            const at = targets.indexOf(card.id);
+            if (at >= 0) targets.splice(at, 1);
+            else targets.push(card.id);
+            render();
+          });
+          dyn.addChild(cv);
+          if (on) dyn.addChild(new Graphics().roundRect(cv.x - 42, cv.y - 60, 84, 120, 8).stroke({ width: 4, color: C.money }));
+        });
       }
-      view.eventMode = 'none';
-      view.position.set(x, 220);
-      const t = new Text({ text, style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: spacing - 14, align: 'center' } });
-      t.anchor.set(0.5, 0);
-      t.position.set(x, 315);
-      const pick = new Button('Wählen', 130, 50, C.green, () => this.pickPackOption(i), 20);
-      pick.position.set(x, 470);
-      pick.enabled = canPick(run, i);
-      box.addChild(view, t, pick);
-    });
-    const skip = new Button('Überspringen', 240, 56, 0x6b5a9e, () => {
-      closePack(run);
-      saveRun(run);
-      this.clearOverlay();
-      this.showPhase();
-    }, 22);
-    skip.position.set(520, 548);
-    box.addChild(skip);
+
+      const skip = new Button('Überspringen', 240, 56, 0x6b5a9e, () => {
+        closePack(run);
+        saveRun(run);
+        this.clearOverlay();
+        this.showPhase();
+      }, 22);
+      skip.position.set(W / 2, H - 52);
+      dyn.addChild(skip);
+    };
+    render();
   }
 
-  private pickPackOption(i: number) {
+  private pickPackOption(i: number, targets: number[] = []) {
     const run = this.run!;
-    if (!pickFromPack(run, i)) return;
+    const res = pickFromPack(run, i, targets);
+    if (!res) return;
     this.syncJokers();
+    this.syncConsumables();
+    if (typeof res !== 'boolean') this.toast(res.message, C.accent);
     saveRun(run);
     this.refreshInfo();
     if (run.phase === 'pack') this.showPack();

@@ -1,6 +1,6 @@
-# Übergabe: Stand nach M2, nächster Schritt M3
+# Übergabe: Stand nach M4, offen sind M3 und M5
 
-Stand: 18.11.2026. Branch `claude/funny-brahmagupta-ic0bpe`, alles gepusht.
+Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 
 ## Wo wir stehen
 
@@ -9,12 +9,12 @@ Stand: 18.11.2026. Branch `claude/funny-brahmagupta-ic0bpe`, alles gepusht.
 | Schritt 1 Audit (`AUDIT.md`, `tests/spec/`) | erledigt |
 | M1 Engine Kern (Daten, Erkennung, Scoring Pipeline, Blinds, Zinsen) | erledigt |
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
-| **M3 Eigener Joker Katalog** | **als Nächstes** |
-| M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | offen |
+| **M3 Eigener Joker Katalog** | **offen** (wurde übersprungen, M4 hängt nicht davon ab) |
+| M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader) | offen |
 | M6 Politur, Performance, Optionen | offen |
 
-Teststand: `npm test` 72 von 72 grün, `npm run test:spec` 87 von 87 grün.
+Teststand: `npm test` 134 von 134 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Für M3 braucht es nur die allgemeinen Teile (Abschnitt 3 Scoring Reihenfolge, 8.2 Joker Schema, 10.1 Gruppen). Diese sind hier zusammengefasst. Den Originalkatalog aus Abschnitt 4 nicht verwenden.
 
@@ -22,18 +22,23 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 
 | Ort | Inhalt |
 |---|---|
-| `src/data/` | alle Zahlen und Inhalte: `hands`, `cards`, `economy`, `blinds`, `shop`, `modifiers` (eigene Enhancements, Seals, Editions), `jokers`, `bosses`, `tags`, `vouchers`, `decks`, `stakes`, `packs`, `modsSpec` (RunMods) |
+| `src/data/` | alle Zahlen und Inhalte: `hands`, `cards`, `economy`, `blinds`, `shop`, `modifiers` (eigene Enhancements, Seals, Editions), `jokers`, `consumables` (Sternbild, Elixier, Omen), `bosses`, `tags`, `vouchers`, `decks`, `stakes`, `packs`, `modsSpec` (RunMods) |
 | `src/core/types.ts` | gemeinsame Typen (Card, HandType, Effect, DetectRules) |
 | `src/core/handEval.ts` | `detectHand(cards, rules)` mit `contained` Set |
-| `src/core/scoring.ts` | `scoreHand()`: Before, Basis mit Boss Mods, Karten (Rang, Enhancement, Seal, Edition, Jokers scored, Retrigger), Held, Jokers main mit Edition vor und nach, Balance, Floor, After. Liefert ScoreEvents |
+| `src/core/scoring.ts` | `scoreHand()`: Before, Basis mit Boss Mods, Karten (Rang, Enhancement, Seal, Edition, Jokers scored, Retrigger), Held, Jokers main mit Edition vor und nach, **Consumable Phase (Sternbilder im Slot)**, Balance, Floor, After. Liefert ScoreEvents |
 | `src/core/jokers.ts` | Joker Schema: `JokerDef { id, name, rarity, cost, config, description mit {platzhaltern}, copyCompat, rules?, calculate(ctx, self, cfg) }`, Registry (`registerJokers`, `getJoker`, `allJokers`), `jokerDescription`, `jokerRules` |
-| `src/core/run.ts` | RunState (Version 3), RunRules, Runde, Boss Effekte (`activeBoss`, `isCardDebuffed`, `activeJokers`), Auszahlung, `addJoker`, `canAddJoker`, `jokerSellValue` |
-| `src/core/game.ts` | Zustandsautomat und Aktionen: `createRun`, `enterAnte`, `selectBlind`, `skipBlind`, `playHand`, `discardHand`, `afterHand`, `cashOut`, `openShop`, `reroll`, `buyCard`, `buyVoucher`, `buyPack`, `pickFromPack`, `closePack`, `sellJoker`, `leaveShop`, `applyMods` |
+| `src/core/consumables.ts` | Slots (`addConsumable`, `freeConsumableSlots`, `sellConsumable`), `canUseConsumable(run, defId, targetIds, where)`, `applyConsumable`, `useConsumable` (aus dem Slot), `useDirect` (Pack, Kaufen und Benutzen), `poolCards` (Hand der Runde oder Pack Hand), `createStarSealConsumables` |
+| `src/core/generate.ts` | Zufallsziehungen: `rollJoker`, `rollJokerEdition`, `rollPlayingCard`, `rollEnhancedCard`, `rollConsumable` (geheime Sternbilder erst nach dem ersten Spielen) |
+| `src/core/runInfo.ts` | reine Daten für die Run Info: `handRows`, `blindRows`, `deckStats` |
+| `src/core/run.ts` | RunState (Version 4), RunRules (inkl. `typeWeights`, `sternbildXMult`, `shopCardMods`), Runde, Boss Effekte, Auszahlung, `addJoker`, `ShopItem` (Union Joker, Consumable, Spielkarte), `PackOption`, `PackState.handIds` |
+| `src/core/game.ts` | Zustandsautomat und Aktionen: `createRun`, `enterAnte`, `selectBlind`, `skipBlind`, `playHand`, `discardHand`, `afterHand`, `cashOut` (liefert zusätzlich `starSealCreated`), `openShop`, `reroll`, `buyCard`, `buyAndUse`, `buyVoucher`, `buyPack`, `pickFromPack(run, index, targetIds)`, `closePack`, `sellJoker`, `useConsumable`, `sellConsumable`, `leaveShop`, `applyMods` |
 | `src/core/index.ts` | registriert `JOKER_DEFS` (muss vor Engine Nutzung importiert sein, auch in Tests) |
-| `src/save.ts` | localStorage, Migration Version 1 zu 2 zu 3 |
-| `src/ui/Game.ts` | Szenen und Ablauf, `ShopView.ts`, `CardView.ts`, `JokerView.ts`, `Background.ts` (Shader), `theme.ts` |
+| `src/save.ts` | localStorage, Migration Version 1 zu 2 zu 3 zu 4, `saveRun` trägt die Collection nach |
+| `src/collection.ts` | Collection: Einträge pro Reiter, `discoveredKeys(run)`, Speicherung unter `alatro.collection.v1` |
+| `src/ui/Game.ts` | Szenen und Ablauf, Consumable Slots mit Tooltip (Benutzen, Verkaufen), Pack Ansicht mit Zielwahl, Run Info, Sammlung, Seed Eingabe |
+| `src/ui/` weitere | `ShopView.ts`, `CardView.ts`, `JokerView.ts`, `ConsumableView.ts`, `RunInfoView.ts`, `CollectionView.ts`, `Background.ts` (Shader), `widgets.ts` (`tabBar`, `wrapText`), `theme.ts` |
 | `tests/spec/` | Testfälle aus Briefing 10.3 mit Adapter `helpers.ts` (neutrale Test Jokers) |
-| `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`) |
+| `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`, `m4`, `m4info`) |
 
 ## Aufgabe M3: eigener Joker Katalog
 
@@ -51,6 +56,7 @@ Die Phasen in `JokerPhase` reichen bisher für das Scoring (`before`, `scored`, 
 * Joker, die `probMult` erhöhen: in `playCards` bzw. `runChance` aus den Jokers ableiten.
 * Erweiterung der Rundenwerte durch Jokers (Hands, Discards, Hand Size): beim `selectBlind` anwenden.
 * Spawn Bedingungen (`spawnCondition`) und Sticker Kompatibilität sind im Schema noch nicht vorhanden (AUDIT J2).
+* Neu seit M4: Omen können Jokers erzeugen (`Teufelsmarkt`) und zerstören (`Hexenkessel`). Beide nutzen `rollJoker` und `run.jokers` direkt, neue Joker Hooks (z. B. `sell`) müssen dort nicht beachtet werden, solange Zerstörung kein Verkauf ist.
 
 ### Gruppen (eigene Inhalte, Beispiele nur als Richtung)
 
@@ -63,10 +69,22 @@ Die Phasen in `JokerPhase` reichen bisher für das Scoring (`before`, `scored`, 
 7. **Passive Jokers:** Erkennungsregeln, +Hand Size, +Discards, Wahrscheinlichkeit verdoppeln.
 8. **Spezialfälle:** Kopie des rechten Nachbarn, Rettung vor Game Over einmalig, Joker die Karten verändern (Enhancement vergeben), Legendary (nicht im Shop).
 
-Verteilung grob: 60 Prozent Common, 30 Prozent Uncommon, 10 Prozent Rare, dazu wenige Legendary.
+Verteilung grob: 60 Prozent Common, 30 Prozent Uncommon, 10 Prozent Rare, dazu wenige Legendary. Mit vielen Jokers lohnt sich ein Blick auf die Collection (`src/collection.ts`): sie listet Jokers automatisch aus der Registry, 12 Einträge pro Seite, Seitenwechsel ist eingebaut.
 
 ### Danach
 
-* `AUDIT.md`: J2, J3 auf erledigt bzw. in Arbeit setzen, M3 Abschnitt unter "Fortschritt", neue Entscheidungen unter "Offene Punkte" (ab O28).
+* `AUDIT.md`: J2, J3 auf erledigt bzw. in Arbeit setzen, M3 Abschnitt unter "Fortschritt", neue Entscheidungen unter "Offene Punkte" (ab O43).
 * UI: Jokers haben bisher nur Farbkreis mit Initiale. Für M3 reicht das, bessere eigene Joker Grafiken in M5.
-* Browser Test: Build, `npx vite preview --port 4173`, Playwright Skript mit Tap Koordinaten (logische Auflösung 1440 mal 1000, skaliert auf 1180 mal 820).
+
+## Hinweise für M5
+
+* Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`, Symbole aus Grafikprimitiven: Stern, Kolben, Mond). Eigene Grafiken und Sounds für Benutzen und Elixier Effekte gehören zu M5.
+* Die Score Animation kennt jetzt `source.kind === 'consumable'` (Fernrohr). Das Popup erscheint unter dem Slot, ob der Zeitpunkt gut wirkt, wurde nur im Code geprüft, nicht Bild für Bild.
+* Seed Eingabe: O und 0 sehen in der Systemschrift fast gleich aus (AUDIT O40).
+
+## Browser Test
+
+Build, `npx vite preview --port 4173`, Playwright Skript mit Tap Koordinaten. Viewport 1440 mal 1000 entspricht 1:1 der logischen Auflösung. Koordinaten im Modal: Bildschirm Position gleich Modal Offset plus Box Koordinate.
+
+* Spielstände für Szenen (Shop, Pack, Runde mit Slots) lassen sich mit einem kleinen Skript erzeugen: `npx vite-node` lädt nur Dateien unter dem Projektordner, das Skript also kurz im Projektordner anlegen (z. B. `m4gen.tmp.ts`, danach wieder entfernen), `createRun` und die Engine Aktionen aufrufen und das JSON in `localStorage['alatro.run.v1']` setzen. Dann im Hauptmenü auf Fortsetzen tippen.
+* Screenshots während der Animation: `page.screenshot` ist mit WebGL langsam (mehrere Sekunden), einzelne Animationsschritte lassen sich so nicht fangen. `page.clock` ist sehr langsam, Video Frames lassen sich mit dem mitgelieferten ffmpeg nicht dekodieren.
