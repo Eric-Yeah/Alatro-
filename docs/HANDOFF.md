@@ -1,6 +1,6 @@
-# Übergabe: Stand nach M3 und M4, nächster Schritt M5
+# Übergabe: Stand nach M5, nächster Schritt M6
 
-Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
+Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
 ## Wo wir stehen
 
@@ -11,10 +11,10 @@ Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
 | M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
-| **M5 UI, UX, Juice** (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken) | **als Nächstes** |
+| M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
 | M6 Politur, Performance, Optionen | offen |
 
-Teststand: `npm test` 231 von 231 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 243 von 243 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
@@ -36,6 +36,9 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 | `src/save.ts` | localStorage, Migration Version 1 zu 2 zu 3 zu 4, `saveRun` trägt die Collection nach |
 | `src/collection.ts` | Collection: Einträge pro Reiter, `discoveredKeys(run)`, Speicherung unter `alatro.collection.v1` |
 | `src/ui/Game.ts` | Szenen und Ablauf, Consumable Slots mit Tooltip (Benutzen, Verkaufen), Pack Ansicht mit Zielwahl, Run Info, Sammlung, Seed Eingabe |
+| `src/data/juice.ts` | Zahlen für Juice: `SCORE_TIERS` (Shake und Flash nach Handpunkten durch Ziel), Tonleiter, `MOODS` (Hintergrund pro Blind), `CRT`, Standard Einstellungen |
+| `src/settings.ts` | Einstellungen (CRT, Shake, Lautstärke), `getSettings`, `updateSettings`, `onSettings`, Speicherort `alatro.settings.v1` |
+| `src/ui/` Juice | `audio.ts` (WebAudio Synthese, `sfx.*`), `crt.ts` (Post Processing), `editionFx.ts` (Edition Overlays), `stageFx.ts` (Shake über Pivot der Wurzel, Flash), `juiceMath.ts` (rein, getestet), `jokerArt.ts` (Embleme), `glsl.ts` (gemeinsamer Vertex Shader), `Background.ts` (Stimmungen über `setMood`) |
 | `src/ui/` weitere | `ShopView.ts`, `CardView.ts`, `JokerView.ts`, `ConsumableView.ts`, `RunInfoView.ts`, `CollectionView.ts`, `Background.ts` (Shader), `widgets.ts` (`tabBar`, `wrapText`), `theme.ts` |
 | `tests/spec/` | Testfälle aus Briefing 10.3 mit Adapter `helpers.ts` (neutrale Test Jokers) |
 | `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`, `m4`, `m4info`) |
@@ -55,7 +58,14 @@ Einen neuen Joker anlegen:
 
 Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
 
-## Hinweise für M5
+## Hinweise für M6 (nach M5)
+
+* Offen aus der UI Liste: **U8** Animationstempo (Optionen gibt es seit M5 im Hauptmenü, `settings.ts` erweitern), **U9** eigene Schrift (löst auch O40, O und 0 in der Seed Eingabe), Performance auf dem iPad prüfen (CRT Filter plus Hintergrund Shader laufen beide als Vollbild Filter, die Edition Overlays kosten pro Karte einen Filter Durchlauf).
+* Sound und Shake sind nur im Browser geprüft, nicht auf dem iPad. Klang, Lautstärke Verhältnisse und die Stärke der Shake Stufen müssen dort gehört und gefühlt werden. Alle Zahlen stehen in `data/juice.ts`, Klänge in `ui/audio.ts`.
+* Neue Jokers aus M3 brauchen keine Grafik, `jokerArt.ts` leitet das Emblem aus der ID ab (O45).
+* Neue Aktionen im Spielfluss sollten einen `sfx.*` Aufruf bekommen. Neue Szenen setzen die Stimmung über `updateMood` in `Game.refreshInfo`.
+
+## Hinweise zu M5 (erledigt, zur Referenz)
 
 * Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`, Symbole aus Grafikprimitiven: Stern, Kolben, Mond). Eigene Grafiken und Sounds für Benutzen und Elixier Effekte gehören zu M5.
 * Die Score Animation kennt jetzt `source.kind === 'consumable'` (Fernrohr). Das Popup erscheint unter dem Slot, ob der Zeitpunkt gut wirkt, wurde nur im Code geprüft, nicht Bild für Bild.
