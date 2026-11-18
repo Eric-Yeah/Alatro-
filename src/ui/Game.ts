@@ -30,7 +30,7 @@ import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
@@ -139,7 +139,8 @@ export class Game {
     t.addChild(catcher);
 
     // Sidebar background
-    const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 12).fill(0x24354a).stroke({ width: 3, color: C.panelLine });
+    const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 12).fill({ color: 0x24354a, alpha: 0.9 }).stroke({ width: 3, color: C.panelLine })
+      .roundRect(15, 15, 340, VIEW_H - 30, 9).stroke({ width: 1.5, color: C.holo, alpha: 0.3 });
     t.addChild(side);
 
     // Blind panel
@@ -154,7 +155,7 @@ export class Game {
     this.targetText.position.set(165, 105);
     this.rewardText = label('', 20, C.money);
     this.rewardText.position.set(165, 140);
-    this.bossDesc = new Text({ text: '', style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 300, align: 'center' } });
+    this.bossDesc = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 300, align: 'center' } });
     this.bossDesc.anchor.set(0.5);
     this.bossDesc.position.set(165, 140);
     bp.addChild(this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
@@ -243,7 +244,7 @@ export class Game {
 
     this.seedText = label('', 16, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
-    this.tagsText = new Text({ text: '', style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.accent, wordWrap: true, wordWrapWidth: 320, align: 'center' } });
+    this.tagsText = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.accent, wordWrap: true, wordWrapWidth: 320, align: 'center' } });
     this.tagsText.anchor.set(0.5, 1);
     this.tagsText.position.set(185, 935);
     t.addChild(this.seedText, this.tagsText);
@@ -579,7 +580,7 @@ export class Game {
     const w = 280;
     const desc = new Text({
       text: jokerDescription(def, v.joker),
-      style: { fontFamily: FONT, fontSize: 19, fontWeight: '700', fill: C.cardEdge, wordWrap: true, wordWrapWidth: w - 30, align: 'center' },
+      style: { fontFamily: FONT_BODY, fontSize: 19, fontWeight: '700', fill: C.cardEdge, wordWrap: true, wordWrapWidth: w - 30, align: 'center' },
     });
     desc.anchor.set(0.5, 0);
     const h = 152 + desc.height;
@@ -1027,14 +1028,14 @@ export class Game {
       back.scale.set(0.8);
       const dn = label(deck.name, 30, C.text);
       dn.position.set(380, 290);
-      const dd = new Text({ text: deck.description, style: { fontFamily: FONT, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
+      const dd = new Text({ text: deck.description, style: { fontFamily: FONT_BODY, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
       dd.anchor.set(0.5, 0);
       dd.position.set(380, 312);
       const sl = label('Stake', 20, C.textDim);
       sl.position.set(380, 392);
       const sn = label(stake.name, 30, stake.color);
       sn.position.set(380, 428);
-      const sd = new Text({ text: stakeIdx === 0 ? stake.description : `${stake.description}, plus alle vorherigen`, style: { fontFamily: FONT, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
+      const sd = new Text({ text: stakeIdx === 0 ? stake.description : `${stake.description}, plus alle vorherigen`, style: { fontFamily: FONT_BODY, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
       sd.anchor.set(0.5, 0);
       sd.position.set(380, 452);
       const arrow = (txt: string, x: number, y: number, fn: () => void) => {
@@ -1271,7 +1272,7 @@ export class Game {
       chipT.position.set(150, 108);
       col.addChild(name, chip, chipT);
       if (boss) {
-        const d = new Text({ text: boss.description, style: { fontFamily: FONT, fontSize: 17, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 260, align: 'center' } });
+        const d = new Text({ text: boss.description, style: { fontFamily: FONT_BODY, fontSize: 17, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 260, align: 'center' } });
         d.anchor.set(0.5, 0);
         d.position.set(150, 160);
         col.addChild(d);
@@ -1289,7 +1290,7 @@ export class Game {
         const tb = new Graphics().roundRect(16, 322, 268, 86, 6).fill(shade(state === 'current' ? color : C.panel, 0.45));
         const tn = label(`Skip Tag: ${tag.name}`, 17, C.accent);
         tn.position.set(150, 342);
-        const td = new Text({ text: tag.description, style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
+        const td = new Text({ text: tag.description, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
         td.anchor.set(0.5, 0);
         td.position.set(150, 360);
         col.addChild(tb, tn, td);
@@ -1511,7 +1512,7 @@ export class Game {
         }
         view.eventMode = 'none';
         view.position.set(x, 200);
-        const t = new Text({ text, style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: spacing - 14, align: 'center' } });
+        const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: spacing - 14, align: 'center' } });
         t.anchor.set(0.5, 0);
         t.position.set(x, 295);
         const pick = new Button('Wählen', 130, 50, C.green, () => this.pickPackOption(i, targets), 20);

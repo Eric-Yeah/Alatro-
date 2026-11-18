@@ -7,7 +7,7 @@ import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES } from './theme';
 import { easeOutBack, tween } from './tween';
 import { Button, label, panel } from './widgets';
 
@@ -34,7 +34,7 @@ function priceTag(price: number, affordable: boolean): Container {
 }
 
 function smallText(text: string, width: number, size = 16, color = C.text): Text {
-  const t = new Text({ text, style: { fontFamily: FONT, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
+  const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
   t.anchor.set(0.5, 0);
   return t;
 }

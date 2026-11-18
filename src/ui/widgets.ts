@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 import { sfx } from './audio';
-import { C, FONT, STYLE, shade } from './theme';
+import { C, FONT, FONT_BODY, STYLE, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
 export function label(text: string, size: number, color = C.text, extra: Partial<TextStyleOptions> = {}): Text {
@@ -16,7 +16,9 @@ export function panel(w: number, h: number, color = C.panel, radius = STYLE.radi
   const c = new Container();
   c.addChild(new Graphics()
     .roundRect(0, STYLE.shadowY, w, h, radius).fill(STYLE.shadowColor)
-    .roundRect(0, 0, w, h, radius).fill(color).stroke({ width: STYLE.outline, color: line }));
+    .roundRect(0, 0, w, h, radius).fill({ color, alpha: 0.9 }).stroke({ width: STYLE.outline, color: line })
+    // dünne Leuchtlinie innen: Hologramm Anmutung
+    .roundRect(4, 4, w - 8, h - 8, Math.max(2, radius - 3)).stroke({ width: 1.5, color: C.holo, alpha: 0.3 }));
   return c;
 }
 
@@ -60,7 +62,8 @@ export class Button extends Container {
     this.bg.clear()
       .roundRect(-o, -o, w + o * 2, h + o * 2 + 5, r + o).fill(C.panelLine)
       .roundRect(0, 0, w, h + 5, r).fill(shade(color, 0.55))
-      .roundRect(0, 0, w, h, r).fill(color);
+      .roundRect(0, 0, w, h, r).fill(color)
+      .roundRect(5, 4, w - 10, 3, 1.5).fill({ color: 0xffffff, alpha: 0.28 });
   }
 }
 
@@ -101,7 +104,7 @@ export function tabBar<T extends string>(
 
 /** Mehrzeiliger Text mit Umbruch, Anker oben (mittig oder links) */
 export function wrapText(text: string, width: number, size = 16, color = C.text, align: 'left' | 'center' = 'center'): Text {
-  const t = new Text({ text, style: { fontFamily: FONT, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align } });
+  const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align } });
   t.anchor.set(align === 'center' ? 0.5 : 0, 0);
   return t;
 }

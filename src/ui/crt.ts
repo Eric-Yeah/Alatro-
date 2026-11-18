@@ -17,6 +17,9 @@ uniform float uPitch;
 uniform float uAberr;
 uniform float uVig;
 uniform float uNoise;
+uniform float uSweep;
+uniform float uPeriod;
+uniform float uTint;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
@@ -42,8 +45,13 @@ void main(void) {
   float scan = mod(line, 2.0);
   col *= 1.0 - uScan * scan;
   // schwaches Flackern und Rauschen
-  col *= 1.0 + 0.012 * sin(uTime * 38.0 + st.y * 6.0);
+  col *= 1.0 + 0.006 * sin(uTime * 38.0 + st.y * 6.0);
   col += (hash(floor(st * uRes) + fract(uTime)) - 0.5) * uNoise;
+  // Hologramm: kühler Farbton und ein helles Band, das von oben nach unten wandert
+  col *= mix(vec3(1.0), vec3(0.93, 1.0, 1.08), uTint);
+  float pos = 1.0 - fract(uTime / uPeriod) * 1.3 + 0.15;
+  float band = smoothstep(0.07, 0.0, abs(st.y - pos));
+  col += vec3(0.25, 0.8, 1.0) * band * uSweep;
   // Randabdunklung
   col *= 1.0 - dot(c, c) * uVig * 0.5;
   finalColor = vec4(col, 1.0);
@@ -68,6 +76,9 @@ export class CrtFilter {
           uAberr: { value: CRT.aberration, type: 'f32' },
           uVig: { value: CRT.vignette, type: 'f32' },
           uNoise: { value: CRT.noise, type: 'f32' },
+          uSweep: { value: CRT.sweep, type: 'f32' },
+          uPeriod: { value: CRT.sweepPeriod, type: 'f32' },
+          uTint: { value: CRT.tint, type: 'f32' },
         },
       },
     });

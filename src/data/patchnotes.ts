@@ -10,12 +10,12 @@ export const PATCH_NOTES: readonly PatchNote[] = [
   {
     version: '0.3.0',
     date: '18.11.2026',
-    title: 'Klarer Pixel Stil',
+    title: 'Pixel Schrift und Hologramm Look',
     items: [
-      'Neu: Eigene Pixel Schrift für das ganze Spiel, inklusive Umlauten und Kartensymbolen.',
-      'Neu: Klarer, flacher Grafikstil mit harten Konturen statt weicher Verläufe.',
-      'Neu: Hintergrund in harten Farbstufen mit kleinen Sternen.',
-      'Der CRT Effekt ist jetzt standardmäßig aus, weil er das Bild weich gemacht hat. In den Optionen lässt er sich wieder einschalten.',
+      'Neu: Eigene Pixel Schrift für Titel, Zahlen, Knöpfe und Namen, inklusive Umlauten und Kartensymbolen. Längere Beschreibungen bleiben gut lesbar.',
+      'Neu: Klare, flache Flächen mit harten Konturen und dünnen Leuchtlinien wie bei einem Hologramm.',
+      'Neu: Hintergrund aus harten Farbstufen mit weichem Leuchten und kleinen Sternen.',
+      'Neu: Hologramm Effekt mit kühlem Farbton, feinem Farbsaum, leichten Scanlines und einem Lichtband, das langsam über das Bild wandert. Ohne Wölbung und Rauschen, das Bild bleibt scharf. Abschaltbar in den Optionen.',
       'Text wird bei jeder Fenstergröße scharf gezeichnet.',
     ],
   },

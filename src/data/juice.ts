@@ -48,11 +48,11 @@ export interface MoodDef {
 }
 
 export const MOODS: Record<BgMood, MoodDef> = {
-  menu: { deep: [0.06, 0.12, 0.34], mid: [0.1, 0.25, 0.62], accent: [0.2, 0.42, 0.85], speed: 1, contrast: 1, vignette: 0, pulse: 0 },
-  small: { deep: [0.05, 0.13, 0.33], mid: [0.09, 0.28, 0.6], accent: [0.14, 0.5, 0.75], speed: 0.8, contrast: 1, vignette: 0, pulse: 0 },
-  big: { deep: [0.2, 0.1, 0.07], mid: [0.5, 0.26, 0.08], accent: [0.8, 0.45, 0.12], speed: 1.2, contrast: 1.05, vignette: 0, pulse: 0 },
-  boss: { deep: [0.16, 0.04, 0.09], mid: [0.45, 0.08, 0.16], accent: [0.7, 0.15, 0.25], speed: 1.6, contrast: 1.1, vignette: 0, pulse: 0.03 },
-  shop: { deep: [0.05, 0.13, 0.3], mid: [0.08, 0.26, 0.5], accent: [0.15, 0.5, 0.55], speed: 0.8, contrast: 1, vignette: 0, pulse: 0 },
+  menu: { deep: [0.07, 0.07, 0.24], mid: [0.17, 0.16, 0.52], accent: [0.1, 0.46, 0.62], speed: 1, contrast: 1, vignette: 0.6, pulse: 0 },
+  small: { deep: [0.05, 0.11, 0.3], mid: [0.1, 0.26, 0.56], accent: [0.08, 0.5, 0.62], speed: 0.8, contrast: 1, vignette: 0.6, pulse: 0 },
+  big: { deep: [0.2, 0.09, 0.1], mid: [0.5, 0.24, 0.1], accent: [0.78, 0.4, 0.2], speed: 1.2, contrast: 1.05, vignette: 0.7, pulse: 0 },
+  boss: { deep: [0.17, 0.04, 0.12], mid: [0.44, 0.08, 0.2], accent: [0.62, 0.14, 0.4], speed: 1.6, contrast: 1.1, vignette: 0.8, pulse: 0.03 },
+  shop: { deep: [0.06, 0.11, 0.27], mid: [0.1, 0.22, 0.46], accent: [0.2, 0.5, 0.52], speed: 0.8, contrast: 1, vignette: 0.6, pulse: 0 },
 };
 
 /** Wie stark die Bossfarbe die Boss Stimmung färbt (0 bis 1) */
@@ -62,16 +62,21 @@ export const MOOD_FADE_S = 1.2;
 
 /** CRT Filter: Zahlen für den Post Processing Shader */
 export const CRT = {
-  /** leichte Wölbung (0 = flach) */
-  curvature: 0.012,
+  /** keine Wölbung: sie würde das Bild neu abtasten und weich machen */
+  curvature: 0,
   /** Stärke der Scanlines */
-  scanline: 0.07,
+  scanline: 0.035,
   /** Abstand der Scanlines in Bildschirmpixeln (vor Auflösungsfaktor) */
-  scanPitch: 2,
-  /** Farbversatz an den Rändern */
-  aberration: 0.0007,
-  vignette: 0.35,
-  noise: 0.025,
+  scanPitch: 3,
+  /** feiner Farbversatz an den Rändern (Hologramm Kante) */
+  aberration: 0.0009,
+  vignette: 0.25,
+  noise: 0,
+  /** Hologramm: helles Band, das langsam über das Bild wandert (Stärke, Sekunden pro Durchlauf) */
+  sweep: 0.07,
+  sweepPeriod: 7,
+  /** leichter Kühlton (0 = aus) */
+  tint: 0.35,
 };
 
 /** Animationstempo: Faktor, um den alle Tweens und Wartezeiten schneller laufen */
@@ -102,8 +107,8 @@ export const FPS_WINDOW_MS = 500;
 
 /** Standard Einstellungen */
 export const DEFAULT_SETTINGS = {
-  /** CRT Effekt macht das Bild weich, standardmäßig aus */
-  crt: false,
+  /** Hologramm und CRT Effekt (ohne Wölbung und Rauschen, bleibt scharf) */
+  crt: true,
   shake: true,
   /** Lautstärke 0 bis 1 */
   volume: 0.6,

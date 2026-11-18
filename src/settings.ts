@@ -10,7 +10,7 @@ export interface Settings {
 }
 
 const KEY = 'alatro.settings.v2';
-/** Alter Speicherort (v1): wird einmal übernommen, der CRT Effekt aber ausgeschaltet (neuer klarer Stil). */
+/** Alter Speicherort (v1): wird einmal übernommen. */
 const OLD_KEY = 'alatro.settings.v1';
 
 /** Liest rohe Daten, ergänzt fehlende oder ungültige Felder durch Standardwerte. */
@@ -47,7 +47,7 @@ function load(): Settings {
     const raw = localStorage.getItem(KEY);
     if (raw === null) {
       const old = localStorage.getItem(OLD_KEY);
-      if (old !== null) return parseSettings({ ...JSON.parse(old), crt: false });
+      if (old !== null) return parseSettings(JSON.parse(old));
     }
     return parseSettings(JSON.parse(raw ?? 'null'));
   } catch {

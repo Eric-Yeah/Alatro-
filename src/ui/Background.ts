@@ -49,8 +49,12 @@ void main(void) {
   vec3 c3 = uMid;
   vec3 c4 = mix(uMid, uAccent, 0.55);
   vec3 col = step5 < 0.5 ? c0 : step5 < 1.5 ? c1 : step5 < 2.5 ? c2 : step5 < 3.5 ? c3 : c4;
+  // weiches Leuchten über den harten Stufen (Mischung aus klar und weich)
+  col += uAccent * 0.14 * smoothstep(0.5, 0.95, f);
   col = (col - 0.15) * uContrast + 0.15;
   col *= 1.0 + uPulse * sin(uTime * 1.6);
+  vec2 vc = vTextureCoord - 0.5;
+  col *= 1.0 - dot(vc, vc) * uVignette;
 
   // scharfe Sterne: ein Zellpixel, langsames Funkeln in zwei Stufen
   float h = hash(cellId);

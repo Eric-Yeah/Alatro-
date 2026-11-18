@@ -18,6 +18,8 @@ export const C = {
   money: 0xf5b32b,
   accent: 0xff9a1f,
   green: 0x3fbf7f,
+  /** Hologramm Farbe: Leuchtlinien in Panels */
+  holo: 0x5fe3ff,
   cardFace: 0xfbf7ee,
   cardEdge: 0x0b1018,
   cardBack: 0x2a56b8,
@@ -62,6 +64,7 @@ export const RARITY_NAMES: Record<Rarity, string> = {
 };
 
 /** Eigene Pixel Schrift, Systemschrift nur als Rückfall für Zeichen, die sie nicht kennt */
+export const FONT_BODY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 export const FONT = '"Alatro Pixel", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 export function fmt(n: number): string {
