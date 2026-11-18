@@ -74,11 +74,40 @@ export const CRT = {
   noise: 0.025,
 };
 
+/** Animationstempo: Faktor, um den alle Tweens und Wartezeiten schneller laufen */
+export interface SpeedStep {
+  id: string;
+  name: string;
+  factor: number;
+}
+export const SPEED_STEPS: SpeedStep[] = [
+  { id: 'normal', name: 'Normal', factor: 1 },
+  { id: 'schnell', name: 'Schnell', factor: 1.6 },
+  { id: 'sehr', name: 'Sehr schnell', factor: 2.5 },
+  { id: 'blitz', name: 'Blitz', factor: 5 },
+];
+
+/** Grafikstufe. "sparsam" für ältere Geräte: Bildrate und Auflösung gedeckelt, kein CRT, keine Edition Shader */
+export type Quality = 'voll' | 'sparsam';
+export const QUALITY_NAMES: Record<Quality, string> = { voll: 'Voll', sparsam: 'Sparsam' };
+export const QUALITY_PROFILE: Record<Quality, { maxFps: number; maxResolution: number; crt: boolean; editionFx: boolean }> = {
+  voll: { maxFps: 0, maxResolution: 2, crt: true, editionFx: true },
+  sparsam: { maxFps: 30, maxResolution: 1, crt: false, editionFx: false },
+};
+
+/** FPS Anzeige: Messfenster in ms */
+export const FPS_WINDOW_MS = 500;
+
 /** Standard Einstellungen */
 export const DEFAULT_SETTINGS = {
   crt: true,
   shake: true,
   /** Lautstärke 0 bis 1 */
   volume: 0.6,
+  /** ID aus SPEED_STEPS */
+  speed: 'normal',
+  quality: 'voll' as Quality,
+  /** kleine FPS Anzeige oben rechts */
+  fps: false,
 };
 export const VOLUME_STEP = 0.1;

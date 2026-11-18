@@ -19,7 +19,7 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { STAKES } from '../data/stakes';
 import { clampVolume, getSettings, updateSettings } from '../settings';
-import { VOLUME_STEP, type BgMood } from '../data/juice';
+import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
 import { sfx } from './audio';
 import { CARD_H, CardView, cardBack } from './CardView';
@@ -1065,7 +1065,7 @@ export class Game {
     title.position.set(310, 130);
     const wobble = (): void => {
       if (title.destroyed) return;
-      tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic).then(wobble);
+      tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic, true).then(wobble);
     };
     wobble();
     const sub = label('Roguelike Poker Deckbuilder', 24, C.textDim);
@@ -1087,10 +1087,10 @@ export class Game {
     box.addChild(nr, coll, opt);
   }
 
-  /** Optionen: CRT, Screen Shake und Lautstärke, werden sofort gespeichert und angewendet */
+  /** Optionen: werden sofort gespeichert und angewendet */
   private showOptions() {
-    const W = 620;
-    const { box } = this.modal(W, 560, C.panelDark);
+    const W = 660;
+    const { box } = this.modal(W, 800, C.panelDark);
     const head = label('Optionen', 44, C.text);
     head.position.set(W / 2, 56);
     box.addChild(head);
@@ -1099,7 +1099,9 @@ export class Game {
     const render = () => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
-      const row = (y: number, name: string, desc: string) => {
+      const gap = 90;
+      const row = (i: number, name: string, desc: string) => {
+        const y = 140 + i * gap;
         const n = label(name, 28, C.text);
         n.anchor.set(0, 0.5);
         n.position.set(50, y - 12);
@@ -1107,25 +1109,41 @@ export class Game {
         d.anchor.set(0, 0.5);
         d.position.set(50, y + 20);
         dyn.addChild(n, d);
+        return y;
       };
-      row(150, 'CRT Effekt', 'Scanlines und leichte Wölbung');
-      const crt = new Button(st.crt ? 'An' : 'Aus', 130, 56, st.crt ? C.green : 0x4a3f6b, () => { updateSettings({ crt: !st.crt }); render(); }, 24);
-      crt.position.set(W - 115, 150);
-      row(250, 'Screen Shake', 'Wackeln und Aufblitzen bei hohen Punkten');
-      const shake = new Button(st.shake ? 'An' : 'Aus', 130, 56, st.shake ? C.green : 0x4a3f6b, () => {
+      const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
+        const y = row(i, name, desc);
+        const b = new Button(on ? 'An' : 'Aus', 130, 56, on ? C.green : 0x4a3f6b, () => { toggle(); render(); }, 24);
+        b.position.set(W - 115, y);
+        dyn.addChild(b);
+      };
+      onOff(0, 'CRT Effekt', 'Scanlines und leichte Wölbung', st.crt, () => updateSettings({ crt: !st.crt }));
+      onOff(1, 'Screen Shake', 'Wackeln und Aufblitzen bei hohen Punkten', st.shake, () => {
         updateSettings({ shake: !st.shake });
-        render();
         this.fx.shake(6);
-      }, 24);
-      shake.position.set(W - 115, 250);
-      row(350, 'Lautstärke', `${Math.round(st.volume * 100)} Prozent`);
+      });
+      const vy = row(2, 'Lautstärke', `${Math.round(st.volume * 100)} Prozent`);
       const minus = new Button('−', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
-      minus.position.set(W - 175, 350);
+      minus.position.set(W - 175, vy);
       const plus = new Button('+', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
-      plus.position.set(W - 95, 350);
+      plus.position.set(W - 95, vy);
+      const sy = row(3, 'Animationstempo', 'Zählen, Karten und Übergänge');
+      const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
+      const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x4a3f6b, () => {
+        updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
+        render();
+      }, 22);
+      speed.position.set(W - 150, sy);
+      const qy = row(4, 'Grafik', st.quality === 'sparsam' ? '30 FPS, ohne CRT und Edition Glanz' : 'Volle Effekte');
+      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x4a3f6b, () => {
+        updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
+        render();
+      }, 22);
+      quality.position.set(W - 150, qy);
+      onOff(5, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
       const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
-      back.position.set(W / 2, 480);
-      dyn.addChild(crt, shake, minus, plus, back);
+      back.position.set(W / 2, 710);
+      dyn.addChild(minus, plus, speed, quality, back);
     };
     render();
   }
@@ -1168,7 +1186,8 @@ export class Game {
           dyn.addChild(ch);
         }
       }
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      // Kein O auf der Tastatur: es gilt ohnehin als 0 und sähe in der Systemschrift gleich aus (O40)
+      const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ0123456789';
       [...chars].forEach((ch, i) => {
         const b = new Button(ch, 66, 66, 0x4a3f6b, () => { seed = normalizeSeed(seed + ch); render(); }, 30);
         b.position.set(W / 2 + ((i % 9) - 4) * 76, 270 + Math.floor(i / 9) * 76);

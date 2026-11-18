@@ -1,4 +1,5 @@
 import { Ticker } from 'pixi.js';
+import { speedFactor } from '../settings';
 
 export type Ease = (t: number) => number;
 export const linear: Ease = (t) => t;
@@ -21,8 +22,10 @@ function setPath(obj: any, path: string, v: number) {
 const active = new Map<object, Map<string, () => void>>();
 
 /** Animate numeric (dotted-path) properties. Resolves when done. A newer tween on the same prop cancels the old one. */
-export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic): Promise<void> {
+export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic, ambient = false): Promise<void> {
   if (!target || target.destroyed) return Promise.resolve();
+  // Animationstempo aus den Optionen. Ambient Bewegungen (Titel wackelt) bleiben im Takt.
+  if (!ambient) ms /= speedFactor();
   return new Promise((resolve) => {
     const from: Record<string, number> = {};
     for (const k in to) from[k] = getPath(target, k);
@@ -50,6 +53,7 @@ export function tween(target: any, to: Record<string, number>, ms: number, ease:
 }
 
 export function wait(ms: number): Promise<void> {
+  ms /= speedFactor();
   return new Promise((resolve) => {
     let elapsed = 0;
     const tick = (ticker: Ticker) => {

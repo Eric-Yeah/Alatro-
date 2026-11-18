@@ -1,4 +1,6 @@
 import { Filter, Graphics, Ticker } from 'pixi.js';
+import { QUALITY_PROFILE } from '../data/juice';
+import { getSettings, onSettings } from '../settings';
 import { FILTER_VERTEX } from './glsl';
 
 // Eigene Glanz Shader für die vier Editions. Jede Edition ist ein Overlay über Karte oder Joker.
@@ -86,6 +88,16 @@ const SOURCES: Record<string, string> = { schimmer: SCHIMMER, aura: AURA, prisma
 const filters = new Map<string, Filter>();
 let time = 0;
 let ticking = false;
+const overlays = new Set<Graphics>();
+let fxOn = true;
+
+function syncOverlays() {
+  fxOn = QUALITY_PROFILE[getSettings().quality].editionFx;
+  for (const g of overlays) {
+    if (g.destroyed) overlays.delete(g);
+    else g.renderable = fxOn;
+  }
+}
 
 function filterFor(edition: string): Filter | null {
   const body = SOURCES[edition];
@@ -106,6 +118,8 @@ function filterFor(edition: string): Filter | null {
   }
   if (!ticking) {
     ticking = true;
+    syncOverlays();
+    onSettings(syncOverlays);
     Ticker.shared.add((t) => {
       time += t.deltaMS / 1000;
       for (const flt of filters.values()) flt.resources.edUniforms.uniforms.uTime = time;
@@ -121,5 +135,7 @@ export function editionOverlay(edition: string, w: number, h: number, radius: nu
   const g = new Graphics().roundRect(-w / 2, -h / 2, w, h, radius).fill(0xffffff);
   g.filters = [f];
   g.eventMode = 'none';
+  g.renderable = fxOn;
+  overlays.add(g);
   return g;
 }

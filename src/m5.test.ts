@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, MOODS, SCALE_MAX_STEPS, SCORE_TIERS, XMULT_SHAKE_MAX } from './data/juice';
-import { clampVolume, getSettings, parseSettings, updateSettings } from './settings';
+import { DEFAULT_SETTINGS, MOODS, QUALITY_PROFILE, SCALE_MAX_STEPS, SCORE_TIERS, SPEED_STEPS, XMULT_SHAKE_MAX } from './data/juice';
+import { clampVolume, getSettings, parseSettings, speedFactor, updateSettings } from './settings';
+import { FpsMeter } from './ui/perf';
 import { scaleFreq, scoreTier, xMultShake } from './ui/juiceMath';
 
 describe('M5 Einstellungen', () => {
@@ -11,7 +12,7 @@ describe('M5 Einstellungen', () => {
   });
 
   it('übernimmt gültige Werte und begrenzt die Lautstärke', () => {
-    expect(parseSettings({ crt: false, shake: false, volume: 0.3 })).toEqual({ crt: false, shake: false, volume: 0.3 });
+    expect(parseSettings({ crt: false, shake: false, volume: 0.3 })).toEqual({ ...DEFAULT_SETTINGS, crt: false, shake: false, volume: 0.3 });
     expect(parseSettings({ volume: 7 }).volume).toBe(1);
     expect(parseSettings({ volume: -2 }).volume).toBe(0);
     expect(parseSettings({ volume: NaN }).volume).toBe(DEFAULT_SETTINGS.volume);
@@ -82,5 +83,41 @@ describe('M5 Stimmungen', () => {
     expect(MOODS.small.contrast).toBeLessThan(MOODS.big.contrast);
     expect(MOODS.big.contrast).toBeLessThan(MOODS.boss.contrast);
     expect(MOODS.boss.pulse).toBeGreaterThan(MOODS.small.pulse);
+  });
+});
+
+describe('M6 Optionen', () => {
+  it('Tempo: unbekannte IDs fallen auf Normal zurück, Faktoren steigen', () => {
+    expect(parseSettings({ speed: 'blitz' }).speed).toBe('blitz');
+    expect(parseSettings({ speed: 'warp' }).speed).toBe(DEFAULT_SETTINGS.speed);
+    expect(parseSettings({ speed: 3 }).speed).toBe(DEFAULT_SETTINGS.speed);
+    const f = SPEED_STEPS.map((x) => x.factor);
+    expect(f[0]).toBe(1);
+    expect(f).toEqual([...f].sort((a, b) => a - b));
+    expect(speedFactor(parseSettings({ speed: 'sehr' }))).toBe(SPEED_STEPS.find((x) => x.id === 'sehr')!.factor);
+    expect(speedFactor(parseSettings(null))).toBe(1);
+  });
+
+  it('Grafikstufe: nur voll oder sparsam, sparsam spart Bildrate, Auflösung und Effekte', () => {
+    expect(parseSettings({ quality: 'ultra' }).quality).toBe('voll');
+    expect(parseSettings({ quality: 'sparsam' }).quality).toBe('sparsam');
+    const lo = QUALITY_PROFILE.sparsam;
+    const hi = QUALITY_PROFILE.voll;
+    expect(lo.maxFps).toBeGreaterThan(0);
+    expect(hi.maxFps).toBe(0);
+    expect(lo.maxResolution).toBeLessThan(hi.maxResolution);
+    expect(lo.crt).toBe(false);
+    expect(lo.editionFx).toBe(false);
+  });
+
+  it('FPS Anzeige: Bildrate und längster Frame pro Messfenster', () => {
+    const m = new FpsMeter(500);
+    let done = 0;
+    for (let i = 0; i < 30; i++) if (m.tick(i === 5 ? 40 : 16)) done++;
+    expect(done).toBe(1);
+    expect(m.fps).toBeGreaterThan(55);
+    expect(m.fps).toBeLessThan(65);
+    expect(m.worstMs).toBe(40);
+    expect(m.text()).toContain('FPS');
   });
 });

@@ -20,7 +20,7 @@ Stand: Audit vor Beginn der Umbauten.
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 | M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün |
 | M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün |
-| M5 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen) | `npm test` | 12 von 12 grün |
+| M5 und M6 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen, Tempo, Grafikstufe, FPS Messung) | `npm test` | 15 von 15 grün (gesamt 246 in `src`) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -129,14 +129,14 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
-| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | in Arbeit (Run Info mit Händen, Blinds, Vouchers und Deck ist da, Options Button folgt in M6) |
+| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | erledigt (Run Info mit Händen, Blinds, Vouchers und Deck, Optionen über Menü) |
 | U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | erledigt |
 | U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | erledigt |
 | U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | erledigt |
 | U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | erledigt |
 | U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | erledigt |
 | U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
-| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | in Arbeit (CRT, Screen Shake und Lautstärke sind seit M5 im Hauptmenü einstellbar, Animationstempo folgt in M6) |
+| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | erledigt (CRT, Screen Shake, Lautstärke, Tempo, Grafikstufe und FPS Anzeige in den Optionen) |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
 ## Fortschritt
@@ -208,6 +208,15 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Joker Grafiken** (`ui/jokerArt.ts`): Eigene Embleme (Stern, Sichel, Kolben, Auge, Sonne, Sanduhr, Orbit, Rune) über Sternenhimmel, aus der Joker ID abgeleitet. Neue Jokers aus M3 bekommen damit automatisch ein Bild.
 * **Optionen** (`settings.ts`, Hauptmenü): CRT, Screen Shake, Lautstärke in Zehnerschritten, gespeichert unter `alatro.settings.v1`.
 * **Browser Test** (Playwright, Chromium mit WebGL): Menü, Optionen, Runde mit allen vier Editions auf Karten und Jokers in Small, Big und Boss, eine gespielte Hand mit Animation. Keine Konsolenfehler. Der Klang selbst lässt sich ohne Audiogerät nicht hören, geprüft ist nur, dass kein Fehler auftritt. Bitte auf dem iPad anhören.
+
+### M6 (in Arbeit, Stand: Optionen und Performance Schalter fertig)
+
+* **Animationstempo** (`data/juice.ts` `SPEED_STEPS`, `settings.ts` `speedFactor`): Normal, Schnell (1,6), Sehr schnell (2,5), Blitz (5). Wirkt zentral in `tween()` und `wait()`, also auf Zählen, Karten, Übergänge und Zwischenpausen. Der wackelnde Titel im Menü bleibt im Takt (`ambient`).
+* **Grafikstufe** (`QUALITY_PROFILE`): Voll oder Sparsam. Sparsam deckelt die Bildrate auf 30, die Auflösung auf 1, schaltet den CRT Filter ab und blendet die Edition Shader aus (`renderable`, kein Filter Durchlauf pro Karte). Wechsel gilt sofort ohne Neustart.
+* **FPS Anzeige** (`ui/perf.ts` `FpsMeter`): kleine Anzeige oben rechts mit Bildrate und längstem Frame, abschaltbar. Gedacht für die Prüfung auf dem iPad.
+* **Optionen** (Menü): jetzt CRT, Screen Shake, Lautstärke, Tempo, Grafik, FPS Anzeige. Gespeichert unter `alatro.settings.v1`, fehlende Felder alter Spielstände werden mit Standardwerten ergänzt.
+* **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
+* **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
 
 ## Behalten
 
@@ -292,4 +301,6 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O52 | Stufen für Shake und Flash (9.3) | Nach Handpunkten geteilt durch Blind Ziel, Schwellen 0, 0,1, 0,3, 0,7, 1,5. Alle Zahlen in `data/juice.ts` und auf dem iPad zu fühlen |
 | O53 | Joker Embleme (9.2) | Aus der Joker ID per Hash gewählt, nicht pro Joker von Hand gezeichnet. Zwei Jokers können dasselbe Symbol haben (Funke und Einzelgänger zeigen beide ein Auge). Eine Zuordnung pro Joker wäre ein Feld in `JokerDef` |
 | O54 | Edition Shader auf Consumables | Nicht umgesetzt, weil Consumables keine Editions haben (O41) |
-| O55 | Systemschrift (U9) | Bleibt offen, gehört zu M6. Schrift ist weiterhin die Systemschrift |
+| O55 | Systemschrift (U9) | Bleibt offen. Eine selbst gezeichnete Pixelschrift (CLAUDE.md verlangt eigene Schrift) wäre mit dem Raster nur bei ganzzahligen Schriftgrößen scharf, die UI nutzt viele Größen (16 bis 110), und lange Beschreibungen würden schwer lesbar. Das Problem O und 0 ist über die Seed Tastatur gelöst. Wenn eine eigene Schrift gewünscht ist, ist das ein eigener Meilenstein mit Glyph Tabelle, Font Erzeugung und Umstellung aller Labels |
+| O56 | Tempo Faktor (M6) | Der Faktor teilt alle Tween und Wartezeiten, auch die Pausen zwischen Score Schritten. Auf Blitz laufen Sounds weiter im selben Rhythmus der Schritte, nur dichter. Die Zahlen stehen in `data/juice.ts` und sind auf dem iPad zu fühlen |
+| O57 | Grafikstufe Sparsam (M6) | Wird nicht automatisch gewählt, nur von Hand. Eine automatische Erkennung (FPS unter Schwelle) wäre möglich, wurde nicht gebaut, weil ohne iPad Messung keine sinnvolle Schwelle bekannt ist |

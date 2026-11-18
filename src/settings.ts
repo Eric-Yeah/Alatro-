@@ -1,9 +1,12 @@
-import { DEFAULT_SETTINGS, VOLUME_STEP } from './data/juice';
+import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality } from './data/juice';
 
 export interface Settings {
   crt: boolean;
   shake: boolean;
   volume: number;
+  speed: string;
+  quality: Quality;
+  fps: boolean;
 }
 
 const KEY = 'alatro.settings.v1';
@@ -16,7 +19,15 @@ export function parseSettings(raw: unknown): Settings {
     crt: typeof o.crt === 'boolean' ? o.crt : DEFAULT_SETTINGS.crt,
     shake: typeof o.shake === 'boolean' ? o.shake : DEFAULT_SETTINGS.shake,
     volume: clampVolume(vol),
+    speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
+    quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
+    fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
   };
+}
+
+/** Tempofaktor der aktuellen Einstellung (1 = normal) */
+export function speedFactor(s: Settings = getSettings()): number {
+  return SPEED_STEPS.find((x) => x.id === s.speed)?.factor ?? 1;
 }
 
 export function clampVolume(v: number): number {

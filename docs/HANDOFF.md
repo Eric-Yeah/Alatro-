@@ -1,4 +1,4 @@
-# Übergabe: Stand nach M5, nächster Schritt M6
+# Übergabe: Stand nach M5, M6 teilweise
 
 Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
@@ -12,9 +12,9 @@ Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 | M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
-| M6 Politur, Performance, Optionen | offen |
+| M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
 
-Teststand: `npm test` 243 von 243 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 246 von 246 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
@@ -58,12 +58,12 @@ Einen neuen Joker anlegen:
 
 Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
 
-## Hinweise für M6 (nach M5)
+## Hinweise für M6 (Rest)
 
-* Offen aus der UI Liste: **U8** Animationstempo (Optionen gibt es seit M5 im Hauptmenü, `settings.ts` erweitern), **U9** eigene Schrift (löst auch O40, O und 0 in der Seed Eingabe), Performance auf dem iPad prüfen (CRT Filter plus Hintergrund Shader laufen beide als Vollbild Filter, die Edition Overlays kosten pro Karte einen Filter Durchlauf).
-* Sound und Shake sind nur im Browser geprüft, nicht auf dem iPad. Klang, Lautstärke Verhältnisse und die Stärke der Shake Stufen müssen dort gehört und gefühlt werden. Alle Zahlen stehen in `data/juice.ts`, Klänge in `ui/audio.ts`.
-* Neue Jokers aus M3 brauchen keine Grafik, `jokerArt.ts` leitet das Emblem aus der ID ab (O45).
-* Neue Aktionen im Spielfluss sollten einen `sfx.*` Aufruf bekommen. Neue Szenen setzen die Stimmung über `updateMood` in `Game.refreshInfo`.
+* Fertig: Animationstempo (`SPEED_STEPS`, wirkt in `tween`/`wait`), Grafikstufe Voll oder Sparsam (`QUALITY_PROFILE`, in `main.ts` und `editionFx.ts` angewendet), FPS Anzeige (`ui/perf.ts`), Seed Tastatur ohne O. Einzelheiten in `AUDIT.md` Abschnitt M6, O56, O57.
+* **Als Nächstes:** Auf dem iPad mit eingeschalteter FPS Anzeige prüfen, ob Voll flüssig läuft (Hintergrund Shader, CRT und Edition Overlays sind die Kandidaten). Wenn nicht, `QUALITY_PROFILE` anpassen oder Sparsam als Standard setzen. Danach Klang und Shake Stärke nachziehen (alle Zahlen in `data/juice.ts`, Klänge in `ui/audio.ts`).
+* **U9 eigene Schrift** ist offen und bewusst nicht gebaut (O55), braucht eine Entscheidung.
+* Neue Aktionen im Spielfluss sollten einen `sfx.*` Aufruf bekommen. Neue Szenen setzen die Stimmung über `updateMood` in `Game.refreshInfo`. Neue Animationen laufen über `tween` und `wait`, damit das Tempo greift.
 
 ## Hinweise zu M5 (erledigt, zur Referenz)
 
