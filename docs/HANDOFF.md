@@ -1,6 +1,6 @@
-# Übergabe: Stand nach M3 und M4, nächster Schritt M5
+# Übergabe: Stand nach M5, M6 teilweise
 
-Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
+Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
 ## Wo wir stehen
 
@@ -11,10 +11,10 @@ Stand: 18.11.2026. Branch `claude/wonderful-brahmagupta-nby5o4`.
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
 | M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
-| **M5 UI, UX, Juice** (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken) | **als Nächstes** |
-| M6 Politur, Performance, Optionen | offen |
+| M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
+| M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
 
-Teststand: `npm test` 231 von 231 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 249 von 249 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
@@ -36,6 +36,9 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 | `src/save.ts` | localStorage, Migration Version 1 zu 2 zu 3 zu 4, `saveRun` trägt die Collection nach |
 | `src/collection.ts` | Collection: Einträge pro Reiter, `discoveredKeys(run)`, Speicherung unter `alatro.collection.v1` |
 | `src/ui/Game.ts` | Szenen und Ablauf, Consumable Slots mit Tooltip (Benutzen, Verkaufen), Pack Ansicht mit Zielwahl, Run Info, Sammlung, Seed Eingabe |
+| `src/data/juice.ts` | Zahlen für Juice: `SCORE_TIERS` (Shake und Flash nach Handpunkten durch Ziel), Tonleiter, `MOODS` (Hintergrund pro Blind), `CRT`, Standard Einstellungen |
+| `src/settings.ts` | Einstellungen (CRT, Shake, Lautstärke), `getSettings`, `updateSettings`, `onSettings`, Speicherort `alatro.settings.v1` |
+| `src/ui/` Juice | `audio.ts` (WebAudio Synthese, `sfx.*`), `crt.ts` (Post Processing), `editionFx.ts` (Edition Overlays), `stageFx.ts` (Shake über Pivot der Wurzel, Flash), `juiceMath.ts` (rein, getestet), `jokerArt.ts` (Embleme), `glsl.ts` (gemeinsamer Vertex Shader), `Background.ts` (Stimmungen über `setMood`) |
 | `src/ui/` weitere | `ShopView.ts`, `CardView.ts`, `JokerView.ts`, `ConsumableView.ts`, `RunInfoView.ts`, `CollectionView.ts`, `Background.ts` (Shader), `widgets.ts` (`tabBar`, `wrapText`), `theme.ts` |
 | `tests/spec/` | Testfälle aus Briefing 10.3 mit Adapter `helpers.ts` (neutrale Test Jokers) |
 | `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`, `m4`, `m4info`) |
@@ -55,7 +58,20 @@ Einen neuen Joker anlegen:
 
 Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), Sticker (gibt es nicht), weitere Jokers.
 
-## Hinweise für M5
+## Tempo, Anleitung und Patch Notes (Version 0.2.0)
+
+* **Tempo Knopf:** In der Seitenleiste schaltet `cycleSpeed()` (`src/settings.ts`) die Stufen aus `SPEED_STEPS` (`src/data/juice.ts`, 1x bis 10x) weiter. Das Tempo selbst wirkt wie in M6 beschrieben in `tween` und `wait`.
+* **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/patchnotes.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
+* **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit den Patch Notes). Bei Regeländerungen die Texte mitpflegen.
+
+## Hinweise für M6 (Rest)
+
+* Fertig: Animationstempo (`SPEED_STEPS`, wirkt in `tween`/`wait`), Grafikstufe Voll oder Sparsam (`QUALITY_PROFILE`, in `main.ts` und `editionFx.ts` angewendet), FPS Anzeige (`ui/perf.ts`), Seed Tastatur ohne O. Einzelheiten in `AUDIT.md` Abschnitt M6, O56, O57.
+* **Als Nächstes:** Auf dem iPad mit eingeschalteter FPS Anzeige prüfen, ob Voll flüssig läuft (Hintergrund Shader, CRT und Edition Overlays sind die Kandidaten). Wenn nicht, `QUALITY_PROFILE` anpassen oder Sparsam als Standard setzen. Danach Klang und Shake Stärke nachziehen (alle Zahlen in `data/juice.ts`, Klänge in `ui/audio.ts`).
+* **U9 eigene Schrift** ist offen und bewusst nicht gebaut (O55), braucht eine Entscheidung.
+* Neue Aktionen im Spielfluss sollten einen `sfx.*` Aufruf bekommen. Neue Szenen setzen die Stimmung über `updateMood` in `Game.refreshInfo`. Neue Animationen laufen über `tween` und `wait`, damit das Tempo greift.
+
+## Hinweise zu M5 (erledigt, zur Referenz)
 
 * Consumables haben ein eigenes Kartenbild (`ConsumableView.ts`, Symbole aus Grafikprimitiven: Stern, Kolben, Mond). Eigene Grafiken und Sounds für Benutzen und Elixier Effekte gehören zu M5.
 * Die Score Animation kennt jetzt `source.kind === 'consumable'` (Fernrohr). Das Popup erscheint unter dem Slot, ob der Zeitpunkt gut wirkt, wurde nur im Code geprüft, nicht Bild für Bild.

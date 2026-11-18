@@ -1,24 +1,6 @@
 import { Filter, Graphics } from 'pixi.js';
-
-const vertex = /* glsl */ `
-in vec2 aPosition;
-out vec2 vTextureCoord;
-uniform vec4 uInputSize;
-uniform vec4 uOutputFrame;
-uniform vec4 uOutputTexture;
-
-vec4 filterVertexPosition(void) {
-  vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
-  position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
-  position.y = position.y * (2.0 * uOutputTexture.z / uOutputTexture.y) - uOutputTexture.z;
-  return vec4(position, 0.0, 1.0);
-}
-
-void main(void) {
-  gl_Position = filterVertexPosition();
-  vTextureCoord = aPosition * (uOutputFrame.zw * uInputSize.zw);
-}
-`;
+import { BOSS_TINT_MIX, MOODS, MOOD_FADE_S, type BgMood, type MoodDef } from '../data/juice';
+import { FILTER_VERTEX } from './glsl';
 
 // Own design: slow domain-warped "ink in water" bands, quantised to a coarse pixel grid,
 // in the game's indigo / plum / teal palette, with a soft vignette.
@@ -28,6 +10,12 @@ in vec2 vTextureCoord;
 out vec4 finalColor;
 uniform float uTime;
 uniform vec2 uRes;
+uniform vec3 uDeep;
+uniform vec3 uMid;
+uniform vec3 uAccent;
+uniform float uContrast;
+uniform float uVignette;
+uniform float uPulse;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -53,34 +41,65 @@ void main(void) {
   float f = fbm(uv * 1.4 + 2.5 * r);
 
   float bands = floor(f * 7.0) / 7.0;
-  vec3 deep = vec3(0.075, 0.055, 0.14);
-  vec3 plum = vec3(0.24, 0.10, 0.30);
-  vec3 teal = vec3(0.06, 0.26, 0.30);
-  vec3 col = mix(deep, plum, smoothstep(0.25, 0.75, bands));
-  col = mix(col, teal, smoothstep(0.55, 0.95, r.x * bands));
+  vec3 col = mix(uDeep, uMid, smoothstep(0.25, 0.75, bands));
+  col = mix(col, uAccent, smoothstep(0.55, 0.95, r.x * bands));
+  // Kontrast um die mittlere Helligkeit, Atmen bei dramatischen Stimmungen
+  col = (col - 0.15) * uContrast + 0.15;
+  col *= 1.0 + uPulse * sin(uTime * 1.6);
 
   vec2 c = vTextureCoord - 0.5;
-  col *= 1.0 - dot(c, c) * 1.3;
+  col *= 1.0 - dot(c, c) * uVignette;
   finalColor = vec4(col, 1.0);
 }
 `;
 
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+
+function cloneMood(m: MoodDef): MoodDef {
+  return { ...m, deep: [...m.deep], mid: [...m.mid], accent: [...m.accent] };
+}
+
+/** Mischt eine Hex Farbe (0xRRGGBB) anteilig in einen RGB Wert 0 bis 1. */
+function tintTo(base: [number, number, number], hex: number, mix: number, dark: number): [number, number, number] {
+  const rgb = [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255].map((v) => (v / 255) * dark);
+  return [lerp(base[0], rgb[0], mix), lerp(base[1], rgb[1], mix), lerp(base[2], rgb[2], mix)];
+}
+
 export class Background extends Graphics {
   private filter: Filter;
-  private time = 0;
+  /** Phase der Animation, läuft mit dem Tempo der aktuellen Stimmung */
+  private phase = 0;
+  private cur: MoodDef = cloneMood(MOODS.menu);
+  private target: MoodDef = cloneMood(MOODS.menu);
 
   constructor() {
     super();
     this.filter = Filter.from({
-      gl: { vertex, fragment, name: 'alatro-bg' },
+      gl: { vertex: FILTER_VERTEX, fragment, name: 'alatro-bg' },
       resources: {
         bgUniforms: {
           uTime: { value: 0, type: 'f32' },
           uRes: { value: new Float32Array([1, 1]), type: 'vec2<f32>' },
+          uDeep: { value: new Float32Array(this.cur.deep), type: 'vec3<f32>' },
+          uMid: { value: new Float32Array(this.cur.mid), type: 'vec3<f32>' },
+          uAccent: { value: new Float32Array(this.cur.accent), type: 'vec3<f32>' },
+          uContrast: { value: this.cur.contrast, type: 'f32' },
+          uVignette: { value: this.cur.vignette, type: 'f32' },
+          uPulse: { value: this.cur.pulse, type: 'f32' },
         },
       },
     });
     this.filters = [this.filter];
+  }
+
+  /** Wechselt weich zur Stimmung. Bei Bossen färbt die Bossfarbe die Stimmung leicht. */
+  setMood(mood: BgMood, bossColor?: number) {
+    const t = cloneMood(MOODS[mood]);
+    if (mood === 'boss' && bossColor !== undefined) {
+      t.mid = tintTo(t.mid, bossColor, BOSS_TINT_MIX, 0.45);
+      t.accent = tintTo(t.accent, bossColor, BOSS_TINT_MIX * 0.5, 0.3);
+    }
+    this.target = t;
   }
 
   resize(w: number, h: number) {
@@ -92,7 +111,27 @@ export class Background extends Graphics {
   }
 
   update(deltaMS: number) {
-    this.time += deltaMS / 1000;
-    this.filter.resources.bgUniforms.uniforms.uTime = this.time;
+    const dt = deltaMS / 1000;
+    const k = Math.min(1, dt / MOOD_FADE_S);
+    const c = this.cur;
+    const t = this.target;
+    for (let i = 0; i < 3; i++) {
+      c.deep[i] = lerp(c.deep[i], t.deep[i], k);
+      c.mid[i] = lerp(c.mid[i], t.mid[i], k);
+      c.accent[i] = lerp(c.accent[i], t.accent[i], k);
+    }
+    c.speed = lerp(c.speed, t.speed, k);
+    c.contrast = lerp(c.contrast, t.contrast, k);
+    c.vignette = lerp(c.vignette, t.vignette, k);
+    c.pulse = lerp(c.pulse, t.pulse, k);
+    this.phase += dt * c.speed;
+    const u = this.filter.resources.bgUniforms.uniforms;
+    u.uTime = this.phase;
+    u.uDeep.set(c.deep);
+    u.uMid.set(c.mid);
+    u.uAccent.set(c.accent);
+    u.uContrast = c.contrast;
+    u.uVignette = c.vignette;
+    u.uPulse = c.pulse;
   }
 }
