@@ -6,13 +6,18 @@
  * Funktionen, die die Engine noch nicht kann, werfen "Noch nicht implementiert".
  * Wenn die Engine wächst, wird nur dieser Adapter angepasst, die Tests bleiben stabil.
  */
+import '../../src/core/index';
 import type { Card, Rank, Suit } from '../../src/core/cards';
-import { containsHand, evaluateHand } from '../../src/core/handEval';
-import { initialHandLevels, type HandLevels, type HandType } from '../../src/core/hands';
-import { JOKER_BY_ID, type Effect, type JokerDef, type ScoreContext } from '../../src/core/jokers';
+import { containsHand, detectHand } from '../../src/core/handEval';
+import { handDisplayName, initialHandLevels, levelUpAll as engineLevelUpAll, type HandLevels, type HandType } from '../../src/core/hands';
+import { registerJokers, unregisterJoker, type JokerContext, type JokerDef } from '../../src/core/jokers';
 import { scoreHand } from '../../src/core/scoring';
-import { anteBase, blindTarget, type BlindKind } from '../../src/core/blinds';
-import { computeEarnings, newRun, sellValue } from '../../src/core/run';
+import { baseTarget as engineBaseTarget, blindTarget, type BlindKind } from '../../src/core/blinds';
+import { computeEarnings, defaultRules, interestFor, newRun } from '../../src/core/run';
+import { RngStreams } from '../../src/core/rng';
+import { buyPrice as engineBuyPrice, rerollCosts as engineRerollCosts, rollRarity as engineRollRarity, sellValue } from '../../src/core/shop';
+import { ENHANCEMENTS, SEALS } from '../../src/data/modifiers';
+import type { Effect } from '../../src/core/types';
 
 export function notYet(feature: string): never {
   throw new Error(`Noch nicht implementiert: ${feature}`);
@@ -20,7 +25,7 @@ export function notYet(feature: string): never {
 
 // ─────────────────────────────────────────────── Karten
 
-/** Modifikator einer Spielkarte als reine Effektbeschreibung (eigene Typen folgen in M4). */
+/** Modifikator einer Spielkarte als reine Effektbeschreibung. */
 export interface TestModifier {
   /** wirkt, wenn die Karte gewertet wird */
   scored?: Effect;
@@ -32,17 +37,34 @@ export interface TestModifier {
   rankless?: boolean;
 }
 
-export type TestCard = Card & { mods?: TestModifier[] };
+export type TestCard = Card;
 
 let nextId = 10_000;
+let modSeq = 0;
 const RANKS: Record<string, number> = { J: 11, Q: 12, K: 13, A: 14 };
 
-/** "AS", "10H", "KD", "9C" */
+/**
+ * "AS", "10H", "KD", "9C". Test Modifikatoren werden als temporäre Enhancement
+ * bzw. Seal Definitionen registriert.
+ */
 export function c(spec: string, mods?: TestModifier[]): TestCard {
   const suit = spec.slice(-1) as Suit;
   const r = spec.slice(0, -1);
   const rank = (RANKS[r] ?? Number(r)) as Rank;
-  return { id: nextId++, suit, rank, ...(mods ? { mods } : {}) };
+  const card: Card = { id: nextId++, suit, rank };
+  for (const m of mods ?? []) {
+    if (m.scored || m.held || m.rankless) {
+      const id = `__test_enh_${modSeq++}`;
+      ENHANCEMENTS[id] = { id, name: id, description: '', scored: m.scored, held: m.held, rankless: m.rankless };
+      card.enhancement = id;
+    }
+    if (m.retrigger) {
+      const id = `__test_seal_${modSeq++}`;
+      SEALS[id] = { id, name: id, description: '', retrigger: m.retrigger };
+      card.seal = id;
+    }
+  }
+  return card;
 }
 
 export const cs = (s: string): TestCard[] => s.trim().split(/\s+/).map((x) => c(x));
@@ -53,6 +75,7 @@ export type TestPhase = 'main' | 'scored' | 'held' | 'retrigger';
 
 export interface TestJoker {
   phase: TestPhase;
+  /** Rückgabe: Effekt, oder bei retrigger die Anzahl zusätzlicher Auswertungen */
   calc: (ctx: TestCtx) => Effect | number | void;
 }
 
@@ -62,7 +85,7 @@ export interface TestCtx {
   played: Card[];
   held: Card[];
   handsLeft: number;
-  /** Index der Karte unter den Scoring Cards (nur scored/retrigger) */
+  /** Index der Karte unter den Scoring Cards (nur gespielte Karten) */
   index?: number;
 }
 
@@ -97,53 +120,43 @@ export interface ScoreOut {
 
 let jokerSeq = 0;
 
-export function score(setup: ScoreSetup): ScoreOut {
-  const allCards = [...setup.played, ...(setup.held ?? [])];
-  if (allCards.some((x) => x.mods?.length)) notYet('Karten Modifikatoren');
-  if (setup.rules && Object.values(setup.rules).some(Boolean)) notYet('Erkennungsregeln (Four Fingers, Shortcut, Splash)');
-  if (setup.boss && Object.values(setup.boss).some(Boolean)) notYet('Boss Modifikatoren im Scoring');
-  if (setup.balance) notYet('Balance Regel (Chips und Mult mitteln)');
+function toEngineJoker(tj: TestJoker): JokerDef {
+  const id = `__test_joker_${jokerSeq++}`;
+  return {
+    id, name: id, rarity: 'common', cost: 1, config: {}, description: '', copyCompat: true,
+    calculate: (ctx: JokerContext) => {
+      if (ctx.phase !== tj.phase) return;
+      const v = tj.calc({ card: ctx.card, scoring: ctx.scoring, played: ctx.played, held: ctx.held, handsLeft: ctx.handsLeft, index: ctx.index });
+      if (typeof v === 'number') return v ? { retrigger: v } : undefined;
+      return v ?? undefined;
+    },
+  };
+}
 
-  const levels = { ...initialHandLevels(), ...setup.levels };
-  const handsLeft = setup.handsLeft ?? 3;
-  const ids: string[] = [];
-  for (const tj of setup.jokers ?? []) {
-    if (tj.phase === 'retrigger') notYet('Retrigger durch Jokers');
-    const id = `__test_${jokerSeq++}`;
-    const wrap = (v: Effect | number | void): Effect | undefined => (typeof v === 'number' ? undefined : v ?? undefined);
-    const toCtx = (ctx: ScoreContext, card?: Card): TestCtx => ({
-      card,
-      scoring: ctx.scoring,
-      played: ctx.played,
-      held: ctx.held,
-      handsLeft: ctx.handsLeft,
-      index: card ? ctx.scoring.indexOf(card) : undefined,
-    });
-    const def: JokerDef = { id, name: id, description: '', rarity: 'common', cost: 1 };
-    if (tj.phase === 'main') def.onIndependent = (ctx) => wrap(tj.calc(toCtx(ctx)));
-    if (tj.phase === 'scored') def.onCardScored = (card, ctx) => wrap(tj.calc(toCtx(ctx, card)));
-    if (tj.phase === 'held') def.onHeldInHand = (card, ctx) => wrap(tj.calc(toCtx(ctx, card)));
-    JOKER_BY_ID[id] = def;
-    ids.push(id);
-  }
+export function score(setup: ScoreSetup): ScoreOut {
+  const defs = (setup.jokers ?? []).map(toEngineJoker);
+  registerJokers(defs);
   try {
     const r = scoreHand({
       played: setup.played,
       held: setup.held ?? [],
-      handLevels: levels,
-      jokers: ids.map((defId, i) => ({ uid: i + 1, defId, vars: {} })),
+      handLevels: { ...initialHandLevels(), ...setup.levels },
+      jokers: defs.map((d, i) => ({ uid: i + 1, defId: d.id, vars: {} })),
       money: setup.money ?? 0,
-      handsLeft,
+      handsLeft: setup.handsLeft ?? 3,
       discardsLeft: 3,
+      rules: setup.rules,
+      boss: setup.boss,
+      balance: setup.balance,
     });
     return { type: r.handType, scoringCount: r.scoring.length, chips: r.chips, mult: r.mult, total: r.total, money: r.money };
   } finally {
-    for (const id of ids) delete JOKER_BY_ID[id];
+    for (const d of defs) unregisterJoker(d.id);
   }
 }
 
 export function detect(cards: Card[]) {
-  return evaluateHand(cards);
+  return detectHand(cards);
 }
 
 export function contains(cards: Card[], type: HandType): boolean {
@@ -151,57 +164,50 @@ export function contains(cards: Card[], type: HandType): boolean {
 }
 
 /** Anzeigename, z. B. "Royal Flush" für einen Straight Flush 10 bis Ace. */
-export function displayName(_cards: Card[]): string {
-  return notYet('Anzeigename Royal Flush');
+export function displayName(cards: Card[]): string {
+  const d = detectHand(cards);
+  return handDisplayName(d.type, d.scoring);
 }
 
 /** Alle Hände um ein Level erhöhen (Effekt eines Consumables). */
-export function levelUpAll(_levels: HandLevels): HandLevels {
-  return notYet('Level Up für alle Hände');
+export function levelUpAll(levels: HandLevels): HandLevels {
+  return engineLevelUpAll(levels);
 }
 
 // ─────────────────────────────────────────────── Wirtschaft
 
 export function interest(money: number, cap = 5): number {
-  if (cap !== 5) notYet('Konfigurierbarer Zinsdeckel');
-  const run = newRun('INTEREST');
-  run.money = money;
-  run.round = { blind: 'small', target: 1, score: 1, handsLeft: 0, discardsLeft: 0, drawPile: [], hand: [], discardPile: [] };
-  return computeEarnings(run).interest;
+  return interestFor(money, { ...defaultRules(), interestCap: cap });
 }
 
 export function payout(o: { blind: BlindKind; handsLeft: number; moneyBefore: number; smallBlindReward?: number }): number {
-  if (o.smallBlindReward !== undefined) notYet('Stake Regel: Small Blind ohne Belohnung');
   const run = newRun('PAYOUT');
   run.money = o.moneyBefore;
+  if (o.smallBlindReward !== undefined) run.rules.smallBlindReward = o.smallBlindReward;
   run.round = { blind: o.blind, target: 1, score: 1, handsLeft: o.handsLeft, discardsLeft: 0, drawPile: [], hand: [], discardPile: [] };
   return computeEarnings(run).total;
 }
 
-export function buyPrice(_o: { base: number; editionSurcharge: number; discount: number }): number {
-  return notYet('Preisformel mit Aufschlag und Rabatt');
+export function buyPrice(o: { base: number; editionSurcharge: number; discount: number }): number {
+  return engineBuyPrice(o);
 }
 
 export function sell(cost: number): number {
   return sellValue(cost);
 }
 
-export function rerollCosts(_start: number, _count: number): number[] {
-  return notYet('Reroll Kosten');
+export function rerollCosts(start: number, count: number): number[] {
+  return engineRerollCosts(start, count);
 }
 
 // ─────────────────────────────────────────────── Blinds
 
 export function baseTarget(ante: number, scaling: 1 | 2 | 3 = 1): number {
-  if (scaling !== 1) notYet('Skalierung 2 und 3');
-  return anteBase(ante);
+  return engineBaseTarget(ante, scaling);
 }
 
 export function target(o: { ante: number; kind: BlindKind; scaling?: 1 | 2 | 3; bossFactor?: number; deckFactor?: number }): number {
-  if ((o.scaling ?? 1) !== 1) notYet('Skalierung 2 und 3');
-  if (o.bossFactor !== undefined) notYet('Boss spezifischer Faktor');
-  if (o.deckFactor !== undefined) notYet('Deck Faktor auf Blind Ziele');
-  return blindTarget(o.ante, o.kind);
+  return blindTarget(o.ante, o.kind, { scaling: o.scaling, bossFactor: o.bossFactor, deckFactor: o.deckFactor });
 }
 
 // ─────────────────────────────────────────────── Zufall
@@ -209,13 +215,20 @@ export function target(o: { ante: number; kind: BlindKind; scaling?: 1 | 2 | 3; 
 export interface StreamRng {
   next(key: string): number;
   chance(num: number, den: number, key: string): boolean;
+  /** Engine Objekt für Funktionen wie rollRarity */
+  engine: RngStreams;
 }
 
-export function streamRng(_seed: string, _probMult = 1): StreamRng {
-  return notYet('Zufallsströme pro Key mit chance()');
+export function streamRng(seed: string, probMult = 1): StreamRng {
+  const engine = RngStreams.create(seed);
+  return {
+    engine,
+    next: (key) => engine.next(key),
+    chance: (num, den, key) => engine.chance(num, den, key, probMult),
+  };
 }
 
 export type Rarity = 'common' | 'uncommon' | 'rare';
-export function rollRarity(_rng: StreamRng, _key: string): Rarity {
-  return notYet('Rarity Wurf');
+export function rollRarity(rng: StreamRng, key: string): Rarity {
+  return engineRollRarity(rng.engine, key) as Rarity;
 }
