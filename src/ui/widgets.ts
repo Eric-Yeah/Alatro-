@@ -3,10 +3,17 @@ import { sfx } from './audio';
 import { C, FONT, FONT_BODY, STYLE, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
+/** Helle Textfarben bekommen einen harten dunklen Schatten (ein Schriftpixel), wie bei Pixel Spielen. Dunkler Text bleibt ohne. */
+function hardShadow(color: number, size: number): TextStyleOptions['dropShadow'] {
+  const lum = (((color >> 16) & 255) * 0.299 + ((color >> 8) & 255) * 0.587 + (color & 255) * 0.114) / 255;
+  if (lum < 0.4) return false;
+  return { color: 0x070b11, alpha: 1, blur: 0, angle: Math.PI / 2, distance: Math.max(1, size / 9) };
+}
+
 export function label(text: string, size: number, color = C.text, extra: Partial<TextStyleOptions> = {}): Text {
   const t = new Text({
     text,
-    style: { fontFamily: FONT, fontSize: size, fill: color, fontWeight: '800', ...extra },
+    style: { fontFamily: FONT, fontSize: size, fill: color, fontWeight: '800', dropShadow: hardShadow(color, size), ...extra },
   });
   t.anchor.set(0.5);
   return t;

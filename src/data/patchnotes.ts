@@ -16,6 +16,7 @@ export const PATCH_NOTES: readonly PatchNote[] = [
       'Neu: Klare, flache Flächen mit harten Konturen und dünnen Leuchtlinien wie bei einem Hologramm.',
       'Neu: Hintergrund aus harten Farbstufen mit weichem Leuchten und kleinen Sternen.',
       'Neu: Hologramm Effekt mit kühlem Farbton, feinem Farbsaum, leichten Scanlines und einem Lichtband, das langsam über das Bild wandert. Ohne Wölbung und Rauschen, das Bild bleibt scharf. Abschaltbar in den Optionen.',
+      'Karten (Spielkarten, Joker, Consumables) behalten ihr bisheriges Design.',
       'Text wird bei jeder Fenstergröße scharf gezeichnet.',
     ],
   },

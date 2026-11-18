@@ -20,9 +20,10 @@ export const C = {
   green: 0x3fbf7f,
   /** Hologramm Farbe: Leuchtlinien in Panels */
   holo: 0x5fe3ff,
-  cardFace: 0xfbf7ee,
-  cardEdge: 0x0b1018,
-  cardBack: 0x2a56b8,
+  /** Kartenfarben im alten Design */
+  cardFace: 0xf6f0e1,
+  cardEdge: 0x2b2540,
+  cardBack: 0x5b3fa8,
 };
 
 /** Flacher Stil: harte Kanten, feste Konturen, versetzter voller Schatten, keine Verläufe. */

@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { CONSUMABLE_BY_ID, type ConsumableType } from '../data/consumables';
-import { C, CONSUMABLE_COLORS, FONT } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY } from './theme';
 
 export const CONSUMABLE_W = 104;
 export const CONSUMABLE_H = 140;
@@ -35,13 +35,13 @@ export class ConsumableView extends Container {
     const w = CONSUMABLE_W, h = CONSUMABLE_H;
     const artH = h - 50;
     const g = new Graphics()
-      .roundRect(-w / 2, -h / 2 + 5, w, h, 8).fill({ color: 0x000000, alpha: 0.4 })
-      .roundRect(-w / 2, -h / 2, w, h, 8).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
-      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, artH, 4).fill(color).stroke({ width: 2, color: C.cardEdge });
+      .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
+      .roundRect(-w / 2, -h / 2, w, h, 10).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
+      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, artH, 6).fill(color);
     const art = symbol(def.type, -h / 2 + 7 + artH / 2);
     const name = new Text({
       text: def.name,
-      style: { fontFamily: FONT, fontSize: 13, fontWeight: '800', fill: C.cardEdge, align: 'center', wordWrap: true, wordWrapWidth: w - 8 },
+      style: { fontFamily: FONT_BODY, fontSize: 13, fontWeight: '800', fill: C.cardEdge, align: 'center', wordWrap: true, wordWrapWidth: w - 8 },
     });
     name.anchor.set(0.5);
     name.y = h / 2 - 22;
