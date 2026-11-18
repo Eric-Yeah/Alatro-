@@ -1,4 +1,4 @@
-# Übergabe: Stand nach M5, M6 teilweise
+# Übergabe: Stand nach M5, M6 teilweise, klarer Pixel Stil (Version 0.3.0)
 
 Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
@@ -66,7 +66,7 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 
 ## Klarer Grafikstil
 
-Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. CRT ist standardmäßig aus. **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen.
+Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. CRT ist standardmäßig aus. Die Schrift ist eine eigene Pixel Schrift (`tools/pixelfont.py` erzeugt `src/assets/alatro-pixel.ttf`, geladen in `main.ts` vor dem ersten Text, `FONT` in `ui/theme.ts`). Neue Sonderzeichen in der UI zuerst in `tools/pixelfont.py` als Glyphe zeichnen (`pip install fonttools`, `python3 tools/pixelfont.py`). **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen.
 
 ## Hinweise für M6 (Rest)
 

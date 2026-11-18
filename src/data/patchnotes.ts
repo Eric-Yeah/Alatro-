@@ -8,6 +8,18 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.3.0',
+    date: '18.11.2026',
+    title: 'Klarer Pixel Stil',
+    items: [
+      'Neu: Eigene Pixel Schrift für das ganze Spiel, inklusive Umlauten und Kartensymbolen.',
+      'Neu: Klarer, flacher Grafikstil mit harten Konturen statt weicher Verläufe.',
+      'Neu: Hintergrund in harten Farbstufen mit kleinen Sternen.',
+      'Der CRT Effekt ist jetzt standardmäßig aus, weil er das Bild weich gemacht hat. In den Optionen lässt er sich wieder einschalten.',
+      'Text wird bei jeder Fenstergröße scharf gezeichnet.',
+    ],
+  },
+  {
     version: '0.2.0',
     date: '18.11.2026',
     title: 'Tempo, Anleitung und Patch Notes',

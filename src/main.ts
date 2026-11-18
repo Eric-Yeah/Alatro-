@@ -1,4 +1,5 @@
 import './core/index';
+import './style.css';
 import { Application, Text, Ticker } from 'pixi.js';
 import { QUALITY_PROFILE, FPS_WINDOW_MS } from './data/juice';
 import { getSettings, onSettings } from './settings';
@@ -13,6 +14,8 @@ import { FONT } from './ui/theme';
 import { computeView, isPhone } from './ui/viewport';
 
 async function main() {
+  // Schrift laden, bevor der erste Text gezeichnet wird (sonst bleibt die Systemschrift im Cache)
+  try { await document.fonts.load('20px "Alatro Pixel"'); } catch { /* Rückfall auf Systemschrift */ }
   const app = new Application();
   await app.init({
     resizeTo: window,

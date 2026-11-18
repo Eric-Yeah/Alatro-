@@ -61,7 +61,8 @@ export const RARITY_NAMES: Record<Rarity, string> = {
   legendary: 'Legendary',
 };
 
-export const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/** Eigene Pixel Schrift, Systemschrift nur als Rückfall für Zeichen, die sie nicht kennt */
+export const FONT = '"Alatro Pixel", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 export function fmt(n: number): string {
   if (n >= 1e11) return n.toExponential(2).replace('+', '');

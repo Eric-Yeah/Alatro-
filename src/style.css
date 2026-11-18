@@ -1,0 +1,8 @@
+/* Eigene Pixel Schrift (tools/pixelfont.py). Ein Schnitt für alle Stärken, damit der Browser keine unscharfe Fettschrift nachbaut. */
+@font-face {
+  font-family: 'Alatro Pixel';
+  src: url('./assets/alatro-pixel.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
