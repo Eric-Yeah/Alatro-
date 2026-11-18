@@ -1,4 +1,5 @@
 import { Filter, Graphics } from 'pixi.js';
+import { MOODS, MOOD_FADE_MS, type Mood, type MoodKey } from '../data/juice';
 
 const vertex = /* glsl */ `
 in vec2 aPosition;
@@ -28,6 +29,11 @@ in vec2 vTextureCoord;
 out vec4 finalColor;
 uniform float uTime;
 uniform vec2 uRes;
+uniform vec3 uDeep;
+uniform vec3 uMid;
+uniform vec3 uAccent;
+uniform float uBands;
+uniform float uVig;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -47,36 +53,47 @@ void main(void) {
   px = floor(px / cell) * cell;
   vec2 uv = px / uRes.y;
 
-  float t = uTime * 0.04;
+  float t = uTime * 0.04;  // uTime läuft bereits mit dem Tempo der Stimmung
   vec2 q = vec2(fbm(uv * 1.6 + t), fbm(uv * 1.6 - t + 4.2));
   vec2 r = vec2(fbm(uv * 2.0 + 3.0 * q + vec2(1.7, 9.2) + t * 1.5), fbm(uv * 2.0 + 3.0 * q + vec2(8.3, 2.8) - t));
   float f = fbm(uv * 1.4 + 2.5 * r);
 
-  float bands = floor(f * 7.0) / 7.0;
-  vec3 deep = vec3(0.075, 0.055, 0.14);
-  vec3 plum = vec3(0.24, 0.10, 0.30);
-  vec3 teal = vec3(0.06, 0.26, 0.30);
-  vec3 col = mix(deep, plum, smoothstep(0.25, 0.75, bands));
-  col = mix(col, teal, smoothstep(0.55, 0.95, r.x * bands));
+  float bands = floor(f * uBands) / uBands;
+  vec3 col = mix(uDeep, uMid, smoothstep(0.25, 0.75, bands));
+  col = mix(col, uAccent, smoothstep(0.55, 0.95, r.x * bands));
 
   vec2 c = vTextureCoord - 0.5;
-  col *= 1.0 - dot(c, c) * 1.3;
+  col *= 1.0 - dot(c, c) * uVig;
   finalColor = vec4(col, 1.0);
 }
 `;
 
+const vec = (a: number[]) => new Float32Array(a);
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+
 export class Background extends Graphics {
   private filter: Filter;
   private time = 0;
+  private cur: Mood = structuredClone(MOODS.menu);
+  private from: Mood = this.cur;
+  private to: Mood = this.cur;
+  private fade = 1;
+  private key: MoodKey = 'menu';
 
   constructor() {
     super();
+    const m = this.cur;
     this.filter = Filter.from({
       gl: { vertex, fragment, name: 'alatro-bg' },
       resources: {
         bgUniforms: {
           uTime: { value: 0, type: 'f32' },
           uRes: { value: new Float32Array([1, 1]), type: 'vec2<f32>' },
+          uDeep: { value: vec(m.deep), type: 'vec3<f32>' },
+          uMid: { value: vec(m.mid), type: 'vec3<f32>' },
+          uAccent: { value: vec(m.accent), type: 'vec3<f32>' },
+          uBands: { value: m.bands, type: 'f32' },
+          uVig: { value: m.vignette, type: 'f32' },
         },
       },
     });
@@ -91,8 +108,34 @@ export class Background extends Graphics {
     u.uRes[1] = h;
   }
 
+  /** Blendet sanft zur Stimmung `key` über (Small ruhig, Big kräftig, Boss dramatisch, Shop warm) */
+  setMood(key: MoodKey) {
+    if (key === this.key) return;
+    this.key = key;
+    this.from = structuredClone(this.cur);
+    this.to = MOODS[key];
+    this.fade = 0;
+  }
+
   update(deltaMS: number) {
-    this.time += deltaMS / 1000;
-    this.filter.resources.bgUniforms.uniforms.uTime = this.time;
+    if (this.fade < 1) {
+      this.fade = Math.min(1, this.fade + deltaMS / MOOD_FADE_MS);
+      const k = this.fade * this.fade * (3 - 2 * this.fade);
+      const c = this.cur;
+      for (const f of ['deep', 'mid', 'accent'] as const) {
+        for (let i = 0; i < 3; i++) c[f][i] = lerp(this.from[f][i], this.to[f][i], k);
+      }
+      c.speed = lerp(this.from.speed, this.to.speed, k);
+      c.bands = lerp(this.from.bands, this.to.bands, k);
+      c.vignette = lerp(this.from.vignette, this.to.vignette, k);
+    }
+    this.time += (deltaMS / 1000) * this.cur.speed;
+    const u = this.filter.resources.bgUniforms.uniforms;
+    u.uTime = this.time;
+    u.uDeep.set(this.cur.deep);
+    u.uMid.set(this.cur.mid);
+    u.uAccent.set(this.cur.accent);
+    u.uBands = this.cur.bands;
+    u.uVig = this.cur.vignette;
   }
 }

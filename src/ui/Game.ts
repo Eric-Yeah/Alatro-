@@ -19,6 +19,10 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { STAKES } from '../data/stakes';
 import { loadRun, saveRun } from '../save';
+import { getSettings, updateSettings } from '../settings';
+import { FLASH_MS, type MoodKey } from '../data/juice';
+import { sfx } from './audio';
+import { lossShake, screenFx, shakeTier, xMultShake } from './screenFx';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
@@ -49,6 +53,9 @@ type SortMode = 'rank' | 'suit';
 
 export class Game {
   readonly root = new Container();
+  /** Wird mit der Stimmung des Hintergrunds aufgerufen (main.ts verbindet den Shader) */
+  onMood: (key: MoodKey) => void = () => {};
+  private flashGfx = new Graphics().rect(-200, -200, VIEW_W + 400, VIEW_H + 400).fill(0xffffff);
 
   private run: RunState | null = null;
   private busy = false;
@@ -106,7 +113,10 @@ export class Game {
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
     this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.overlayLayer);
+    this.flashGfx.alpha = 0;
+    this.flashGfx.eventMode = 'none';
     this.buildTable();
+    this.fxLayer.addChild(this.flashGfx);
     this.showMainMenu();
   }
 
@@ -278,6 +288,7 @@ export class Game {
     const run = this.run;
     if (!run) return;
     const blind = BLIND_KINDS[Math.min(run.blindIndex, 2)];
+    this.updateMood();
     const r = run.round;
     const boss = blind === 'boss' ? (r ? activeBoss(run) : run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined) : undefined;
     this.blindBg.clear()
@@ -309,6 +320,21 @@ export class Game {
     for (const v of this.cardViews.values()) v.setDebuffed(isCardDebuffed(run, v.card));
     this.updateButtons();
     if (!this.busy) this.updatePreview();
+  }
+
+  /** Hintergrund Stimmung nach Phase und Blind (Small ruhig, Big kräftig, Boss dramatisch, Shop warm) */
+  private updateMood() {
+    const run = this.run;
+    if (!run) return this.onMood('menu');
+    if (run.phase === 'shop' || run.phase === 'pack') return this.onMood('shop');
+    this.onMood(BLIND_KINDS[Math.min(run.blindIndex, 2)]);
+  }
+
+  /** Heller Blitz über der ganzen Szene */
+  private flash(alpha: number) {
+    if (alpha <= 0) return;
+    this.flashGfx.alpha = alpha;
+    tween(this.flashGfx, { alpha: 0 }, FLASH_MS);
   }
 
   private updateButtons() {
@@ -372,6 +398,7 @@ export class Game {
       return;
     }
     v.selected = !v.selected;
+    sfx(v.selected ? 'select' : 'deselect');
     tween(v, { y: v.homeY - (v.selected ? 40 : 0) }, 160, easeOutBack);
     this.updatePreview();
     this.updateButtons();
@@ -421,6 +448,7 @@ export class Game {
     // layoutHand(0) setzt die Zielpositionen, die neuen Karten fliegen vom Stapel dorthin
     views.forEach((v) => v.position.set(DECK_X, DECK_Y));
     for (const v of views) {
+      sfx('deal');
       tween(v, { x: v.homeX, y: v.homeY, rotation: v.homeRot }, 320, easeInOutCubic);
       tween(v, { 'scale.x': 1, 'scale.y': 1 }, 320);
       await wait(60);
@@ -574,6 +602,7 @@ export class Game {
     const run = this.run!;
     if (this.busy || !sellJokerAction(run, uid)) return;
     this.closeTooltip();
+    sfx('sell');
     this.syncJokers();
     juice(this.moneyText);
     saveRun(run);
@@ -663,6 +692,7 @@ export class Game {
     const run = this.run!;
     if (this.busy || !sellConsumable(run, uid)) return;
     this.closeTooltip();
+    sfx('sell');
     this.syncConsumables();
     juice(this.moneyText);
     saveRun(run);
@@ -682,6 +712,7 @@ export class Game {
   /** Gemeinsame Nachbereitung nach dem Benutzen: Anzeige, Meldung, Speichern. */
   private afterConsumableUse(res: UseResult) {
     const run = this.run!;
+    sfx('use');
     this.syncConsumables();
     this.syncJokers();
     if (run.round && (res.changed.length || res.destroyed.length || res.created.length)) this.rebuildHand();
@@ -720,6 +751,7 @@ export class Game {
     this.updateButtons();
 
     const result = playHand(run, sel.map((v) => v.card.id));
+    sfx('play');
     const r = run.round;
     this.handsText.text = String(r.handsLeft);
     juice(this.handsText);
@@ -743,7 +775,7 @@ export class Game {
 
     let step = 0;
     for (const ev of result.events.slice(1)) {
-      await this.animateEvent(ev);
+      await this.animateEvent(ev, step);
       await wait(Math.max(90, 280 - step * 14));
       step++;
     }
@@ -753,6 +785,10 @@ export class Game {
     this.totalText.text = fmt(result.total);
     this.totalText.alpha = 1;
     this.totalText.scale.set(0.3);
+    sfx('total');
+    const tier = shakeTier(result.total, r.target);
+    screenFx.shake(tier.amplitude, tier.durationMs);
+    this.flash(tier.flash);
     await tween(this.totalText, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
     const before = r.score - result.total;
     await this.countUp(this.scoreText, before, r.score, 500);
@@ -787,7 +823,7 @@ export class Game {
     this.refreshInfo();
   }
 
-  private async animateEvent(ev: ScoreEvent) {
+  private async animateEvent(ev: ScoreEvent, step = 0) {
     let target: Container | undefined;
     if (ev.source.kind === 'card' || ev.source.kind === 'held') target = this.cardViews.get(ev.source.cardId);
     else if (ev.source.kind === 'joker') target = this.jokerViews.get(ev.source.jokerUid);
@@ -809,6 +845,10 @@ export class Game {
       const p = this.fxLayer.toLocal(this.multBox.getGlobalPosition());
       popup(this.fxLayer, p.x - 77, p.y - 60, ev.message, C.accent, 26);
     }
+    if (ev.chips) sfx('chip', step);
+    if (ev.mult) sfx('mult', step);
+    if (ev.xMult) { sfx('xmult', step); xMultShake(); }
+    if (ev.money) sfx('money');
     this.chipsText.text = fmt(ev.chipsTotal);
     this.multText.text = fmtMult(ev.multTotal);
     this.fitBoxText();
@@ -832,6 +872,7 @@ export class Game {
     this.busy = true;
     this.closeTooltip();
     discardHand(run, sel.map((v) => v.card.id));
+    sfx('discard');
     this.discardsText.text = String(run.round.discardsLeft);
     juice(this.discardsText);
     this.updateButtons();
@@ -861,6 +902,7 @@ export class Game {
     const by = this.run?.round?.rescuedBy;
     if (by && this.run?.phase === 'roundWon') {
       this.syncJokers();
+      sfx('rescue');
       this.toast(`${by} hat die Runde gerettet`, C.green);
     }
   }
@@ -999,9 +1041,11 @@ export class Game {
   }
 
   private showMainMenu() {
+    this.onMood('menu');
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
-    const { box } = this.modal(620, canResume ? 620 : 520, C.panelDark);
+    const boxH = canResume ? 700 : 600;
+    const { box } = this.modal(620, boxH, C.panelDark);
     const title = label('ALATRO', 110, C.text, { stroke: { color: C.mult, width: 10 }, letterSpacing: 6 });
     title.position.set(310, 130);
     const wobble = (): void => {
@@ -1024,6 +1068,21 @@ export class Game {
     const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
     coll.position.set(310, y + 100);
     box.addChild(nr, coll);
+
+    // Schnelle Optionen (Details folgen in M6)
+    const crtBtn = new Button('', 190, 52, 0x4a3f6b, () => {
+      updateSettings({ crt: !getSettings().crt });
+      crtBtn.setText(`CRT ${getSettings().crt ? 'an' : 'aus'}`);
+    }, 20);
+    crtBtn.setText(`CRT ${getSettings().crt ? 'an' : 'aus'}`);
+    crtBtn.position.set(210, boxH - 60);
+    const soundBtn = new Button('', 190, 52, 0x4a3f6b, () => {
+      updateSettings({ sound: !getSettings().sound });
+      soundBtn.setText(`Ton ${getSettings().sound ? 'an' : 'aus'}`);
+    }, 20);
+    soundBtn.setText(`Ton ${getSettings().sound ? 'an' : 'aus'}`);
+    soundBtn.position.set(410, boxH - 60);
+    box.addChild(crtBtn, soundBtn);
   }
 
   /** Sammlung aller gesehenen Inhalte, Zurück führt ins Hauptmenü */
@@ -1087,6 +1146,7 @@ export class Game {
   }
 
   private showBlindSelect() {
+    this.updateMood();
     const run = this.run!;
     this.clearScreen();
     this.refreshInfo();
@@ -1189,6 +1249,7 @@ export class Game {
 
   private showRoundWon() {
     const run = this.run!;
+    sfx('roundWon');
     const e = computeEarnings(run);
     const lines: [string, number][] = [
       ['Blind Belohnung', e.blindReward],
@@ -1237,6 +1298,7 @@ export class Game {
   }
 
   private showShop() {
+    this.updateMood();
     this.clearOverlay();
     this.renderShop(true);
   }
@@ -1253,6 +1315,7 @@ export class Game {
     this.shopView = buildShop(run, {
       buyCard: (i) => {
         if (buyCard(run, i)) {
+          sfx('buy');
           this.syncJokers();
           this.syncConsumables();
           juice(this.moneyText);
@@ -1265,6 +1328,7 @@ export class Game {
       },
       buyPack: (i) => {
         if (buyPack(run, i)) {
+          sfx('buy');
           saveRun(run);
           this.renderShop();
           this.showPack();
@@ -1272,12 +1336,16 @@ export class Game {
       },
       buyVoucher: () => {
         if (buyVoucher(run)) {
+          sfx('buy');
           juice(this.moneyText);
           after();
         }
       },
       reroll: () => {
-        if (reroll(run)) after();
+        if (reroll(run)) {
+          sfx('reroll');
+          after();
+        }
       },
       nextRound: () => {
         leaveShop(run);
@@ -1400,6 +1468,8 @@ export class Game {
   private showGameOver() {
     const run = this.run!;
     saveRun(null);
+    sfx('lose');
+    lossShake();
     const { box } = this.modal(560, 440, C.panelDark);
     const head = label('Verloren', 64, C.mult);
     head.position.set(280, 80);
@@ -1415,6 +1485,8 @@ export class Game {
   }
 
   private showRunWon() {
+    sfx('win');
+    this.flash(0.4);
     const { box } = this.modal(620, 440, C.panelDark);
     const head = label('Gewonnen!', 72, C.money, { stroke: { color: C.mult, width: 8 } });
     head.position.set(310, 90);
