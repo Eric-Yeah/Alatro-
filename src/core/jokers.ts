@@ -139,7 +139,7 @@ export function allJokers(): JokerDef[] {
 
 /** Beschreibung mit eingesetzten Werten, z. B. "+{mult} Mult" wird "+4 Mult". */
 export function jokerDescription(def: JokerDef, inst?: JokerInstance): string {
-  const values: Record<string, number> = { ...def.config, ...(def.startVars ?? {}), ...(inst?.vars ?? {}) };
+  const values: Record<string, number> = { ...(def.passive ?? {}), ...def.config, ...(def.startVars ?? {}), ...(inst?.vars ?? {}) };
   return def.description.replace(/\{(\w+)\}/g, (_, k) => (k in values ? fmtValue(values[k]) : `{${k}}`));
 }
 
