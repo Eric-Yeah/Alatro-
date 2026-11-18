@@ -87,3 +87,6 @@ export const CONSUMABLE_COLORS: Record<ConsumableType, number> = {
   elixier: 0x2f9f7a,
   omen: 0x7a2fa8,
 };
+
+/** Handy: kürzere Bildschirmseite (CSS Pixel) bis zu dieser Grenze zählt als Handy. */
+export const PHONE_MAX_SHORT_SIDE = 600;

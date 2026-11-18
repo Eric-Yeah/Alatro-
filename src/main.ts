@@ -8,7 +8,8 @@ import { sfx } from './ui/audio';
 import { CrtFilter } from './ui/crt';
 import { Game } from './ui/Game';
 import { FpsMeter } from './ui/perf';
-import { FONT, VIEW_H, VIEW_W } from './ui/theme';
+import { FONT } from './ui/theme';
+import { computeView, isPhone } from './ui/viewport';
 
 async function main() {
   const app = new Application();
@@ -62,13 +63,21 @@ async function main() {
     const h = app.screen.height;
     bg.resize(w, h);
     crt.resize(app.renderer.width, app.renderer.height, app.renderer.resolution);
-    const s = Math.min(w / VIEW_W, h / VIEW_H);
-    game.root.scale.set(s);
-    game.root.position.set((w - VIEW_W * s) / 2, (h - VIEW_H * s) / 2);
+    // Handy im Hochformat: Spielfeld wird gedreht, damit es im Querformat erscheint.
+    const t = computeView(w, h, isPhone(window.screen.width, window.screen.height));
+    game.root.rotation = t.rotation;
+    game.root.scale.set(t.scale);
+    game.root.position.set(t.x, t.y);
     fpsText.position.set(w - 8, 6);
   };
   app.renderer.on('resize', resize);
   resize();
+
+  // Android (installiert als PWA): Querformat fest anfordern, wo es erlaubt ist. iOS ignoriert das.
+  const lockLandscape = () => {
+    try { (screen.orientation as any)?.lock?.('landscape')?.catch(() => {}); } catch { /* nicht unterstützt */ }
+  };
+  window.addEventListener('pointerdown', lockLandscape, { once: true });
 
   Ticker.shared.add((t) => {
     bg.update(t.deltaMS);
