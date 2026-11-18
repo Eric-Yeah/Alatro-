@@ -27,6 +27,7 @@ import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
+import { buildHome } from './HomeView';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
@@ -72,6 +73,7 @@ export class Game {
   private playLayer = new Container();
   private handLayer = new Container();
   private fxLayer = new Container();
+  private homeLayer = new Container();
   private overlayLayer = new Container();
   private flashLayer = new Container();
   private screenLayer = new Container();
@@ -120,7 +122,7 @@ export class Game {
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
-    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.overlayLayer, this.flashLayer);
+    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.flashLayer);
     this.fx = new StageFx(this.root, this.flashLayer);
     this.buildTable();
     this.showMainMenu();
@@ -979,6 +981,7 @@ export class Game {
   }
 
   private beginNewRun(deckId: string, stakeId: string) {
+    this.hideHome();
     this.clearCardViews();
     this.clearScreen();
     this.run = createRun({ seed: this.setupSeed || randomSeed(), deckId, stakeId });
@@ -991,6 +994,7 @@ export class Game {
   }
 
   private resume(run: RunState) {
+    this.hideHome();
     this.clearCardViews();
     this.clearScreen();
     this.run = run;
@@ -1012,7 +1016,9 @@ export class Game {
     const { box } = this.modal(760, 700, C.panelDark);
     const head = label('Neuer Run', 44, C.text);
     head.position.set(380, 50);
-    box.addChild(head);
+    const backBtn = new Button('Zurück', 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
+    backBtn.position.set(100, 50);
+    box.addChild(head, backBtn);
     const content = new Container();
     box.addChild(content);
 
@@ -1064,44 +1070,39 @@ export class Game {
     render();
   }
 
+  /** Home Bildschirm (Vollbild). Nebenmenüs öffnen als Fenster darüber und führen per Zurück hierher. */
   private showMainMenu() {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
     this.hooks.setMood('menu');
     this.refreshSpeedBtn();
-    const { box } = this.modal(620, canResume ? 720 : 620, C.panelDark);
-    const title = label('ALATRO', 110, C.text, { stroke: { color: C.mult, width: 10 }, letterSpacing: 6 });
-    title.position.set(310, 130);
-    const wobble = (): void => {
-      if (title.destroyed) return;
-      tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic, true).then(wobble);
-    };
-    wobble();
-    const sub = label('Roguelike Poker Deckbuilder', 24, C.textDim);
-    sub.position.set(310, 215);
-    const ver = label(`Version ${APP_VERSION}`, 16, C.textDim, { fontWeight: '600' });
-    ver.position.set(310, canResume ? 700 : 600);
-    box.addChild(title, sub, ver);
-    let y = 310;
-    if (canResume) {
-      const cont = new Button(`Fortsetzen · Ante ${saved!.ante}`, 400, 76, C.chips, () => this.resume(saved!), 28);
-      cont.position.set(310, y);
-      box.addChild(cont);
-      y += 100;
-    }
-    const nr = new Button('Neuer Run', 400, 76, C.mult, () => this.startNewRun(), 30);
-    nr.position.set(310, y);
-    const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
-    coll.position.set(310, y + 100);
-    box.addChild(nr, coll);
-    const small = (text: string, x: number, fn: () => void) => {
-      const b = new Button(text, 180, 64, 0x4a3f6b, fn, 22);
-      b.position.set(x, y + 200);
-      box.addChild(b);
-    };
-    small('Anleitung', 120, () => this.showTutorial());
-    small('Optionen', 310, () => this.showOptions());
-    small('Neuigkeiten', 500, () => this.showPatchNotes());
+    this.clearOverlay();
+    this.closeTooltip();
+    // Ist der Home Bildschirm schon sichtbar (Rückkehr aus einem Nebenmenü), bleibt er stehen
+    if (this.homeLayer.children.length > 0) return;
+    this.setTableVisible(false);
+    this.homeLayer.addChild(buildHome({
+      saved: canResume ? saved : null,
+      version: APP_VERSION,
+      actions: {
+        resume: () => this.resume(saved!),
+        newRun: () => this.startNewRun(),
+        collection: () => this.showCollection(),
+        tutorial: () => this.showTutorial(),
+        options: () => this.showOptions(),
+        patchNotes: () => this.showPatchNotes(),
+      },
+    }));
+  }
+
+  /** Spieltisch samt Karten, Jokers und Shop ausblenden, solange der Home Bildschirm offen ist */
+  private setTableVisible(visible: boolean) {
+    for (const l of [this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer]) l.visible = visible;
+  }
+
+  private hideHome() {
+    this.setTableVisible(true);
+    for (const c of [...this.homeLayer.children]) c.destroy({ children: true });
   }
 
   private refreshSpeedBtn() {

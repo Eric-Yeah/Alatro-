@@ -308,3 +308,4 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O58 | Tempo Knopf am Tisch | Zusätzlich zur Option gibt es in der Seitenleiste einen Knopf, der `SPEED_STEPS` (1x, 1,5x, 2x, 3x, 5x, 10x) durchschaltet, auch während Animationen |
 | O59 | Patch Notes | Einträge in `src/data/patchnotes.ts`, Version steht dort und in `package.json` (ein Test prüft Gleichheit). Nach einem Update erscheinen sie einmal automatisch, gemerkt unter `alatro.patchSeen.v1`. Bei jedem Release einen Eintrag ergänzen |
 | O60 | Anleitung | Texte in `src/data/tutorial.ts`. Bei Regeländerungen (Startwerte, Blinds, Shop) die Seiten mit anpassen |
+| O61 | Home Bildschirm | Eigene Gestaltung (Sterne, Kartenfächer, Titel), keine Vorlage. Der Spieltisch wird dahinter ausgeblendet statt nur abgedunkelt. Der Menü Knopf im Spiel ist bei offenen Fenstern (z. B. Blind Auswahl) nicht erreichbar, wie bisher |

@@ -8,6 +8,16 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.2.1',
+    date: '18.11.2026',
+    title: 'Home Bildschirm',
+    items: [
+      'Neu: Vollbild Home Bildschirm beim Start mit Fortsetzen, Neuer Run, Sammlung, Anleitung, Optionen und Neuigkeiten.',
+      'Fortsetzen zeigt Ante, Geld, Deck und Stake des gespeicherten Runs.',
+      'Neuer Run hat jetzt einen Zurück Knopf zum Home Bildschirm.',
+    ],
+  },
+  {
     version: '0.2.0',
     date: '18.11.2026',
     title: 'Tempo, Anleitung und Patch Notes',
