@@ -6,10 +6,11 @@ import {
   leaveShop, pickFromPack, playHand, reroll, selectBlind, sellJoker as sellJokerAction, skipBlind,
 } from '../core/game';
 import { handDisplayName } from '../core/hands';
-import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
+import { getJoker, jokerDescription, jokerPassives, jokerRules } from '../core/jokers';
 import { randomSeed } from '../core/rng';
 import {
-  BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerSellValue, type RunState,
+  BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerSellValue,
+  type JokerEventResult, type RunState,
 } from '../core/run';
 import { previewHand, type ScoreEvent } from '../core/scoring';
 import { DECKS } from '../data/decks';
@@ -279,8 +280,9 @@ export class Game {
     const reward = blindReward(run.ante, blind, run.rules.smallBlindReward);
     this.rewardText.text = reward > 0 ? 'Belohnung ' + '$'.repeat(reward) : 'Keine Belohnung';
     this.scoreText.text = fmt(r?.score ?? 0);
-    this.handsText.text = String(r?.handsLeft ?? run.hands);
-    this.discardsText.text = String(r?.discardsLeft ?? run.discards);
+    const passive = jokerPassives(run.jokers);
+    this.handsText.text = String(r?.handsLeft ?? run.hands + passive.hands);
+    this.discardsText.text = String(r?.discardsLeft ?? run.discards + passive.discards);
     this.moneyText.text = '$' + run.money;
     this.anteText.text = `${run.ante}/${FINAL_ANTE}`;
     this.roundText.text = String((run.ante - 1) * 3 + run.blindIndex + 1);
@@ -623,11 +625,13 @@ export class Game {
 
     await this.flyAway(sel);
     this.setHandDisplay('', null, 0, 0);
+    this.syncJokers();
     saveRun(run);
 
     const drawn = afterHand(run);
     saveRun(run);
     if (run.phase === 'roundWon') {
+      this.syncJokers();
       await wait(250);
       this.busy = false;
       this.showRoundWon();
@@ -686,7 +690,8 @@ export class Game {
     if (sel.length === 0 || run.round.discardsLeft <= 0) return;
     this.busy = true;
     this.closeTooltip();
-    discardHand(run, sel.map((v) => v.card.id));
+    const events = discardHand(run, sel.map((v) => v.card.id));
+    this.showJokerEvents(events);
     this.discardsText.text = String(run.round.discardsLeft);
     juice(this.discardsText);
     this.updateButtons();
@@ -727,6 +732,26 @@ export class Game {
     o.addChild(box);
     this.overlayLayer.addChild(o);
     return { o, box };
+  }
+
+  /** Popups für Joker Effekte außerhalb des Scorings (Geld, Hands, Discards, Meldungen). */
+  private showJokerEvents(events: JokerEventResult[]) {
+    for (const { uid, effect: e } of events) {
+      const v = this.jokerViews.get(uid);
+      if (!v) continue;
+      const texts: [string, number][] = [];
+      if (e.money) texts.push(['+$' + e.money, C.money]);
+      if (e.handsDelta) texts.push(['+' + e.handsDelta + ' Hand', C.chips]);
+      if (e.discardsDelta) texts.push(['+' + e.discardsDelta + ' Discard', C.mult]);
+      if (e.createJoker) texts.push(['Neuer Joker', C.accent]);
+      if (e.message) texts.push([e.message, C.accent]);
+      if (!texts.length) continue;
+      juice(v);
+      const p = this.fxLayer.toLocal(v.getGlobalPosition());
+      texts.forEach(([t, col], i) => wait(i * 180).then(() => popup(this.fxLayer, p.x, p.y + 100, t, col, 26)));
+    }
+    if (events.some((x) => x.effect.money)) juice(this.moneyText);
+    this.refreshInfo();
   }
 
   private toast(text: string, color = C.accent) {
@@ -937,7 +962,9 @@ export class Game {
     this.clearOverlay();
     this.clearScreen();
     this.clearCardViews();
-    selectBlind(run);
+    const events = selectBlind(run);
+    this.syncJokers();
+    this.showJokerEvents(events);
     this.busy = true;
     this.refreshInfo();
     await this.drawCards([...run.round!.hand]);
@@ -949,23 +976,27 @@ export class Game {
   private showRoundWon() {
     const run = this.run!;
     const e = computeEarnings(run);
-    const { box } = this.modal(580, 520, C.panelDark);
-    const head = label('Blind geschafft!', 44, C.money);
-    head.position.set(290, 60);
-    box.addChild(head);
+    const cap = run.rules.interestCap + jokerPassives(run.jokers).interestCap;
     const lines: [string, number][] = [
       ['Blind Belohnung', e.blindReward],
       [`Übrige Hands (${run.round!.handsLeft})`, e.handsBonus],
       ...(e.discardsBonus ? [[`Übrige Discards (${run.round!.discardsLeft})`, e.discardsBonus] as [string, number]] : []),
-      [`Zinsen ($1 je $${run.rules.interestPer}, max. $${run.rules.interestCap})`, e.interest],
+      [`Zinsen ($1 je $${run.rules.interestPer}, max. $${cap})`, e.interest],
+      ...e.jokers.map((x): [string, number] => [x.name, x.amount]),
     ];
+    const rowH = lines.length > 5 ? 46 : 58;
+    const h = Math.max(520, 300 + lines.length * rowH);
+    const { box } = this.modal(580, h, C.panelDark);
+    const head = label(run.round!.rescued ? 'Gerettet!' : 'Blind geschafft!', 44, C.money);
+    head.position.set(290, 60);
+    box.addChild(head);
     lines.forEach(([t, v], i) => {
       const l = label(t, 22, C.text);
       l.anchor.set(0, 0.5);
-      l.position.set(40, 150 + i * 58);
+      l.position.set(40, 150 + i * rowH);
       const r = label('$' + v, 30, C.money);
       r.anchor.set(1, 0.5);
-      r.position.set(540, 150 + i * 58);
+      r.position.set(540, 150 + i * rowH);
       l.alpha = r.alpha = 0;
       wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
       box.addChild(l, r);
@@ -988,7 +1019,7 @@ export class Game {
         this.showShop();
       }
     }, 28);
-    btn.position.set(290, 445);
+    btn.position.set(290, h - 75);
     box.addChild(btn);
   }
 

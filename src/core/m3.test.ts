@@ -453,6 +453,8 @@ describe('Gruppe 8: Spezialfälle', () => {
     afterHand(run);
     expect(run.phase).toBe('roundWon');
     expect(run.round!.rescued).toBe(true);
+    expect(run.round!.handsLeft).toBe(0);
+    expect(computeEarnings(run).handsBonus).toBe(0);
     expect(run.jokers).toHaveLength(0);
     cashOut(run);
     expect(run.phase).toBe('shop');

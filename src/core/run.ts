@@ -520,10 +520,8 @@ export function applyJokerEvents(run: RunState, results: JokerEventResult[]) {
   if (destroyed.size) run.jokers = run.jokers.filter((j) => !destroyed.has(j.uid));
   for (const { effect: e } of results) {
     run.money += e.money ?? 0;
-    if (run.round) {
-      run.round.handsLeft = Math.max(1, run.round.handsLeft + (e.handsDelta ?? 0));
-      run.round.discardsLeft = Math.max(0, run.round.discardsLeft + (e.discardsDelta ?? 0));
-    }
+    if (run.round && e.handsDelta) run.round.handsLeft = Math.max(0, run.round.handsLeft + e.handsDelta);
+    if (run.round && e.discardsDelta) run.round.discardsLeft = Math.max(0, run.round.discardsLeft + e.discardsDelta);
     if (run.shop && e.freeRerolls) run.shop.freeRerolls += e.freeRerolls;
     if (e.createJoker && canAddJoker(run)) {
       const def = rollJoker(run, rngOf(run), `joker_create_a${run.ante}`, new Set(), e.createJoker);

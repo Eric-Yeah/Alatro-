@@ -18,6 +18,7 @@ Stand: Audit vor Beginn der Umbauten.
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
+| M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 53 von 53 grün (gesamt `npm test` 125 von 125) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -69,8 +70,8 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | J1 | Mehrere Hook Funktionen pro Joker, Zahlen direkt im Code | `JokerDef` mit `config` (Zahlen als Daten) und einem `calculate(ctx)` Hook mit Phase im Kontext, Adapter für die 9 vorhandenen Jokers (8.2) | Architektur | mittel | erledigt |
-| J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | in Arbeit |
-| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | offen |
+| J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | erledigt (Sticker selbst folgen später) |
+| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | erledigt (65 Jokers) |
 | J4 | Joker Editions fehlen | Eigene Editions mit Phase vor bzw. nach dem Joker (3.4, 6.4) | Feature | mittel | erledigt |
 
 ### Consumables, Vouchers, Tags, Bosse, Decks, Stakes (4.3 bis 4.9)
@@ -163,6 +164,17 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * Spielstand Version 3 mit Migration.
 * Consumable Packs und der Typ Wurf der Shop Slots folgen mit den Consumables in M4.
 
+### M3 (abgeschlossen)
+
+* **Joker Schema erweitert** (`src/core/jokers.ts`): Phasen außerhalb des Scorings `discard`, `blindSelected`, `payout` (reines Geld am Rundenende, eigene Zeile in der Auszahlung), `roundEnd` (Zustand am Rundenende), `shopOpen`, `shopReroll`, `sell`, `rescue`. Im Scoring neu: `other` (Reaktion auf andere Jokers nach deren Effekt, Briefing 3.4 Schritt 3). Ein gemeinsamer Kontext mit `isFace` (beachtet `allFace`), `jokerCount`, `emptySlots`, `deckLeft`, `ante`, `blind`, `copied`.
+* **Neue Felder:** `passive` (Hand Size, Hands, Discards, Wahrscheinlichkeitsfaktor, Zinsdeckel, Shop Rabatt, alles live aus den Jokers abgeleitet, keine dauerhafte Regeländerung), `copies: 'right'` (Kopie mit Kette und `copyCompat` Prüfung), `spawn.minAnte`, `stickers` (eternal, perishable), `startVars`.
+* **Neue Effekte:** `setEnhancement` (dauerhaft, auch im Deck), `destroySelf`, `createJoker`, `handsDelta`, `discardsDelta`, `freeRerolls`, `rescue`.
+* **Engine:** `runJokerEvent` und `applyJokerEvents` in `run.ts`, Aufrufstellen in `selectBlind`, `discardHand`, `afterHand` (Rettung), `cashOut`, `openShop`, `reroll`, `sellJoker`. `rollJoker` nach `run.ts` verschoben und um Spawn Bedingungen erweitert.
+* **Katalog** (`src/data/jokers.ts`): 65 eigene Jokers, davon 35 Common, 21 Uncommon, 6 Rare, 3 Legendary, in 8 Gruppen: einfache MAIN Jokers (14), SCORED und HELD (11), Retrigger (4), skalierend (7), Geld (7), Blind und Shop (6), passiv (9), Spezialfälle (7, inkl. Kopie, einmalige Rettung, Karten Veränderung, 3 Legendary). Alte IDs unverändert.
+* **Tests:** `src/core/m3.test.ts` mit Katalog Prüfungen (Anzahl, Rarity Verteilung, Platzhalter, keine Gedankenstriche, Spawn, Sticker) und Tests pro Gruppe.
+* **UI:** Auszahlung zeigt Joker Zeilen, "Gerettet!" nach einer Rettung, Popups für Joker Ereignisse bei Blind Auswahl und Discard, Joker Leiste wird nach Erzeugen und Zerstören neu aufgebaut, Hands und Discards Anzeige vor der Runde mit Joker Passiven. Browser Test mit Playwright (Kopie, Transmutator, Kerze, Münzstock, Phönixfeder) ohne Konsolenfehler.
+* Spielstand Format unverändert (nur optionale Felder `round.rescued` und Joker `vars`), daher keine neue `SAVE_VERSION`.
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
@@ -219,3 +231,11 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O25 | Geld durch Boss Effekte | darf negativ werden, Käufe sind dann nicht möglich |
 | O26 | Suit Debuff bei Karten mit jeder Suit | Quecksilber Karten sind von jedem Suit Debuff betroffen. "Gerade Ränge" meint nur 2, 4, 6, 8, 10 |
 | O27 | Showdown Ziel Faktor | eigene Showdown Bosse nutzen ihren Faktor (z. B. X5), sonst gilt der Standard Boss Faktor 2 |
+| O28 | Kopie skalierender Jokers (eigene Regel) | Kopien liefern den Effekt, verändern aber nie den Zustand des Ziels (`ctx.copied`). `destroySelf` einer Kopie wird ignoriert |
+| O29 | Passive Jokers mitten in der Runde (eigene Regel) | Hand Size, Hands und Discards gelten ab der nächsten Runde. Wird ein passiver Joker in der Runde verkauft, bleibt die laufende Runde unverändert |
+| O30 | Shop Rabatt durch Jokers (eigene Regel) | wirkt nur auf neu erzeugte Karten und Packs (Reroll, nächster Shop), schon liegende Preise bleiben |
+| O31 | Rettung vor Game Over (eigene Regel) | Phase rescue läuft, wenn die Runde verloren wäre. Der erste rettende Joker wirkt, die Runde zählt als gewonnen mit normaler Auszahlung. Phönixfeder ist nicht kopierbar, damit eine Kopie keine unbegrenzten Rettungen erlaubt |
+| O32 | Verkaufseffekt (eigene Regel) | der Verkaufswert wird zuerst gutgeschrieben, dann wird der Joker entfernt, dann wirkt sein sell Effekt (der frei gewordene Slot kann genutzt werden) |
+| O33 | Legendary Jokers | erscheinen nie in Shop oder Packs. Eine Quelle (eigenes Omen Consumable) folgt in M4 |
+| O34 | Joker Ereignisse und Boss "Die Stille" | der geschwächte Joker ganz rechts löst auch außerhalb des Scorings nichts aus, sein Verkaufseffekt wirkt trotzdem |
+| O35 | Transmutator Darstellung | die Karte ist sofort Kupfer und scort so, die Karten Grafik aktualisiert sich erst beim nächsten Erzeugen der Ansicht (M5) |
