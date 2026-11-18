@@ -1,8 +1,6 @@
 import { Container } from 'pixi.js';
 import { PATCH_NOTES } from '../data/patchnotes';
-import { SPEED_OPTIONS, speedLabel } from '../data/options';
 import { TUTORIAL } from '../data/tutorial';
-import { getSettings, setSettings } from '../settings';
 import { C } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
@@ -10,8 +8,6 @@ export const TUTORIAL_W = 1100;
 export const TUTORIAL_H = 780;
 export const PATCH_W = 900;
 export const PATCH_H = 700;
-export const OPTIONS_W = 860;
-export const OPTIONS_H = 560;
 
 function clear(c: Container) {
   for (const k of [...c.children]) k.destroy({ children: true });
@@ -103,43 +99,5 @@ export function buildPatchNotes(box: Container, close: () => void) {
 
   const closeBtn = new Button('Schließen', 220, 60, 0x6b5a9e, close, 24);
   closeBtn.position.set(W - 150, PATCH_H - 50);
-  box.addChild(closeBtn);
-}
-
-/** Optionen: Animationstempo. */
-export function buildOptions(box: Container, close: () => void) {
-  const W = OPTIONS_W;
-  const head = label('Optionen', 38);
-  head.position.set(W / 2, 40);
-  box.addChild(head);
-  const dyn = new Container();
-  box.addChild(dyn);
-
-  const render = () => {
-    clear(dyn);
-    const cur = getSettings().speed;
-    const l = label('Animationstempo', 28);
-    l.position.set(W / 2, 120);
-    const hint = wrapText('Wie schnell Karten fliegen und Punkte gezählt werden. Bei 2x läuft alles doppelt so schnell, die Rechnung bleibt gleich.', W - 120, 18, C.textDim);
-    hint.position.set(W / 2, 156);
-    dyn.addChild(l, hint);
-    const n = SPEED_OPTIONS.length;
-    const gap = 14;
-    const w = (W - 100 - gap * (n - 1)) / n;
-    SPEED_OPTIONS.forEach((s, i) => {
-      const b = new Button(speedLabel(s), w, 90, s === cur ? C.chips : 0x4a3f6b, () => { setSettings({ speed: s }); render(); }, 30);
-      b.position.set(50 + w / 2 + i * (w + gap), 290);
-      dyn.addChild(b);
-    });
-    const now = label(`Aktuell: ${speedLabel(cur)}`, 24, C.money);
-    now.position.set(W / 2, 380);
-    const tip = label('Das Tempo lässt sich auch mit dem Tempo Knopf am Tisch ändern.', 18, C.textDim);
-    tip.position.set(W / 2, 420);
-    dyn.addChild(now, tip);
-  };
-  render();
-
-  const closeBtn = new Button('Schließen', 260, 60, 0x6b5a9e, close, 24);
-  closeBtn.position.set(W / 2, OPTIONS_H - 50);
   box.addChild(closeBtn);
 }

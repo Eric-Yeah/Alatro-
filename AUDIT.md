@@ -16,11 +16,12 @@ Stand: Audit vor Beginn der Umbauten.
 |---|---|---|
 | Vorhandene Unit Tests (`src/core/core.test.ts`) | `npm test` | 26 von 26 grün |
 | Spezifikation 10.3 (`tests/spec/`) | `npm run test:spec` | vor M1: 50 grün, 37 rot. Nach M1: 87 von 87 grün |
-| Optionen, Patch Notes, Anleitung (`src/settings.test.ts`) | `npm test` | 6 von 6 grün |
+| Patch Notes und Anleitung (`src/patchnotes.test.ts`) | `npm test` | 3 von 3 grün |
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 | M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün |
-| M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün (gesamt 231 in `src`) |
+| M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün |
+| M5 und M6 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen, Tempo, Grafikstufe, FPS Messung) | `npm test` | 15 von 15 grün (gesamt 246 in `src`) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -129,14 +130,14 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
-| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | in Arbeit (Run Info mit Händen, Blinds, Vouchers und Deck ist da, Options Button folgt in M6) |
-| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | offen |
-| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | offen |
-| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | offen |
-| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | offen |
-| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | offen |
+| U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | erledigt (Run Info mit Händen, Blinds, Vouchers und Deck, Optionen über Menü) |
+| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | erledigt |
+| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | erledigt |
+| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | erledigt |
+| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | erledigt |
+| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | erledigt |
 | U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
-| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | in Arbeit (Animationstempo 1x bis 10x mit Optionen und Tempo Knopf ist da, CRT und Lautstärke folgen mit M5 und M6) |
+| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | erledigt (CRT, Screen Shake, Lautstärke, Tempo, Grafikstufe und FPS Anzeige in den Optionen) |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
 ## Fortschritt
@@ -198,6 +199,26 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Refactor:** Zufallsziehungen (Joker, Editions, Spielkarten, Consumables) in `core/generate.ts`, `ShopItem` ist eine Union aus Joker, Consumable und Spielkarte.
 * **Browser Test:** Runde mit Slots, Elixier auf zwei Zielkarten, Pair mit Fernrohr (78 Punkte wie berechnet), Shop mit allen Karten Arten, Elixier Pack mit Zielwahl, Run Info, Sammlung, Seed Eingabe. Keine Konsolenfehler.
 
+### M5 (abgeschlossen)
+
+* **Farbstimmung pro Blind** (`ui/Background.ts`, `data/juice.ts`): Der Hintergrund Shader bekommt Farben, Kontrast, Randabdunklung und Atmen als Uniforms und blendet in 1,2 Sekunden weich um. Small ruhig und blau, Big kräftig in Bernstein, Boss dramatisch in Rot mit Atmen und schnellerem Fluss (die Bossfarbe färbt leicht mit), Shop und Packs gedämpft, Menü wie vorher.
+* **CRT Filter** (`ui/crt.ts`): Eigener Post Processing Shader über der ganzen Szene mit leichter Wölbung, Scanlines in Bildschirmpixeln, Farbversatz am Rand, Randabdunklung und feinem Rauschen. Abschaltbar.
+* **Sound** (`ui/audio.ts`): Alles per WebAudio Synthese, keine Audiodateien. Der AudioContext startet erst nach der ersten Berührung (iPad). Eigene Klänge für Bedienung, Karten, Zählen (Chips, Mult, X Mult, Geld, Retrigger mit steigender Tonhöhe auf einer pentatonischen Leiter), Aufschlag der Gesamtpunkte, Blind Start (Boss tief), Sieg, Niederlage, Shop (Kaufen, Verkaufen, Reroll, Pack öffnen, Wählen) und Consumables (Sternbild, Elixier, Omen).
+* **Shake und Flash in Stufen** (`ui/stageFx.ts`, `ui/juiceMath.ts`): Die Stufe richtet sich nach Handpunkten geteilt durch Blind Ziel (5 Stufen in `SCORE_TIERS`). X Mult Effekte erschüttern zusätzlich nach Faktor. Sieg, Niederlage, Omen und Voucher haben eigene Effekte. Der Shake läuft über den Pivot der Wurzel und stört die Skalierung nicht.
+* **Edition Shader** (`ui/editionFx.ts`): Schimmer (Folienstreifen mit Funkeln), Aura (rosa Wellen), Prisma (wandernder Regenbogen), Schatten (wabernde Dunkelheit mit hellem Rand). Ein Overlay über Karten und Jokers, ein gemeinsamer Filter pro Edition, additive Ausgabe über premultiplied Alpha.
+* **Joker Grafiken** (`ui/jokerArt.ts`): Eigene Embleme (Stern, Sichel, Kolben, Auge, Sonne, Sanduhr, Orbit, Rune) über Sternenhimmel, aus der Joker ID abgeleitet. Neue Jokers aus M3 bekommen damit automatisch ein Bild.
+* **Optionen** (`settings.ts`, Hauptmenü): CRT, Screen Shake, Lautstärke in Zehnerschritten, gespeichert unter `alatro.settings.v1`.
+* **Browser Test** (Playwright, Chromium mit WebGL): Menü, Optionen, Runde mit allen vier Editions auf Karten und Jokers in Small, Big und Boss, eine gespielte Hand mit Animation. Keine Konsolenfehler. Der Klang selbst lässt sich ohne Audiogerät nicht hören, geprüft ist nur, dass kein Fehler auftritt. Bitte auf dem iPad anhören.
+
+### M6 (in Arbeit, Stand: Optionen und Performance Schalter fertig)
+
+* **Animationstempo** (`data/juice.ts` `SPEED_STEPS`, `settings.ts` `speedFactor`): Normal, Schnell (1,6), Sehr schnell (2,5), Blitz (5). Wirkt zentral in `tween()` und `wait()`, also auf Zählen, Karten, Übergänge und Zwischenpausen. Der wackelnde Titel im Menü bleibt im Takt (`ambient`).
+* **Grafikstufe** (`QUALITY_PROFILE`): Voll oder Sparsam. Sparsam deckelt die Bildrate auf 30, die Auflösung auf 1, schaltet den CRT Filter ab und blendet die Edition Shader aus (`renderable`, kein Filter Durchlauf pro Karte). Wechsel gilt sofort ohne Neustart.
+* **FPS Anzeige** (`ui/perf.ts` `FpsMeter`): kleine Anzeige oben rechts mit Bildrate und längstem Frame, abschaltbar. Gedacht für die Prüfung auf dem iPad.
+* **Optionen** (Menü): jetzt CRT, Screen Shake, Lautstärke, Tempo, Grafik, FPS Anzeige. Gespeichert unter `alatro.settings.v1`, fehlende Felder alter Spielstände werden mit Standardwerten ergänzt.
+* **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
+* **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
@@ -218,7 +239,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | M2 | Zustandsautomat in der Engine, Skip und Tags, Bosse mit Effekten, Shop mit Reroll, Preisformel, Packs, Vouchers, Decks, Stakes, Zufallsströme pro Key mit `chance()` | D5, D7, F |
 | M3 | `JokerDef` mit `config` und `calculate`, Adapter für die vorhandenen Jokers, danach eigener Katalog gruppenweise mit Tests | neue Gruppentests |
 | M4 | Consumables, Modifikatoren, Siegel, Editions, Pack Abläufe, Collection, Run Info, Seed Eingabe, versioniertes Speichern | neue Tests |
-| M5 | UI und Juice nach Abschnitt 9: Skip Button, Shop Szene, Pack Ansicht, CRT, Farbstimmung pro Blind, Sound, Shake | Sichtprüfung |
+| M5 | UI und Juice nach Abschnitt 9: Skip Button, Shop Szene, Pack Ansicht, CRT, Farbstimmung pro Blind, Sound, Shake (erledigt) | Sichtprüfung |
 | M6 | Politur, Performance, Optionen | |
 
 ## Offene Punkte
@@ -277,6 +298,13 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O48 | Hooks außerhalb des Scorings | `roundEnd` darf keinen Zufall nutzen (Anzeige und Auszahlung müssen gleich sein). Wachstum bei `roundEnd` passiert beim Einkassieren, nicht in der Vorschau |
 | O49 | Joker Passive bei Boss Schwächung | Der vom Boss geschwächte Joker ganz rechts bleibt für Passive, Rettung und Hooks außerhalb des Scorings aktiv, nur das Scoring ignoriert ihn |
 | O50 | Legendary Jokers (4.1) | Nur über das Omen Ahnenruf, 3 Stück in M3 |
-| O51 | Animationstempo | Das Tempo skaliert alle Tweens und Wartezeiten (`tween`, `wait`), die Rechnung der Engine bleibt unberührt. Dauerschleifen wie das Wackeln des Titels laufen im Normaltempo. Gespeichert unter `alatro.settings.v1`, gewählt aus `SPEED_OPTIONS` in `src/data/options.ts` |
-| O52 | Patch Notes | Einträge in `src/data/patchnotes.ts`, Version steht dort und in `package.json` (ein Test prüft Gleichheit). Nach einem Update erscheinen sie einmal automatisch, gemerkt unter `alatro.patchSeen.v1`. Bei jedem Release einen Eintrag ergänzen |
-| O53 | Anleitung | Texte in `src/data/tutorial.ts`. Bei Regeländerungen (Startwerte, Blinds, Shop) die Seiten mit anpassen |
+| O51 | Wölbung des CRT Filters (9.4) | Nur 1,2 Prozent, weil Berührungen nicht mit verzerrt werden und am Rand sonst Tippfehler entstehen. Wert in `data/juice.ts` (`CRT.curvature`), im Zweifel in den Optionen abschalten |
+| O52 | Stufen für Shake und Flash (9.3) | Nach Handpunkten geteilt durch Blind Ziel, Schwellen 0, 0,1, 0,3, 0,7, 1,5. Alle Zahlen in `data/juice.ts` und auf dem iPad zu fühlen |
+| O53 | Joker Embleme (9.2) | Aus der Joker ID per Hash gewählt, nicht pro Joker von Hand gezeichnet. Zwei Jokers können dasselbe Symbol haben (Funke und Einzelgänger zeigen beide ein Auge). Eine Zuordnung pro Joker wäre ein Feld in `JokerDef` |
+| O54 | Edition Shader auf Consumables | Nicht umgesetzt, weil Consumables keine Editions haben (O41) |
+| O55 | Systemschrift (U9) | Bleibt offen. Eine selbst gezeichnete Pixelschrift (CLAUDE.md verlangt eigene Schrift) wäre mit dem Raster nur bei ganzzahligen Schriftgrößen scharf, die UI nutzt viele Größen (16 bis 110), und lange Beschreibungen würden schwer lesbar. Das Problem O und 0 ist über die Seed Tastatur gelöst. Wenn eine eigene Schrift gewünscht ist, ist das ein eigener Meilenstein mit Glyph Tabelle, Font Erzeugung und Umstellung aller Labels |
+| O56 | Tempo Faktor (M6) | Der Faktor teilt alle Tween und Wartezeiten, auch die Pausen zwischen Score Schritten. Auf Blitz laufen Sounds weiter im selben Rhythmus der Schritte, nur dichter. Die Zahlen stehen in `data/juice.ts` und sind auf dem iPad zu fühlen |
+| O57 | Grafikstufe Sparsam (M6) | Wird nicht automatisch gewählt, nur von Hand. Eine automatische Erkennung (FPS unter Schwelle) wäre möglich, wurde nicht gebaut, weil ohne iPad Messung keine sinnvolle Schwelle bekannt ist |
+| O58 | Tempo Knopf am Tisch | Zusätzlich zur Option gibt es in der Seitenleiste einen Knopf, der `SPEED_STEPS` (1x, 1,5x, 2x, 3x, 5x, 10x) durchschaltet, auch während Animationen |
+| O59 | Patch Notes | Einträge in `src/data/patchnotes.ts`, Version steht dort und in `package.json` (ein Test prüft Gleichheit). Nach einem Update erscheinen sie einmal automatisch, gemerkt unter `alatro.patchSeen.v1`. Bei jedem Release einen Eintrag ergänzen |
+| O60 | Anleitung | Texte in `src/data/tutorial.ts`. Bei Regeländerungen (Startwerte, Blinds, Shop) die Seiten mit anpassen |

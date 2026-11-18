@@ -1,5 +1,5 @@
 import { Ticker } from 'pixi.js';
-import { getSpeed } from '../settings';
+import { speedFactor } from '../settings';
 
 export type Ease = (t: number) => number;
 export const linear: Ease = (t) => t;
@@ -21,10 +21,11 @@ function setPath(obj: any, path: string, v: number) {
 
 const active = new Map<object, Map<string, () => void>>();
 
-/** Animate numeric (dotted-path) properties. Resolves when done. A newer tween on the same prop cancels the old one.
- * `scaled = false` ignoriert das Animationstempo (Dauerschleifen wie das Wackeln des Titels). */
-export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic, scaled = true): Promise<void> {
+/** Animate numeric (dotted-path) properties. Resolves when done. A newer tween on the same prop cancels the old one. */
+export function tween(target: any, to: Record<string, number>, ms: number, ease: Ease = easeOutCubic, ambient = false): Promise<void> {
   if (!target || target.destroyed) return Promise.resolve();
+  // Animationstempo aus den Optionen. Ambient Bewegungen (Titel wackelt) bleiben im Takt.
+  if (!ambient) ms /= speedFactor();
   return new Promise((resolve) => {
     const from: Record<string, number> = {};
     for (const k in to) from[k] = getPath(target, k);
@@ -37,7 +38,7 @@ export function tween(target: any, to: Record<string, number>, ms: number, ease:
     const tick = (ticker: Ticker) => {
       if (cancelled) return;
       if (target.destroyed) { cancel(); return; }
-      elapsed += ticker.deltaMS * (scaled ? getSpeed() : 1);
+      elapsed += ticker.deltaMS;
       const p = ms <= 0 ? 1 : Math.min(1, elapsed / ms);
       const e = ease(p);
       for (const k in to) setPath(target, k, from[k] + (to[k] - from[k]) * e);
@@ -52,10 +53,11 @@ export function tween(target: any, to: Record<string, number>, ms: number, ease:
 }
 
 export function wait(ms: number): Promise<void> {
+  ms /= speedFactor();
   return new Promise((resolve) => {
     let elapsed = 0;
     const tick = (ticker: Ticker) => {
-      elapsed += ticker.deltaMS * getSpeed();
+      elapsed += ticker.deltaMS;
       if (elapsed >= ms) { Ticker.shared.remove(tick); resolve(); }
     };
     Ticker.shared.add(tick);
