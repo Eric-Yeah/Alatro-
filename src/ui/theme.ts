@@ -36,10 +36,10 @@ export const RARITY_COLORS: Record<Rarity, number> = {
 };
 
 export const RARITY_NAMES: Record<Rarity, string> = {
-  common: 'Gewöhnlich',
-  uncommon: 'Ungewöhnlich',
-  rare: 'Selten',
-  legendary: 'Legendär',
+  common: 'Common',
+  uncommon: 'Uncommon',
+  rare: 'Rare',
+  legendary: 'Legendary',
 };
 
 export const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';

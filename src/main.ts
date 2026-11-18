@@ -1,3 +1,4 @@
+import './core/index';
 import { Application, Ticker } from 'pixi.js';
 import { registerSW } from 'virtual:pwa-register';
 import { Background } from './ui/Background';

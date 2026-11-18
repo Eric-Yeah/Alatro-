@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { JOKER_BY_ID, type JokerInstance } from '../core/jokers';
+import { getJoker, type JokerInstance } from '../core/jokers';
 import { C, FONT, RARITY_COLORS } from './theme';
 
 export const JOKER_W = 104;
@@ -8,7 +8,7 @@ export const JOKER_H = 140;
 export class JokerView extends Container {
   constructor(public readonly joker: JokerInstance) {
     super();
-    const def = JOKER_BY_ID[joker.defId];
+    const def = getJoker(joker.defId)!;
     const color = RARITY_COLORS[def.rarity];
     const w = JOKER_W, h = JOKER_H;
     const g = new Graphics()

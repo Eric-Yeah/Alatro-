@@ -1,12 +1,12 @@
 import { Container, Graphics, Text, type FederatedPointerEvent } from 'pixi.js';
-import { BLIND_INFO, BLIND_KINDS, FINAL_ANTE, blindTarget, type BlindKind } from '../core/blinds';
+import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, type BlindKind } from '../core/blinds';
 import { sortByRank, sortBySuit } from '../core/cards';
-import { HAND_INFO } from '../core/hands';
-import { JOKERS, JOKER_BY_ID } from '../core/jokers';
+import { handDisplayName } from '../core/hands';
+import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
 import { randomSeed } from '../core/rng';
 import {
   MAX_SELECT, addJoker, computeEarnings, discardCards, drawToHandSize, finishRound, isRoundLost, isRoundWon,
-  jokerOffer, newRun, playCards, sellValue, startRound, type RunState,
+  currentTarget, jokerOffer, jokerSellValue, newRun, playCards, startRound, type RunState,
 } from '../core/run';
 import { previewHand, type ScoreEvent } from '../core/scoring';
 import { loadRun, saveRun } from '../save';
@@ -116,7 +116,7 @@ export class Game {
     // Round score
     const sp = panel(330, 76, C.panelDark);
     sp.position.set(20, 192);
-    const sLbl = label('Runde', 20, C.textDim);
+    const sLbl = label('Round Score', 20, C.textDim);
     sLbl.anchor.set(0, 0.5);
     sLbl.position.set(20, 38);
     this.scoreText = label('0', 40);
@@ -158,8 +158,8 @@ export class Game {
       t.addChild(p);
       return v;
     };
-    this.handsText = counter('Hände', C.chips, 20);
-    this.discardsText = counter('Abwürfe', C.mult, 190);
+    this.handsText = counter('Hands', C.chips, 20);
+    this.discardsText = counter('Discards', C.mult, 190);
 
     // Money
     const mp = panel(330, 84, C.panelDark);
@@ -182,7 +182,7 @@ export class Game {
       return v;
     };
     this.anteText = info('Ante', 20);
-    this.roundText = info('Runde', 190);
+    this.roundText = info('Round', 190);
 
     const menuBtn = new Button('Menü', 330, 60, 0x4a3f6b, () => { if (!this.busy) this.showMainMenu(); }, 24);
     menuBtn.position.set(185, 800);
@@ -202,7 +202,7 @@ export class Game {
     const ct = panel(260, 180, C.panelDark);
     ct.alpha = 0.85;
     ct.position.set(1160, 24);
-    const ctLbl = label('Verbrauch 0/2', 16, C.textDim);
+    const ctLbl = label('Consumables 0/2', 16, C.textDim);
     ctLbl.anchor.set(1, 0.5);
     ctLbl.position.set(1408, 220);
     t.addChild(jt, ct, this.jokerCount, ctLbl);
@@ -217,13 +217,13 @@ export class Game {
     t.addChild(deck, deck2, this.deckCount);
 
     // Buttons
-    this.playBtn = new Button('Hand spielen', 230, 72, C.chips, () => this.play(), 28);
+    this.playBtn = new Button('Play Hand', 230, 72, C.chips, () => this.play(), 28);
     this.playBtn.position.set(MX - 260, 935);
-    this.discardBtn = new Button('Abwerfen', 230, 72, C.mult, () => this.discard(), 28);
+    this.discardBtn = new Button('Discard', 230, 72, C.mult, () => this.discard(), 28);
     this.discardBtn.position.set(MX + 260, 935);
-    this.sortRankBtn = new Button('Wert', 116, 56, 0x6b5a9e, () => this.setSort('rank'), 22);
+    this.sortRankBtn = new Button('Rank', 116, 56, 0x6b5a9e, () => this.setSort('rank'), 22);
     this.sortRankBtn.position.set(MX - 64, 935);
-    this.sortSuitBtn = new Button('Farbe', 116, 56, 0x6b5a9e, () => this.setSort('suit'), 22);
+    this.sortSuitBtn = new Button('Suit', 116, 56, 0x6b5a9e, () => this.setSort('suit'), 22);
     this.sortSuitBtn.position.set(MX + 64, 935);
     const sortLbl = label('Sortieren', 16, C.textDim);
     sortLbl.position.set(MX, 892);
@@ -246,9 +246,9 @@ export class Game {
       .roundRect(0, 4, 330, 160, 14).fill({ color: 0, alpha: 0.35 })
       .roundRect(0, 0, 330, 160, 14).fill(BLIND_COLORS[blind]).stroke({ width: 2, color: 0xffffff, alpha: 0.2 })
       .roundRect(10, 56, 310, 96, 10).fill({ color: 0x0b0814, alpha: 0.45 });
-    this.blindName.text = BLIND_INFO[blind].name;
-    this.targetText.text = fmt(r ? r.target : blindTarget(run.ante, blind));
-    this.rewardText.text = 'Belohnung ' + '$'.repeat(BLIND_INFO[blind].reward);
+    this.blindName.text = BLIND_NAMES[blind];
+    this.targetText.text = fmt(r ? r.target : currentTarget(run, blind));
+    this.rewardText.text = 'Belohnung ' + '$'.repeat(blindReward(run.ante, blind, run.rules.smallBlindReward));
     this.scoreText.text = fmt(r?.score ?? 0);
     this.handsText.text = String(r?.handsLeft ?? run.hands);
     this.discardsText.text = String(r?.discardsLeft ?? run.discards);
@@ -294,8 +294,8 @@ export class Game {
       this.setHandDisplay('', null, 0, 0);
       return;
     }
-    const p = previewHand(sel.map((v) => v.card), run.handLevels);
-    this.setHandDisplay(HAND_INFO[p.type].name, run.handLevels[p.type], p.chips, p.mult);
+    const p = previewHand(sel.map((v) => v.card), run.handLevels, jokerRules(run.jokers));
+    this.setHandDisplay(handDisplayName(p.type, p.scoring), run.handLevels[p.type], p.chips, p.mult);
   }
 
   // ────────────────────────────────────────────────────────────── hand & cards
@@ -491,12 +491,12 @@ export class Game {
     const wasSame = this.tooltip && (this.tooltip as any).jokerUid === v.joker.uid;
     this.closeTooltip();
     if (wasSame) return;
-    const def = JOKER_BY_ID[v.joker.defId];
+    const def = getJoker(v.joker.defId)!;
     const tip = new Container() as Container & { jokerUid?: number };
     tip.jokerUid = v.joker.uid;
     const w = 280;
     const desc = new Text({
-      text: def.description + (v.joker.vars.mult ? `\n(aktuell +${v.joker.vars.mult} Mult)` : ''),
+      text: jokerDescription(def, v.joker),
       style: { fontFamily: FONT, fontSize: 19, fontWeight: '700', fill: C.cardEdge, wordWrap: true, wordWrapWidth: w - 30, align: 'center' },
     });
     desc.anchor.set(0.5, 0);
@@ -511,7 +511,7 @@ export class Game {
     const rarT = label(RARITY_NAMES[def.rarity], 14, 0xffffff);
     rarT.position.set(0, 56);
     desc.position.set(0, 78);
-    const sell = new Button(`Verkaufen $${sellValue(def.cost)}`, 200, 44, C.green, () => this.sellJoker(v.joker.uid), 20);
+    const sell = new Button(`Verkaufen $${jokerSellValue(v.joker)}`, 200, 44, C.green, () => this.sellJoker(v.joker.uid), 20);
     sell.position.set(0, h - 34);
     tip.addChild(bg, name, rar, rarT, desc, sell);
     tip.position.set(Math.max(JOKER_TRAY_X + w / 2, Math.min(VIEW_W - w / 2 - 10, v.x)), JOKER_Y + 82);
@@ -526,8 +526,7 @@ export class Game {
     if (this.busy) return;
     const idx = run.jokers.findIndex((j) => j.uid === uid);
     if (idx < 0) return;
-    const def = JOKER_BY_ID[run.jokers[idx].defId];
-    run.money += sellValue(def.cost);
+    run.money += jokerSellValue(run.jokers[idx]);
     run.jokers.splice(idx, 1);
     this.closeTooltip();
     this.syncJokers();
@@ -564,7 +563,7 @@ export class Game {
     const scoringIds = new Set(result.scoring.map((c) => c.id));
     for (const v of sel) if (scoringIds.has(v.card.id)) tween(v, { y: PLAY_Y - 30 }, 160, easeOutBack);
     const base = result.events[0];
-    this.setHandDisplay(HAND_INFO[result.handType].name, run.handLevels[result.handType], base.chipsTotal, base.multTotal);
+    this.setHandDisplay(handDisplayName(result.handType, result.scoring), run.handLevels[result.handType], base.chipsTotal, base.multTotal);
     juice(this.handName);
     await wait(380);
 
@@ -626,6 +625,11 @@ export class Game {
       if (ev.mult) popup(this.fxLayer, p.x, y, `+${fmtMult(ev.mult)} Mult`, C.mult, 28);
       if (ev.xMult) popup(this.fxLayer, p.x, y, `×${fmtMult(ev.xMult)} Mult`, C.mult, 30);
       if (ev.money) popup(this.fxLayer, p.x, y, `+$${ev.money}`, C.money);
+      if (ev.message) popup(this.fxLayer, p.x, y, ev.message, ev.phase === 'debuff' ? 0x6b5a9e : C.accent, 26);
+    } else if (ev.message) {
+      // Regel Events (Balance, Boss) erscheinen über der Chips mal Mult Anzeige
+      const p = this.fxLayer.toLocal(this.multBox.getGlobalPosition());
+      popup(this.fxLayer, p.x - 77, p.y - 60, ev.message, C.accent, 26);
     }
     this.chipsText.text = fmt(ev.chipsTotal);
     this.multText.text = fmtMult(ev.multTotal);
@@ -723,7 +727,7 @@ export class Game {
       tween(title, { rotation: title.rotation > 0 ? -0.03 : 0.03 }, 1600, easeInOutCubic).then(wobble);
     };
     wobble();
-    const sub = label('Roguelike Poker-Deckbuilder', 24, C.textDim);
+    const sub = label('Roguelike Poker Deckbuilder', 24, C.textDim);
     sub.position.set(310, 215);
     box.addChild(title, sub);
 
@@ -754,16 +758,16 @@ export class Game {
       const g = new Graphics()
         .roundRect(0, 0, 280, 380, 16).fill(state === 'current' ? BLIND_COLORS[kind] : C.panel)
         .stroke({ width: 3, color: state === 'current' ? 0xffffff : C.panelLine, alpha: state === 'current' ? 0.6 : 1 });
-      const name = label(BLIND_INFO[kind].name, 28);
+      const name = label(BLIND_NAMES[kind], 28);
       name.position.set(140, 50);
       const chip = new Graphics().circle(140, 140, 50).fill({ color: 0x0b0814, alpha: 0.4 }).stroke({ width: 4, color: BLIND_COLORS[kind] });
       const chipT = label(kind === 'boss' ? '☠' : kind === 'big' ? '◆' : '●', 44, BLIND_COLORS[kind] === 0 ? C.text : 0xffffff);
       chipT.position.set(140, 140);
       const zl = label('Mindestens', 18, C.textDim);
       zl.position.set(140, 220);
-      const target = label(fmt(blindTarget(run.ante, kind)), 36, C.mult);
+      const target = label(fmt(currentTarget(run, kind)), 36, C.mult);
       target.position.set(140, 255);
-      const rew = label('Belohnung ' + '$'.repeat(BLIND_INFO[kind].reward), 20, C.money);
+      const rew = label('Belohnung ' + '$'.repeat(blindReward(run.ante, kind, run.rules.smallBlindReward)), 20, C.money);
       rew.position.set(140, 292);
       col.addChild(g, name, chip, chipT, zl, target, rew);
       if (state === 'current') {
@@ -805,9 +809,10 @@ export class Game {
     head.position.set(280, 60);
     box.addChild(head);
     const lines: [string, number][] = [
-      ['Blind-Belohnung', e.blindReward],
-      [`Übrige Hände (${run.round!.handsLeft})`, e.handsBonus],
-      ['Zinsen ($1 je $5, max. $5)', e.interest],
+      ['Blind Belohnung', e.blindReward],
+      [`Übrige Hands (${run.round!.handsLeft})`, e.handsBonus],
+      ...(e.discardsBonus ? [[`Übrige Discards (${run.round!.discardsLeft})`, e.discardsBonus] as [string, number]] : []),
+      [`Zinsen ($1 je $${run.rules.interestPer}, max. $${run.rules.interestCap})`, e.interest],
     ];
     lines.forEach(([t, v], i) => {
       const l = label(t, 24, C.text);
@@ -840,7 +845,7 @@ export class Game {
   /** Temporary reward screen until the shop exists. */
   private showJokerPick() {
     const run = this.run!;
-    const offer = jokerOffer(run, JOKERS, 3);
+    const offer = jokerOffer(run, 3);
     const full = run.jokers.length >= run.jokerSlots;
     const { box } = this.modal(980, 560, C.panelDark);
     const head = label(full ? 'Joker-Plätze voll' : 'Wähle einen Joker', 40, C.text);
@@ -850,7 +855,7 @@ export class Game {
     box.addChild(head, sub);
 
     offer.forEach((id, i) => {
-      const def = JOKER_BY_ID[id];
+      const def = getJoker(id)!;
       const col = new Container();
       col.position.set(40 + i * 310, 120);
       const g = new Graphics().roundRect(0, 0, 280, 330, 16).fill(C.panel).stroke({ width: 2, color: C.panelLine });
@@ -861,7 +866,7 @@ export class Game {
       const rarT = label(RARITY_NAMES[def.rarity], 14, 0xffffff);
       rarT.position.set(140, 184);
       const desc = new Text({
-        text: def.description,
+        text: jokerDescription(def),
         style: { fontFamily: FONT, fontSize: 19, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' },
       });
       desc.anchor.set(0.5, 0);
@@ -891,7 +896,7 @@ export class Game {
     const { box } = this.modal(560, 440, C.panelDark);
     const head = label('Verloren', 64, C.mult);
     head.position.set(280, 80);
-    const l1 = label(`Erreicht: Ante ${run.ante}, Runde ${(run.ante - 1) * 3 + run.blindIndex + 1}`, 24);
+    const l1 = label(`Erreicht: Ante ${run.ante}, Round ${(run.ante - 1) * 3 + run.blindIndex + 1}`, 24);
     l1.position.set(280, 170);
     const l2 = label(`Punkte: ${fmt(run.round?.score ?? 0)} / ${fmt(run.round?.target ?? 0)}`, 22, C.textDim);
     l2.position.set(280, 215);
