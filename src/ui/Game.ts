@@ -14,11 +14,14 @@ import {
   BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerSellValue, type RunState,
 } from '../core/run';
 import { previewHand, type ScoreEvent } from '../core/scoring';
-import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
+import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES, type ConsumableType } from '../data/consumables';
 import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { STAKES } from '../data/stakes';
+import { clampVolume, getSettings, updateSettings } from '../settings';
+import { VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
+import { sfx } from './audio';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
@@ -26,6 +29,8 @@ import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
 import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES, VIEW_H, VIEW_W, fmt, fmtMult } from './theme';
+import { scoreTier, xMultShake } from './juiceMath';
+import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
@@ -45,8 +50,14 @@ const BLIND_COLORS: Record<BlindKind, number> = { small: 0x2a7f8f, big: 0xc9822b
 
 type SortMode = 'rank' | 'suit';
 
+export interface GameHooks {
+  /** Wechselt die Farbstimmung des Hintergrunds, bossColor färbt die Boss Stimmung */
+  setMood: (mood: BgMood, bossColor?: number) => void;
+}
+
 export class Game {
   readonly root = new Container();
+  private fx: StageFx;
 
   private run: RunState | null = null;
   private busy = false;
@@ -58,6 +69,7 @@ export class Game {
   private handLayer = new Container();
   private fxLayer = new Container();
   private overlayLayer = new Container();
+  private flashLayer = new Container();
   private screenLayer = new Container();
   private handControls = new Container();
   private deckPile = new Container();
@@ -100,10 +112,11 @@ export class Game {
   private sortRankBtn!: Button;
   private sortSuitBtn!: Button;
 
-  constructor() {
+  constructor(private hooks: GameHooks = { setMood: () => {} }) {
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
-    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.overlayLayer);
+    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.overlayLayer, this.flashLayer);
+    this.fx = new StageFx(this.root, this.flashLayer);
     this.buildTable();
     this.showMainMenu();
   }
@@ -307,6 +320,15 @@ export class Game {
     for (const v of this.cardViews.values()) v.setDebuffed(isCardDebuffed(run, v.card));
     this.updateButtons();
     if (!this.busy) this.updatePreview();
+    this.updateMood(blind, boss?.color);
+  }
+
+  /** Farbstimmung: Small ruhig, Big kräftig, Boss dramatisch, Shop und Packs gedämpft. */
+  private updateMood(blind: BlindKind, bossColor?: number) {
+    const run = this.run;
+    if (!run) return;
+    const mood: BgMood = run.phase === 'shop' || run.phase === 'pack' ? 'shop' : blind;
+    this.hooks.setMood(mood, bossColor);
   }
 
   private updateButtons() {
@@ -367,9 +389,11 @@ export class Game {
     this.closeTooltip();
     if (!v.selected && this.selected().length >= MAX_SELECT) {
       juice(v, 0.5);
+      sfx.deny();
       return;
     }
     v.selected = !v.selected;
+    sfx.select(v.selected);
     tween(v, { y: v.homeY - (v.selected ? 40 : 0) }, 160, easeOutBack);
     this.updatePreview();
     this.updateButtons();
@@ -419,6 +443,7 @@ export class Game {
     // layoutHand(0) setzt die Zielpositionen, die neuen Karten fliegen vom Stapel dorthin
     views.forEach((v) => v.position.set(DECK_X, DECK_Y));
     for (const v of views) {
+      sfx.draw();
       tween(v, { x: v.homeX, y: v.homeY, rotation: v.homeRot }, 320, easeInOutCubic);
       tween(v, { 'scale.x': 1, 'scale.y': 1 }, 320);
       await wait(60);
@@ -571,6 +596,7 @@ export class Game {
   private sellJoker(uid: number) {
     const run = this.run!;
     if (this.busy || !sellJokerAction(run, uid)) return;
+    sfx.sell();
     this.closeTooltip();
     this.syncJokers();
     juice(this.moneyText);
@@ -660,6 +686,7 @@ export class Game {
   private sellConsumableUI(uid: number) {
     const run = this.run!;
     if (this.busy || !sellConsumable(run, uid)) return;
+    sfx.sell();
     this.closeTooltip();
     this.syncConsumables();
     juice(this.moneyText);
@@ -671,15 +698,17 @@ export class Game {
     const run = this.run!;
     if (this.busy) return;
     const targets = this.selected().map((c) => c.card.id);
+    const type = CONSUMABLE_BY_ID[run.consumables.find((c) => c.uid === uid)?.defId ?? '']?.type;
     const res = useConsumable(run, uid, targets);
     if (!res) return;
     this.closeTooltip();
-    this.afterConsumableUse(res);
+    this.afterConsumableUse(res, type);
   }
 
   /** Gemeinsame Nachbereitung nach dem Benutzen: Anzeige, Meldung, Speichern. */
-  private afterConsumableUse(res: UseResult) {
+  private afterConsumableUse(res: UseResult, type?: ConsumableType) {
     const run = this.run!;
+    this.playConsumableFx(type);
     this.syncConsumables();
     this.syncJokers();
     if (run.round && (res.changed.length || res.destroyed.length || res.created.length)) this.rebuildHand();
@@ -693,6 +722,13 @@ export class Game {
     saveRun(run);
     if (run.phase === 'gameOver') this.showGameOver();
     else if (run.phase === 'shop') this.renderShop();
+  }
+
+  /** Klang und Effekt je nach Typ des benutzten Consumables, Omen erschüttern leicht den Bildschirm. */
+  private playConsumableFx(type?: ConsumableType) {
+    if (type === 'sternbild') { sfx.starUse(); this.fx.flash(0.08, 0x9fd8ff); }
+    else if (type === 'omen') { sfx.omenUse(); this.fx.shake(7); this.fx.flash(0.12, 0xa82fff); }
+    else sfx.elixirUse();
   }
 
   /** Baut alle Karten Ansichten der Hand neu auf, z. B. nachdem ein Elixier Karten verändert hat. */
@@ -723,6 +759,7 @@ export class Game {
     juice(this.handsText);
 
     // Move played cards to the play area
+    sfx.whoosh();
     sel.forEach((v, i) => {
       v.selected = false;
       this.playLayer.addChild(v);
@@ -734,6 +771,7 @@ export class Game {
 
     const scoringIds = new Set(result.scoring.map((c) => c.id));
     for (const v of sel) if (scoringIds.has(v.card.id)) tween(v, { y: PLAY_Y - 30 }, 160, easeOutBack);
+    sfx.select(true);
     const base = result.events[0];
     this.setHandDisplay(handDisplayName(result.handType, result.scoring), run.handLevels[result.handType], base.chipsTotal, base.multTotal);
     juice(this.handName);
@@ -741,16 +779,20 @@ export class Game {
 
     let step = 0;
     for (const ev of result.events.slice(1)) {
-      await this.animateEvent(ev);
+      await this.animateEvent(ev, step);
       await wait(Math.max(90, 280 - step * 14));
       step++;
     }
 
     // Total
     await wait(150);
+    const tier = scoreTier(result.total, r.target);
     this.totalText.text = fmt(result.total);
     this.totalText.alpha = 1;
     this.totalText.scale.set(0.3);
+    sfx.total(tier.boom);
+    this.fx.shake(tier.shake);
+    this.fx.flash(tier.flash);
     await tween(this.totalText, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
     const before = r.score - result.total;
     await this.countUp(this.scoreText, before, r.score, 500);
@@ -784,7 +826,8 @@ export class Game {
     this.refreshInfo();
   }
 
-  private async animateEvent(ev: ScoreEvent) {
+  private async animateEvent(ev: ScoreEvent, step = 0) {
+    this.playEventSound(ev, step);
     let target: Container | undefined;
     if (ev.source.kind === 'card' || ev.source.kind === 'held') target = this.cardViews.get(ev.source.cardId);
     else if (ev.source.kind === 'joker') target = this.jokerViews.get(ev.source.jokerUid);
@@ -813,6 +856,20 @@ export class Game {
     if (ev.mult || ev.xMult) juice(this.multBox, ev.xMult ? 1.2 : 0.6);
   }
 
+  /** Klang pro Score Schritt, die Tonhöhe steigt mit der Schrittzahl. X Mult erschüttert den Bildschirm. */
+  private playEventSound(ev: ScoreEvent, step: number) {
+    if (ev.phase === 'retrigger') sfx.retrigger(step);
+    else if (ev.xMult) {
+      sfx.xmult(step);
+      this.fx.shake(xMultShake(ev.xMult));
+    } else {
+      if (ev.chips) sfx.chips(step);
+      if (ev.mult) sfx.mult(step);
+      if (!ev.chips && !ev.mult && !ev.money && ev.message) sfx.message(step);
+    }
+    if (ev.money) sfx.money();
+  }
+
   private async countUp(t: Text, from: number, to: number, ms: number) {
     const proxy = { v: from };
     const ticker = setInterval(() => { t.text = fmt(proxy.v); }, 16);
@@ -829,6 +886,7 @@ export class Game {
     this.busy = true;
     this.closeTooltip();
     discardHand(run, sel.map((v) => v.card.id));
+    sfx.discard();
     this.discardsText.text = String(run.round.discardsLeft);
     juice(this.discardsText);
     this.updateButtons();
@@ -981,7 +1039,8 @@ export class Game {
   private showMainMenu() {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
-    const { box } = this.modal(620, canResume ? 620 : 520, C.panelDark);
+    this.hooks.setMood('menu');
+    const { box } = this.modal(620, canResume ? 720 : 620, C.panelDark);
     const title = label('ALATRO', 110, C.text, { stroke: { color: C.mult, width: 10 }, letterSpacing: 6 });
     title.position.set(310, 130);
     const wobble = (): void => {
@@ -1003,7 +1062,52 @@ export class Game {
     nr.position.set(310, y);
     const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
     coll.position.set(310, y + 100);
-    box.addChild(nr, coll);
+    const opt = new Button('Optionen', 400, 76, 0x4a3f6b, () => this.showOptions(), 30);
+    opt.position.set(310, y + 200);
+    box.addChild(nr, coll, opt);
+  }
+
+  /** Optionen: CRT, Screen Shake und Lautstärke, werden sofort gespeichert und angewendet */
+  private showOptions() {
+    const W = 620;
+    const { box } = this.modal(W, 560, C.panelDark);
+    const head = label('Optionen', 44, C.text);
+    head.position.set(W / 2, 56);
+    box.addChild(head);
+    const dyn = new Container();
+    box.addChild(dyn);
+    const render = () => {
+      for (const c of [...dyn.children]) c.destroy({ children: true });
+      const st = getSettings();
+      const row = (y: number, name: string, desc: string) => {
+        const n = label(name, 28, C.text);
+        n.anchor.set(0, 0.5);
+        n.position.set(50, y - 12);
+        const d = label(desc, 16, C.textDim, { fontWeight: '600' });
+        d.anchor.set(0, 0.5);
+        d.position.set(50, y + 20);
+        dyn.addChild(n, d);
+      };
+      row(150, 'CRT Effekt', 'Scanlines und leichte Wölbung');
+      const crt = new Button(st.crt ? 'An' : 'Aus', 130, 56, st.crt ? C.green : 0x4a3f6b, () => { updateSettings({ crt: !st.crt }); render(); }, 24);
+      crt.position.set(W - 115, 150);
+      row(250, 'Screen Shake', 'Wackeln und Aufblitzen bei hohen Punkten');
+      const shake = new Button(st.shake ? 'An' : 'Aus', 130, 56, st.shake ? C.green : 0x4a3f6b, () => {
+        updateSettings({ shake: !st.shake });
+        render();
+        this.fx.shake(6);
+      }, 24);
+      shake.position.set(W - 115, 250);
+      row(350, 'Lautstärke', `${Math.round(st.volume * 100)} Prozent`);
+      const minus = new Button('−', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      minus.position.set(W - 175, 350);
+      const plus = new Button('+', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      plus.position.set(W - 95, 350);
+      const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
+      back.position.set(W / 2, 480);
+      dyn.addChild(crt, shake, minus, plus, back);
+    };
+    render();
   }
 
   /** Sammlung aller gesehenen Inhalte, Zurück führt ins Hauptmenü */
@@ -1153,6 +1257,7 @@ export class Game {
     this.clearCardViews();
     selectBlind(run);
     this.busy = true;
+    sfx.blindStart(BLIND_KINDS[Math.min(run.blindIndex, 2)]);
     this.refreshInfo();
     await this.drawCards([...run.round!.hand]);
     this.busy = false;
@@ -1163,6 +1268,8 @@ export class Game {
   private showRoundWon() {
     const run = this.run!;
     const e = computeEarnings(run);
+    sfx.win();
+    this.fx.flash(0.18, 0xffd23f);
     const { box } = this.modal(580, 520, C.panelDark);
     const head = label('Blind geschafft!', 44, C.money);
     head.position.set(290, 60);
@@ -1224,6 +1331,7 @@ export class Game {
     this.shopView = buildShop(run, {
       buyCard: (i) => {
         if (buyCard(run, i)) {
+          sfx.buy();
           this.syncJokers();
           this.syncConsumables();
           juice(this.moneyText);
@@ -1231,11 +1339,17 @@ export class Game {
         }
       },
       buyAndUse: (i) => {
+        const item = run.shop?.cards[i];
+        const type = item?.kind === 'consumable' ? CONSUMABLE_BY_ID[item.defId]?.type : undefined;
         const res = buyAndUse(run, i);
-        if (res) this.afterConsumableUse(res);
+        if (res) {
+          sfx.buy();
+          this.afterConsumableUse(res, type);
+        }
       },
       buyPack: (i) => {
         if (buyPack(run, i)) {
+          sfx.packOpen();
           saveRun(run);
           this.renderShop();
           this.showPack();
@@ -1243,12 +1357,17 @@ export class Game {
       },
       buyVoucher: () => {
         if (buyVoucher(run)) {
+          sfx.buy();
+          this.fx.flash(0.06, 0xffd23f);
           juice(this.moneyText);
           after();
         }
       },
       reroll: () => {
-        if (reroll(run)) after();
+        if (reroll(run)) {
+          sfx.reroll();
+          after();
+        }
       },
       nextRound: () => {
         leaveShop(run);
@@ -1354,8 +1473,12 @@ export class Game {
 
   private pickPackOption(i: number, targets: number[] = []) {
     const run = this.run!;
+    const opt = run.pack?.options[i];
+    const type = opt?.kind === 'consumable' ? CONSUMABLE_BY_ID[opt.defId]?.type : undefined;
     const res = pickFromPack(run, i, targets);
     if (!res) return;
+    if (type) this.playConsumableFx(type);
+    else sfx.pick();
     this.syncJokers();
     this.syncConsumables();
     if (typeof res !== 'boolean') this.toast(res.message, C.accent);
@@ -1371,6 +1494,8 @@ export class Game {
   private showGameOver() {
     const run = this.run!;
     saveRun(null);
+    sfx.lose();
+    this.fx.shake(12);
     const { box } = this.modal(560, 440, C.panelDark);
     const head = label('Verloren', 64, C.mult);
     head.position.set(280, 80);
@@ -1386,6 +1511,9 @@ export class Game {
   }
 
   private showRunWon() {
+    sfx.victory();
+    this.fx.flash(0.3, 0xffd23f);
+    this.fx.shake(10);
     const { box } = this.modal(620, 440, C.panelDark);
     const head = label('Gewonnen!', 72, C.money, { stroke: { color: C.mult, width: 8 } });
     head.position.set(310, 90);

@@ -19,6 +19,7 @@ Stand: Audit vor Beginn der Umbauten.
 | M1 Unit Tests (`src/core/m1.test.ts`) | `npm test` | 15 von 15 grün |
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 | M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün (gesamt 134 in `src`) |
+| M5 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen) | `npm test` | 12 von 12 grün (gesamt 146 in `src`) |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -128,13 +129,13 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | ID | Ist | Soll | Schweregrad | Aufwand | Status |
 |---|---|---|---|---|---|
 | U1 | Layout entspricht weitgehend 9.1 | Zusätzlich Run Info und Options Buttons, Hand Level Übersicht | Feature | mittel | in Arbeit (Run Info mit Händen, Blinds, Vouchers und Deck ist da, Options Button folgt in M6) |
-| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | offen |
-| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | offen |
-| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | offen |
-| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | offen |
-| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | offen |
+| U2 | Hintergrund Shader fix | Farbstimmung pro Blind (Small ruhig, Big kräftiger, Boss dramatisch) (9.1, 9.4) | Feature | klein | erledigt |
+| U3 | Kein CRT Effekt | Eigener CRT Post Processing Shader, abschaltbar (9.4) | Feature | mittel | erledigt |
+| U4 | Kein Sound | Selbst erzeugte Sounds (WebAudio Synthese), steigende Tonhöhe beim Zählen (9.5) | Feature | mittel | erledigt |
+| U5 | Kein Screen Shake, keine Stufen nach Score | Shake und Flash in Stufen (9.3) | Feature | klein | erledigt |
+| U6 | Keine Edition Shader | Eigene Glanz Shader für Editions (9.4) | Feature | mittel | erledigt |
 | U7 | Blind Auswahl ohne Skip | Skip Button mit Tag Vorschau (9.1) | Feature | klein | erledigt |
-| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | offen |
+| U8 | Keine Optionen | Animationstempo, CRT an oder aus, Lautstärke (M6) | Feature | klein | in Arbeit (CRT, Screen Shake und Lautstärke sind seit M5 im Hauptmenü einstellbar, Animationstempo folgt in M6) |
 | U9 | Systemschrift | Eigene oder frei lizenzierte Pixelschrift (9.2) | Feature | klein | offen |
 
 ## Fortschritt
@@ -180,6 +181,17 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Refactor:** Zufallsziehungen (Joker, Editions, Spielkarten, Consumables) in `core/generate.ts`, `ShopItem` ist eine Union aus Joker, Consumable und Spielkarte.
 * **Browser Test:** Runde mit Slots, Elixier auf zwei Zielkarten, Pair mit Fernrohr (78 Punkte wie berechnet), Shop mit allen Karten Arten, Elixier Pack mit Zielwahl, Run Info, Sammlung, Seed Eingabe. Keine Konsolenfehler.
 
+### M5 (abgeschlossen)
+
+* **Farbstimmung pro Blind** (`ui/Background.ts`, `data/juice.ts`): Der Hintergrund Shader bekommt Farben, Kontrast, Randabdunklung und Atmen als Uniforms und blendet in 1,2 Sekunden weich um. Small ruhig und blau, Big kräftig in Bernstein, Boss dramatisch in Rot mit Atmen und schnellerem Fluss (die Bossfarbe färbt leicht mit), Shop und Packs gedämpft, Menü wie vorher.
+* **CRT Filter** (`ui/crt.ts`): Eigener Post Processing Shader über der ganzen Szene mit leichter Wölbung, Scanlines in Bildschirmpixeln, Farbversatz am Rand, Randabdunklung und feinem Rauschen. Abschaltbar.
+* **Sound** (`ui/audio.ts`): Alles per WebAudio Synthese, keine Audiodateien. Der AudioContext startet erst nach der ersten Berührung (iPad). Eigene Klänge für Bedienung, Karten, Zählen (Chips, Mult, X Mult, Geld, Retrigger mit steigender Tonhöhe auf einer pentatonischen Leiter), Aufschlag der Gesamtpunkte, Blind Start (Boss tief), Sieg, Niederlage, Shop (Kaufen, Verkaufen, Reroll, Pack öffnen, Wählen) und Consumables (Sternbild, Elixier, Omen).
+* **Shake und Flash in Stufen** (`ui/stageFx.ts`, `ui/juiceMath.ts`): Die Stufe richtet sich nach Handpunkten geteilt durch Blind Ziel (5 Stufen in `SCORE_TIERS`). X Mult Effekte erschüttern zusätzlich nach Faktor. Sieg, Niederlage, Omen und Voucher haben eigene Effekte. Der Shake läuft über den Pivot der Wurzel und stört die Skalierung nicht.
+* **Edition Shader** (`ui/editionFx.ts`): Schimmer (Folienstreifen mit Funkeln), Aura (rosa Wellen), Prisma (wandernder Regenbogen), Schatten (wabernde Dunkelheit mit hellem Rand). Ein Overlay über Karten und Jokers, ein gemeinsamer Filter pro Edition, additive Ausgabe über premultiplied Alpha.
+* **Joker Grafiken** (`ui/jokerArt.ts`): Eigene Embleme (Stern, Sichel, Kolben, Auge, Sonne, Sanduhr, Orbit, Rune) über Sternenhimmel, aus der Joker ID abgeleitet. Neue Jokers aus M3 bekommen damit automatisch ein Bild.
+* **Optionen** (`settings.ts`, Hauptmenü): CRT, Screen Shake, Lautstärke in Zehnerschritten, gespeichert unter `alatro.settings.v1`.
+* **Browser Test** (Playwright, Chromium mit WebGL): Menü, Optionen, Runde mit allen vier Editions auf Karten und Jokers in Small, Big und Boss, eine gespielte Hand mit Animation. Keine Konsolenfehler. Der Klang selbst lässt sich ohne Audiogerät nicht hören, geprüft ist nur, dass kein Fehler auftritt. Bitte auf dem iPad anhören.
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
@@ -200,7 +212,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 | M2 | Zustandsautomat in der Engine, Skip und Tags, Bosse mit Effekten, Shop mit Reroll, Preisformel, Packs, Vouchers, Decks, Stakes, Zufallsströme pro Key mit `chance()` | D5, D7, F |
 | M3 | `JokerDef` mit `config` und `calculate`, Adapter für die vorhandenen Jokers, danach eigener Katalog gruppenweise mit Tests | neue Gruppentests |
 | M4 | Consumables, Modifikatoren, Siegel, Editions, Pack Abläufe, Collection, Run Info, Seed Eingabe, versioniertes Speichern | neue Tests |
-| M5 | UI und Juice nach Abschnitt 9: Skip Button, Shop Szene, Pack Ansicht, CRT, Farbstimmung pro Blind, Sound, Shake | Sichtprüfung |
+| M5 | UI und Juice nach Abschnitt 9: Skip Button, Shop Szene, Pack Ansicht, CRT, Farbstimmung pro Blind, Sound, Shake (erledigt) | Sichtprüfung |
 | M6 | Politur, Performance, Optionen | |
 
 ## Offene Punkte
@@ -251,3 +263,8 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O40 | Seed Eingabe (7.1) | Eigene Bildschirmtastatur. Die Schrift stellt O und 0 sehr ähnlich dar, deshalb soll U9 (eigene Schrift) das lösen |
 | O41 | Editions auf Consumables (3.4) | Nicht in M4. Schatten Slots gelten nur für Jokers |
 | O42 | Seeds nach M4 | Neue Tags und Vouchers verändern die Auswahl aus dem Tag und Voucher Pool, alte Seeds ergeben damit andere Ante Tags und Vouchers als vor M4. Laufende Spielstände behalten ihre Werte |
+| O43 | Wölbung des CRT Filters (9.4) | Nur 1,2 Prozent, weil Berührungen nicht mit verzerrt werden und am Rand sonst Tippfehler entstehen. Wert in `data/juice.ts` (`CRT.curvature`), im Zweifel in den Optionen abschalten |
+| O44 | Stufen für Shake und Flash (9.3) | Nach Handpunkten geteilt durch Blind Ziel, Schwellen 0, 0,1, 0,3, 0,7, 1,5. Alle Zahlen in `data/juice.ts` und auf dem iPad zu fühlen |
+| O45 | Joker Embleme (9.2) | Aus der Joker ID per Hash gewählt, nicht pro Joker von Hand gezeichnet. Zwei Jokers können dasselbe Symbol haben (Funke und Einzelgänger zeigen beide ein Auge). Eine Zuordnung pro Joker wäre ein Feld in `JokerDef` |
+| O46 | Edition Shader auf Consumables | Nicht umgesetzt, weil Consumables keine Editions haben (O41) |
+| O47 | Systemschrift (U9) | Bleibt offen, gehört zu M6. Schrift ist weiterhin die Systemschrift |

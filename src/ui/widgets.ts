@@ -1,4 +1,5 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { sfx } from './audio';
 import { C, FONT } from './theme';
 import { easeOutBack, tween } from './tween';
 
@@ -37,7 +38,9 @@ export class Button extends Container {
     const release = () => tween(this, { 'scale.x': 1, 'scale.y': 1 }, 200, easeOutBack);
     this.on('pointerup', release);
     this.on('pointerupoutside', release);
-    this.on('pointertap', () => { if (this._enabled) onTap(); });
+    this.on('pointertap', () => {
+      if (this._enabled) { sfx.click(); onTap(); } else sfx.deny();
+    });
   }
 
   setText(t: string) { this.txt.text = t; }
