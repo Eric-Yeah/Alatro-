@@ -1,0 +1,86 @@
+import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { C, FONT } from './theme';
+import { easeOutBack, tween } from './tween';
+
+export function label(text: string, size: number, color = C.text, extra: Partial<TextStyleOptions> = {}): Text {
+  const t = new Text({
+    text,
+    style: { fontFamily: FONT, fontSize: size, fill: color, fontWeight: '800', ...extra },
+  });
+  t.anchor.set(0.5);
+  return t;
+}
+
+export function panel(w: number, h: number, color = C.panel, radius = 14, line = C.panelLine): Container {
+  const c = new Container();
+  c.addChild(new Graphics()
+    .roundRect(0, 4, w, h, radius).fill({ color: 0x000000, alpha: 0.35 })
+    .roundRect(0, 0, w, h, radius).fill(color).stroke({ width: 2, color: line }));
+  return c;
+}
+
+export class Button extends Container {
+  private bg = new Graphics();
+  private txt: Text;
+  private _enabled = true;
+
+  constructor(text: string, private w: number, private h: number, private color: number, onTap: () => void, size = 28) {
+    super();
+    this.txt = label(text, size);
+    this.txt.position.set(w / 2, h / 2);
+    this.addChild(this.bg, this.txt);
+    this.pivot.set(w / 2, h / 2);
+    this.draw();
+    this.eventMode = 'static';
+    this.cursor = 'pointer';
+    this.on('pointerdown', () => { if (this._enabled) tween(this, { 'scale.x': 0.94, 'scale.y': 0.94 }, 60); });
+    const release = () => tween(this, { 'scale.x': 1, 'scale.y': 1 }, 200, easeOutBack);
+    this.on('pointerup', release);
+    this.on('pointerupoutside', release);
+    this.on('pointertap', () => { if (this._enabled) onTap(); });
+  }
+
+  setText(t: string) { this.txt.text = t; }
+
+  set enabled(v: boolean) {
+    this._enabled = v;
+    this.alpha = v ? 1 : 0.4;
+    this.cursor = v ? 'pointer' : 'default';
+  }
+  get enabled() { return this._enabled; }
+
+  private draw() {
+    const { w, h, color } = this;
+    this.bg.clear()
+      .roundRect(0, 5, w, h, 12).fill({ color: 0x000000, alpha: 0.4 })
+      .roundRect(0, 0, w, h, 12).fill(color)
+      .roundRect(4, 4, w - 8, h * 0.4, 8).fill({ color: 0xffffff, alpha: 0.12 });
+  }
+}
+
+/** Floating "+12" style text that rises and fades. */
+export function popup(parent: Container, x: number, y: number, text: string, color: number, size = 34) {
+  const box = new Container();
+  const t = label(text, size, C.text);
+  const pad = 10;
+  const bg = new Graphics()
+    .roundRect(-t.width / 2 - pad, -t.height / 2 - 4, t.width + pad * 2, t.height + 8, 10)
+    .fill(color);
+  box.addChild(bg, t);
+  box.position.set(x, y);
+  box.scale.set(0.3);
+  parent.addChild(box);
+  tween(box, { 'scale.x': 1, 'scale.y': 1 }, 180, easeOutBack);
+  tween(box, { y: y - 50 }, 700).then(() => tween(box, { alpha: 0 }, 200)).then(() => box.destroy({ children: true }));
+}
+
+/** Full-screen dimmer that blocks input below it. */
+export function overlay(w: number, h: number): Container {
+  const c = new Container();
+  const dim = new Graphics().rect(0, 0, w, h).fill({ color: 0x0b0814, alpha: 0.7 });
+  dim.eventMode = 'static';
+  c.addChild(dim);
+  c.alpha = 0;
+  tween(c, { alpha: 1 }, 200);
+  return c;
+}

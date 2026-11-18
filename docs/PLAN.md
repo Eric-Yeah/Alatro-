@@ -185,7 +185,35 @@ kann beliebig aufwendig werden.
 
 ---
 
-## 4. Eigenes Thema (Vorschläge, noch offen)
+## 4. Grafikstil (Entscheidung)
+
+Gleiches *Genre-Gefühl*, aber eigener Look. Die Techniken sind allgemein üblich, Farben,
+Karten und Figuren sind eigene Entwürfe:
+
+- **Animierter Shader-Hintergrund**: eigene „Tinte im Wasser“-Schlieren in Indigo/Pflaume/Petrol,
+  grob gepixelt, mit Vignette (`src/ui/Background.ts`)
+- **Vierfarben-Deck**: Pik Indigo, Herz Rot, Karo Orange, Kreuz Grün; cremefarbene Karten
+- **Juice**: Karten wackeln und springen beim Werten, Zahlen-Popups, Zähler laufen hoch
+- **Später**: eigene Pixel-Art für Joker, Holo-/Folien-Shader auf Karten, CRT-Overlay,
+  Sound mit steigender Tonhöhe, eigene Pixel-Schrift
+
+## 4b. Joker-Design
+
+Eigene Joker, geordnet nach **Mechanik-Familien**, damit der Pool systematisch wächst:
+
+| Familie | Beispiele (bereits drin) |
+|---|---|
+| Flache Boni | Funke (+4 Mult) |
+| Farb-/Rang-Synergien | Glut (rote Karten +2 Mult), Frost (schwarze +15 Chips), Kleinvieh (2–5 +3 Mult) |
+| Hand-Synergien | Treppe (+60 Chips bei Straße) |
+| Skalierend | Schneeball (+1 Mult pro gespielter Hand, dauerhaft) |
+| Bedingungen | Einzelgänger (×3 bei 1 Karte), Letzte Chance (×2,5 bei letzter Hand) |
+| Wirtschaft | Sparschwein (×Mult abhängig vom Geld) |
+
+Geplant: Retrigger-Joker, Joker die auf Abwürfe reagieren, Joker die andere Joker kopieren,
+Joker die Karten im Deck verändern, Geld-Joker am Rundenende.
+
+## 4c. Thema (noch offen)
 
 Damit es ein eigenes Spiel wird, brauchen Joker, Verbrauchskarten und Blinds eigene Namen und Bilder:
 
@@ -231,8 +259,11 @@ Ab **M3** ist es ein vollständig spielbares Spiel; alles danach macht es tiefer
 
 ---
 
-## 7. Offene Fragen
+## 7. Stand
 
-1. Gibt es einen Mac? (Falls ja, wäre nativ später möglich; die PWA bleibt trotzdem die einfachste Variante.)
-2. Welches Thema / welcher Grafikstil?
-3. Wo soll gehostet werden: GitHub Pages, Cloudflare Pages oder Netlify?
+- [x] M0 Setup: Vite + TS + Pixi + Vitest, PWA, GitHub-Pages-Workflow
+- [x] M1 Kern-Logik mit Tests
+- [x] M2 Spielbarer Blind (Auswählen, Spielen, Abwerfen, Sortieren, Punkte-Animation)
+- [x] M3 Run-Schleife (Antes, Blinds, Geld, Zinsen, Sieg/Niederlage, Speichern/Fortsetzen)
+- [~] M4 Joker: System + 9 Joker, Umsortieren per Ziehen, Verkaufen; vorläufige Joker-Auswahl statt Shop
+- [ ] M5 Shop …
