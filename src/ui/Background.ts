@@ -2,8 +2,9 @@ import { Filter, Graphics } from 'pixi.js';
 import { BOSS_TINT_MIX, MOODS, MOOD_FADE_S, type BgMood, type MoodDef } from '../data/juice';
 import { FILTER_VERTEX } from './glsl';
 
-// Own design: slow domain-warped "ink in water" bands, quantised to a coarse pixel grid,
-// in the game's indigo / plum / teal palette, with a soft vignette.
+// Eigener Entwurf: langsam ziehende Schlieren in wenigen harten Farbstufen (kein Verlauf),
+// auf einem groben Pixelraster, dazu kleine scharfe Sterne. Die Konturen der Stufen sind
+// ohne Weichzeichnung, damit das Bild klar und flach wirkt.
 const fragment = /* glsl */ `
 precision highp float;
 in vec2 vTextureCoord;
@@ -25,30 +26,37 @@ float noise(vec2 p) {
 }
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
-  for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+  for (int i = 0; i < 3; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
   return v;
 }
 
 void main(void) {
   vec2 px = vTextureCoord * uRes;
-  float cell = 4.0;
-  px = floor(px / cell) * cell;
+  float cell = 6.0;
+  vec2 cellId = floor(px / cell);
+  px = cellId * cell;
   vec2 uv = px / uRes.y;
 
-  float t = uTime * 0.04;
-  vec2 q = vec2(fbm(uv * 1.6 + t), fbm(uv * 1.6 - t + 4.2));
-  vec2 r = vec2(fbm(uv * 2.0 + 3.0 * q + vec2(1.7, 9.2) + t * 1.5), fbm(uv * 2.0 + 3.0 * q + vec2(8.3, 2.8) - t));
-  float f = fbm(uv * 1.4 + 2.5 * r);
+  float t = uTime * 0.035;
+  vec2 q = vec2(fbm(uv * 1.3 + t), fbm(uv * 1.3 - t + 4.2));
+  float f = fbm(uv * 1.1 + 2.2 * q + vec2(t, -t));
 
-  float bands = floor(f * 7.0) / 7.0;
-  vec3 col = mix(uDeep, uMid, smoothstep(0.25, 0.75, bands));
-  col = mix(col, uAccent, smoothstep(0.55, 0.95, r.x * bands));
-  // Kontrast um die mittlere Helligkeit, Atmen bei dramatischen Stimmungen
+  // fünf harte Stufen von tief nach hell, ohne Übergänge
+  float step5 = floor(clamp(f * 1.35 - 0.12, 0.0, 0.999) * 5.0);
+  vec3 c0 = uDeep * 0.8;
+  vec3 c1 = uDeep;
+  vec3 c2 = mix(uDeep, uMid, 0.6);
+  vec3 c3 = uMid;
+  vec3 c4 = mix(uMid, uAccent, 0.55);
+  vec3 col = step5 < 0.5 ? c0 : step5 < 1.5 ? c1 : step5 < 2.5 ? c2 : step5 < 3.5 ? c3 : c4;
   col = (col - 0.15) * uContrast + 0.15;
   col *= 1.0 + uPulse * sin(uTime * 1.6);
 
-  vec2 c = vTextureCoord - 0.5;
-  col *= 1.0 - dot(c, c) * uVignette;
+  // scharfe Sterne: ein Zellpixel, langsames Funkeln in zwei Stufen
+  float h = hash(cellId);
+  float tw = step(0.5, fract(h * 17.0 + uTime * 0.15));
+  float star = step(0.992, h) * (0.55 + 0.45 * tw);
+  col = mix(col, vec3(1.0), star);
   finalColor = vec4(col, 1.0);
 }
 `;
@@ -103,7 +111,7 @@ export class Background extends Graphics {
   }
 
   resize(w: number, h: number) {
-    this.clear().rect(0, 0, w, h).fill(0x1b1530);
+    this.clear().rect(0, 0, w, h).fill(0x14275a);
     this.filterArea = undefined as any;
     const u = this.filter.resources.bgUniforms.uniforms;
     u.uRes[0] = w;

@@ -51,9 +51,9 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
     dyn.addChild(title);
     addLines(dyn, page.lines, 70, 205, W - 140, 21);
 
-    const prev = new Button('‹', 70, 56, 0x4a3f6b, () => { idx = (idx + TUTORIAL.length - 1) % TUTORIAL.length; render(); }, 30);
+    const prev = new Button('‹', 70, 56, 0x3b5068, () => { idx = (idx + TUTORIAL.length - 1) % TUTORIAL.length; render(); }, 30);
     prev.position.set(W / 2 - 150, TUTORIAL_H - 50);
-    const next = new Button('›', 70, 56, 0x4a3f6b, () => { idx = (idx + 1) % TUTORIAL.length; render(); }, 30);
+    const next = new Button('›', 70, 56, 0x3b5068, () => { idx = (idx + 1) % TUTORIAL.length; render(); }, 30);
     next.position.set(W / 2 + 150, TUTORIAL_H - 50);
     const pl = label(`Seite ${idx + 1} von ${TUTORIAL.length}`, 20, C.text);
     pl.position.set(W / 2, TUTORIAL_H - 50);
@@ -61,7 +61,7 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
   };
   render();
 
-  const closeBtn = new Button('Schließen', 220, 60, 0x6b5a9e, close, 24);
+  const closeBtn = new Button('Schließen', 220, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 150, TUTORIAL_H - 50);
   box.addChild(closeBtn);
 }
@@ -86,10 +86,10 @@ export function buildPatchNotes(box: Container, close: () => void) {
     dyn.addChild(ver, sub);
     addLines(dyn, n.items.map((i) => `* ${i}`), 60, 190, W - 120, 20);
     if (PATCH_NOTES.length > 1) {
-      const newer = new Button('‹ Neuer', 150, 56, 0x4a3f6b, () => { idx = Math.max(0, idx - 1); render(); }, 22);
+      const newer = new Button('‹ Neuer', 150, 56, 0x3b5068, () => { idx = Math.max(0, idx - 1); render(); }, 22);
       newer.position.set(120, PATCH_H - 50);
       newer.enabled = idx > 0;
-      const older = new Button('Älter ›', 150, 56, 0x4a3f6b, () => { idx = Math.min(PATCH_NOTES.length - 1, idx + 1); render(); }, 22);
+      const older = new Button('Älter ›', 150, 56, 0x3b5068, () => { idx = Math.min(PATCH_NOTES.length - 1, idx + 1); render(); }, 22);
       older.position.set(290, PATCH_H - 50);
       older.enabled = idx < PATCH_NOTES.length - 1;
       dyn.addChild(newer, older);
@@ -97,7 +97,7 @@ export function buildPatchNotes(box: Container, close: () => void) {
   };
   render();
 
-  const closeBtn = new Button('Schließen', 220, 60, 0x6b5a9e, close, 24);
+  const closeBtn = new Button('Schließen', 220, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 150, PATCH_H - 50);
   box.addChild(closeBtn);
 }

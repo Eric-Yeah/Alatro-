@@ -1,6 +1,6 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 import { sfx } from './audio';
-import { C, FONT } from './theme';
+import { C, FONT, STYLE, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
 export function label(text: string, size: number, color = C.text, extra: Partial<TextStyleOptions> = {}): Text {
@@ -12,11 +12,11 @@ export function label(text: string, size: number, color = C.text, extra: Partial
   return t;
 }
 
-export function panel(w: number, h: number, color = C.panel, radius = 14, line = C.panelLine): Container {
+export function panel(w: number, h: number, color = C.panel, radius = STYLE.radius, line = C.panelLine): Container {
   const c = new Container();
   c.addChild(new Graphics()
-    .roundRect(0, 4, w, h, radius).fill({ color: 0x000000, alpha: 0.35 })
-    .roundRect(0, 0, w, h, radius).fill(color).stroke({ width: 2, color: line }));
+    .roundRect(0, STYLE.shadowY, w, h, radius).fill(STYLE.shadowColor)
+    .roundRect(0, 0, w, h, radius).fill(color).stroke({ width: STYLE.outline, color: line }));
   return c;
 }
 
@@ -54,10 +54,13 @@ export class Button extends Container {
 
   private draw() {
     const { w, h, color } = this;
+    const r = STYLE.radius;
+    const o = STYLE.outline;
+    // Kontur, unterer Rand in dunklerer Farbe, Fläche: alles flach und hart
     this.bg.clear()
-      .roundRect(0, 5, w, h, 12).fill({ color: 0x000000, alpha: 0.4 })
-      .roundRect(0, 0, w, h, 12).fill(color)
-      .roundRect(4, 4, w - 8, h * 0.4, 8).fill({ color: 0xffffff, alpha: 0.12 });
+      .roundRect(-o, -o, w + o * 2, h + o * 2 + 5, r + o).fill(C.panelLine)
+      .roundRect(0, 0, w, h + 5, r).fill(shade(color, 0.55))
+      .roundRect(0, 0, w, h, r).fill(color);
   }
 }
 
@@ -89,7 +92,7 @@ export function tabBar<T extends string>(
   const gap = 8;
   const w = (width - gap * (tabs.length - 1)) / tabs.length;
   tabs.forEach((t, i) => {
-    const b = new Button(t.name, w, 46, t.id === current ? C.accent : 0x4a3f6b, () => onSelect(t.id), size);
+    const b = new Button(t.name, w, 46, t.id === current ? C.accent : 0x3b5068, () => onSelect(t.id), size);
     b.position.set(w / 2 + i * (w + gap), 23);
     bar.addChild(b);
   });
@@ -106,7 +109,7 @@ export function wrapText(text: string, width: number, size = 16, color = C.text,
 /** Full-screen dimmer that blocks input below it. */
 export function overlay(w: number, h: number): Container {
   const c = new Container();
-  const dim = new Graphics().rect(0, 0, w, h).fill({ color: 0x0b0814, alpha: 0.7 });
+  const dim = new Graphics().rect(0, 0, w, h).fill({ color: 0x070b11, alpha: 0.72 });
   dim.eventMode = 'static';
   c.addChild(dim);
   c.alpha = 0;

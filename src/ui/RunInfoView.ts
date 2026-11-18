@@ -44,7 +44,7 @@ export function buildRunInfo(box: Container, run: RunState, close: () => void, s
   };
   show(startTab);
 
-  const closeBtn = new Button('Schließen', 260, 60, 0x6b5a9e, close, 24);
+  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W / 2, RUN_INFO_H - 50);
   box.addChild(closeBtn);
 }
@@ -60,7 +60,7 @@ function hands(c: Container, run: RunState) {
   }
   handRows(run).forEach((r, i) => {
     const y = 26 + i * 43;
-    const bg = new Graphics().roundRect(0, y, 1020, 38, 10).fill({ color: r.hidden ? 0x15111f : C.panel, alpha: 0.9 });
+    const bg = new Graphics().roundRect(0, y, 1020, 38, 10).fill({ color: r.hidden ? 0x141d29 : C.panel, alpha: 0.9 });
     const lv = label(r.hidden ? '?' : `Lv ${r.level}`, 22, r.level > 1 ? C.money : C.text);
     lv.anchor.set(0, 0.5);
     lv.position.set(colX.level, y + 19);

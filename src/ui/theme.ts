@@ -6,21 +6,39 @@ export const VIEW_W = 1440;
 export const VIEW_H = 1000;
 
 export const C = {
-  bg: 0x1b1530,
-  panel: 0x2a2342,
-  panelDark: 0x1f1a33,
-  panelLine: 0x4a3f6b,
-  text: 0xf4efe6,
-  textDim: 0xa99fc4,
-  chips: 0x2f8fff,
-  mult: 0xff4d5e,
-  money: 0xffc94d,
-  accent: 0x9b6bff,
+  bg: 0x14275a,
+  panel: 0x2e3f55,
+  panelDark: 0x1d2a3a,
+  /** dunkle Kontur um Panels, Knöpfe und Karten */
+  panelLine: 0x0b1018,
+  text: 0xffffff,
+  textDim: 0x9fb4cc,
+  chips: 0x0a8cff,
+  mult: 0xff4c40,
+  money: 0xf5b32b,
+  accent: 0xff9a1f,
   green: 0x3fbf7f,
-  cardFace: 0xf6f0e1,
-  cardEdge: 0x2b2540,
-  cardBack: 0x5b3fa8,
+  cardFace: 0xfbf7ee,
+  cardEdge: 0x0b1018,
+  cardBack: 0x2a56b8,
 };
+
+/** Flacher Stil: harte Kanten, feste Konturen, versetzter voller Schatten, keine Verläufe. */
+export const STYLE = {
+  outline: 3,
+  radius: 8,
+  /** Versatz des harten Schattens nach unten */
+  shadowY: 4,
+  shadowColor: 0x070b11,
+};
+
+/** Dunkelt eine Farbe (0xRRGGBB) um den Faktor ab, 1 = unverändert. */
+export function shade(hex: number, k: number): number {
+  const r = Math.round(((hex >> 16) & 255) * k);
+  const g = Math.round(((hex >> 8) & 255) * k);
+  const b = Math.round((hex & 255) * k);
+  return (r << 16) | (g << 8) | b;
+}
 
 export const SUIT_COLORS: Record<Suit, number> = {
   S: 0x2b2f6b,

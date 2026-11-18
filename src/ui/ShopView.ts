@@ -29,7 +29,7 @@ function priceTag(price: number, affordable: boolean): Container {
   const c = new Container();
   const t = label(price === 0 ? 'Gratis' : `$${price}`, 22, affordable ? C.money : 0x8a7f99);
   const w = Math.max(56, t.width + 20);
-  c.addChild(new Graphics().roundRect(-w / 2, -16, w, 32, 10).fill(0x15111f).stroke({ width: 2, color: affordable ? C.money : 0x4a3f6b }), t);
+  c.addChild(new Graphics().roundRect(-w / 2, -16, w, 32, 10).fill(0x141d29).stroke({ width: 2, color: affordable ? C.money : 0x3b5068 }), t);
   return c;
 }
 
@@ -129,7 +129,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       cv.scale.set(0.9);
       cv.position.set(x, 130);
       cv.eventMode = 'none';
-      badge('Spielkarte', 0x6b5a9e);
+      badge('Spielkarte', 0xf2711c);
       const parts: string[] = [];
       if (item.card.enhancement) parts.push(`${ENHANCEMENTS[item.card.enhancement].name}: ${ENHANCEMENTS[item.card.enhancement].description}`);
       if (item.card.seal) parts.push(`${SEALS[item.card.seal].name}: ${SEALS[item.card.seal].description}`);
@@ -149,7 +149,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     card.position.set(vx, 140);
     card.addChild(
       new Graphics()
-        .roundRect(-56, -70, 112, 140, 12).fill(0x3a2a5e).stroke({ width: 3, color: C.money })
+        .roundRect(-56, -70, 112, 140, 12).fill(0x24407a).stroke({ width: 3, color: C.money })
         .star(0, -18, 6, 26, 12).fill({ color: C.money, alpha: 0.85 }),
     );
     const vn = smallText(v.name, 100, 15, 0xffffff);
@@ -185,8 +185,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     const def = PACK_BY_ID[p.packId];
     const color = def.kind === 'joker' ? C.mult : C.chips;
     const box = new Graphics()
-      .roundRect(x - 100, 440, 200, 92, 12).fill(color).stroke({ width: 3, color: 0xffffff, alpha: 0.4 })
-      .roundRect(x - 92, 448, 184, 30, 8).fill({ color: 0xffffff, alpha: 0.12 });
+      .roundRect(x - 100, 440, 200, 92, 8).fill(color).stroke({ width: 3, color: C.panelLine });
     const name = label(def.name, 18, 0xffffff);
     name.position.set(x, 466);
     const info = label(`Wähle ${def.picks} aus ${def.choices}`, 15, 0xffffff, { fontWeight: '700' });

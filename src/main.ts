@@ -8,6 +8,7 @@ import { sfx } from './ui/audio';
 import { CrtFilter } from './ui/crt';
 import { Game } from './ui/Game';
 import { FpsMeter } from './ui/perf';
+import { setTextResolution } from './ui/textRes';
 import { FONT } from './ui/theme';
 import { computeView, isPhone } from './ui/viewport';
 
@@ -15,7 +16,7 @@ async function main() {
   const app = new Application();
   await app.init({
     resizeTo: window,
-    background: 0x1b1530,
+    background: 0x14275a,
     antialias: true,
     resolution: Math.min(window.devicePixelRatio || 1, QUALITY_PROFILE[getSettings().quality].maxResolution),
     autoDensity: true,
@@ -68,6 +69,7 @@ async function main() {
     game.root.rotation = t.rotation;
     game.root.scale.set(t.scale);
     game.root.position.set(t.x, t.y);
+    setTextResolution(app.renderer.resolution * t.scale, app.stage);
     fpsText.position.set(w - 8, 6);
   };
   app.renderer.on('resize', resize);

@@ -48,11 +48,11 @@ export interface MoodDef {
 }
 
 export const MOODS: Record<BgMood, MoodDef> = {
-  menu: { deep: [0.075, 0.055, 0.14], mid: [0.24, 0.1, 0.3], accent: [0.06, 0.26, 0.3], speed: 1, contrast: 1, vignette: 1.3, pulse: 0 },
-  small: { deep: [0.04, 0.09, 0.17], mid: [0.09, 0.24, 0.42], accent: [0.06, 0.34, 0.34], speed: 0.7, contrast: 0.85, vignette: 1.2, pulse: 0 },
-  big: { deep: [0.14, 0.08, 0.05], mid: [0.44, 0.24, 0.07], accent: [0.42, 0.13, 0.26], speed: 1.35, contrast: 1.15, vignette: 1.3, pulse: 0.04 },
-  boss: { deep: [0.07, 0.02, 0.05], mid: [0.3, 0.05, 0.12], accent: [0.14, 0.05, 0.3], speed: 1.9, contrast: 1.4, vignette: 1.7, pulse: 0.1 },
-  shop: { deep: [0.06, 0.1, 0.12], mid: [0.13, 0.22, 0.24], accent: [0.3, 0.26, 0.08], speed: 0.8, contrast: 0.9, vignette: 1.2, pulse: 0 },
+  menu: { deep: [0.06, 0.12, 0.34], mid: [0.1, 0.25, 0.62], accent: [0.2, 0.42, 0.85], speed: 1, contrast: 1, vignette: 0, pulse: 0 },
+  small: { deep: [0.05, 0.13, 0.33], mid: [0.09, 0.28, 0.6], accent: [0.14, 0.5, 0.75], speed: 0.8, contrast: 1, vignette: 0, pulse: 0 },
+  big: { deep: [0.2, 0.1, 0.07], mid: [0.5, 0.26, 0.08], accent: [0.8, 0.45, 0.12], speed: 1.2, contrast: 1.05, vignette: 0, pulse: 0 },
+  boss: { deep: [0.16, 0.04, 0.09], mid: [0.45, 0.08, 0.16], accent: [0.7, 0.15, 0.25], speed: 1.6, contrast: 1.1, vignette: 0, pulse: 0.03 },
+  shop: { deep: [0.05, 0.13, 0.3], mid: [0.08, 0.26, 0.5], accent: [0.15, 0.5, 0.55], speed: 0.8, contrast: 1, vignette: 0, pulse: 0 },
 };
 
 /** Wie stark die Bossfarbe die Boss Stimmung färbt (0 bis 1) */
@@ -102,7 +102,8 @@ export const FPS_WINDOW_MS = 500;
 
 /** Standard Einstellungen */
 export const DEFAULT_SETTINGS = {
-  crt: true,
+  /** CRT Effekt macht das Bild weich, standardmäßig aus */
+  crt: false,
   shake: true,
   /** Lautstärke 0 bis 1 */
   volume: 0.6,

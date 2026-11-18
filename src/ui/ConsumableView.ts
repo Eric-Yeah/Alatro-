@@ -35,9 +35,9 @@ export class ConsumableView extends Container {
     const w = CONSUMABLE_W, h = CONSUMABLE_H;
     const artH = h - 50;
     const g = new Graphics()
-      .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
-      .roundRect(-w / 2, -h / 2, w, h, 10).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
-      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, artH, 6).fill(color);
+      .roundRect(-w / 2, -h / 2 + 5, w, h, 8).fill({ color: 0x000000, alpha: 0.4 })
+      .roundRect(-w / 2, -h / 2, w, h, 8).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
+      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, artH, 4).fill(color).stroke({ width: 2, color: C.cardEdge });
     const art = symbol(def.type, -h / 2 + 7 + artH / 2);
     const name = new Text({
       text: def.name,

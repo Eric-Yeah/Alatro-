@@ -26,7 +26,7 @@ export class CardView extends Container {
 
     const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 });
     const body = new Graphics()
-      .roundRect(-w / 2, -h / 2, w, h, 10).fill(faceColor).stroke({ width: 3, color: C.cardEdge })
+      .roundRect(-w / 2, -h / 2, w, h, 8).fill(faceColor).stroke({ width: 3, color: C.cardEdge })
       .roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 6).stroke({ width: 1.5, color, alpha: 0.35 });
     this.face.addChild(shadow, body);
 
@@ -108,7 +108,7 @@ export class CardView extends Container {
       return;
     }
     const o = new Container();
-    o.addChild(new Graphics().roundRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10).fill({ color: 0x1b1530, alpha: 0.55 }));
+    o.addChild(new Graphics().roundRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 8).fill({ color: 0x14275a, alpha: 0.6 }));
     const x = new Text({ text: '✕', style: { fontFamily: FONT, fontSize: 64, fontWeight: '900', fill: 0xff4d5e } });
     x.anchor.set(0.5);
     x.alpha = 0.85;
@@ -122,12 +122,12 @@ export function cardBack(color: number = C.cardBack): Container {
   const c = new Container();
   const w = CARD_W, h = CARD_H;
   const g = new Graphics()
-    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
-    .roundRect(-w / 2, -h / 2, w, h, 10).fill(color).stroke({ width: 3, color: C.cardEdge })
-    .roundRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20, 6).stroke({ width: 2, color: 0xffffff, alpha: 0.35 });
-  for (let i = -3; i <= 3; i++) {
-    g.moveTo(-w / 2 + 14, i * 18).lineTo(0, i * 18 - 30).lineTo(w / 2 - 14, i * 18).stroke({ width: 2, color: 0xffffff, alpha: 0.12 });
-  }
+    .roundRect(-w / 2, -h / 2 + 5, w, h, 8).fill({ color: 0x000000, alpha: 0.4 })
+    .roundRect(-w / 2, -h / 2, w, h, 8).fill(0xfbf7ee).stroke({ width: 3, color: C.cardEdge })
+    .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, h - 14, 4).fill(color).stroke({ width: 2, color: C.cardEdge });
+  // Raute in der Mitte: harte Flächen statt feiner Linien
+  g.poly([0, -34, 26, 0, 0, 34, -26, 0]).fill(0xfbf7ee).stroke({ width: 2, color: C.cardEdge });
+  g.poly([0, -16, 12, 0, 0, 16, -12, 0]).fill(color);
   c.addChild(g);
   return c;
 }

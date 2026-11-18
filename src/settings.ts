@@ -9,7 +9,9 @@ export interface Settings {
   fps: boolean;
 }
 
-const KEY = 'alatro.settings.v1';
+const KEY = 'alatro.settings.v2';
+/** Alter Speicherort (v1): wird einmal übernommen, der CRT Effekt aber ausgeschaltet (neuer klarer Stil). */
+const OLD_KEY = 'alatro.settings.v1';
 
 /** Liest rohe Daten, ergänzt fehlende oder ungültige Felder durch Standardwerte. */
 export function parseSettings(raw: unknown): Settings {
@@ -42,7 +44,12 @@ const listeners = new Set<Listener>();
 
 function load(): Settings {
   try {
-    return parseSettings(JSON.parse(localStorage.getItem(KEY) ?? 'null'));
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) {
+      const old = localStorage.getItem(OLD_KEY);
+      if (old !== null) return parseSettings({ ...JSON.parse(old), crt: false });
+    }
+    return parseSettings(JSON.parse(raw ?? 'null'));
   } catch {
     return parseSettings(null);
   }

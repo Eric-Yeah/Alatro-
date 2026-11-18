@@ -18,7 +18,7 @@ function entryColor(e: CollectionEntry): number {
   if (e.color !== undefined) return e.color;
   if (e.group in RARITY_COLORS) return RARITY_COLORS[e.group as keyof typeof RARITY_COLORS];
   if (e.group in CONSUMABLE_COLORS) return CONSUMABLE_COLORS[e.group as keyof typeof CONSUMABLE_COLORS];
-  return 0x6b5a9e;
+  return 0xf2711c;
 }
 
 /** Sammlung: alle Inhalte nach Reitern, nicht gesehene Einträge bleiben verdeckt. */
@@ -55,7 +55,7 @@ export function buildCollection(box: Container, close: () => void) {
       const color = entryColor(e);
       dyn.addChild(new Graphics()
         .roundRect(x, y + 4, CELL_W, CELL_H, 14).fill({ color: 0, alpha: 0.35 })
-        .roundRect(x, y, CELL_W, CELL_H, 14).fill(known ? C.panel : 0x15111f).stroke({ width: 3, color: known ? color : C.panelLine }));
+        .roundRect(x, y, CELL_W, CELL_H, 14).fill(known ? C.panel : 0x141d29).stroke({ width: 3, color: known ? color : C.panelLine }));
       if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(color));
       const name = label(known ? e.name : '???', 24, known ? C.text : C.textDim);
       name.position.set(x + CELL_W / 2, y + 42);
@@ -71,9 +71,9 @@ export function buildCollection(box: Container, close: () => void) {
     });
 
     if (pages > 1) {
-      const prev = new Button('‹', 70, 56, 0x4a3f6b, () => { page = (page + pages - 1) % pages; render(); }, 30);
+      const prev = new Button('‹', 70, 56, 0x3b5068, () => { page = (page + pages - 1) % pages; render(); }, 30);
       prev.position.set(W / 2 - 150, H_NAV);
-      const next = new Button('›', 70, 56, 0x4a3f6b, () => { page = (page + 1) % pages; render(); }, 30);
+      const next = new Button('›', 70, 56, 0x3b5068, () => { page = (page + 1) % pages; render(); }, 30);
       next.position.set(W / 2 + 150, H_NAV);
       const pl = label(`Seite ${page + 1} von ${pages}`, 20, C.text);
       pl.position.set(W / 2, H_NAV);
@@ -82,7 +82,7 @@ export function buildCollection(box: Container, close: () => void) {
   };
   render();
 
-  const closeBtn = new Button('Schließen', 260, 60, 0x6b5a9e, close, 24);
+  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 190, COLLECTION_H - 50);
   box.addChild(closeBtn);
 }

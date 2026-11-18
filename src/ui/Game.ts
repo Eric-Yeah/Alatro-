@@ -30,7 +30,7 @@ import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES, VIEW_H, VIEW_W, fmt, fmtMult } from './theme';
+import { C, CONSUMABLE_COLORS, FONT, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
@@ -50,7 +50,7 @@ const jokerSpacing = (n: number) => (n <= 5 ? JOKER_SPACING : Math.min(JOKER_SPA
 const CONS_TRAY_X = 1160;
 const CONS_TRAY_W = 260;
 
-const BLIND_COLORS: Record<BlindKind, number> = { small: 0x2a7f8f, big: 0xc9822b, boss: 0xa8324a };
+const BLIND_COLORS: Record<BlindKind, number> = { small: 0x1f8fc4, big: 0xe08a1e, boss: 0xd23a4a };
 
 type SortMode = 'rank' | 'suit';
 
@@ -139,7 +139,7 @@ export class Game {
     t.addChild(catcher);
 
     // Sidebar background
-    const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 18).fill({ color: 0x0e0b1a, alpha: 0.55 });
+    const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 12).fill(0x24354a).stroke({ width: 3, color: C.panelLine });
     t.addChild(side);
 
     // Blind panel
@@ -180,7 +180,7 @@ export class Game {
     this.handLevel = label('', 18, C.textDim);
     this.handLevel.position.set(165, 66);
     const box = (c: Container, color: number, x: number) => {
-      c.addChild(new Graphics().roundRect(-66, -36, 132, 72, 10).fill(color));
+      c.addChild(new Graphics().roundRect(-66, -36, 132, 72, 8).fill(color).stroke({ width: 3, color: C.panelLine }));
       c.position.set(x, 122);
       const tx = label('0', 38, C.text);
       c.addChild(tx);
@@ -231,12 +231,12 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button('Menü', 160, 60, 0x4a3f6b, () => { if (!this.busy) this.showMainMenu(); }, 24);
+    const menuBtn = new Button('Menü', 160, 60, 0x3b5068, () => { if (!this.busy) this.showMainMenu(); }, 24);
     menuBtn.position.set(100, 800);
-    const infoBtn = new Button('Run Info', 160, 60, 0x6b5a9e, () => { if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
     t.addChild(menuBtn, infoBtn);
-    this.speedBtn = new Button('', 330, 54, 0x3f6fa8, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
+    this.speedBtn = new Button('', 330, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
     this.refreshSpeedBtn();
     this.speedBtn.position.set(185, 872);
     t.addChild(this.speedBtn);
@@ -278,16 +278,16 @@ export class Game {
     this.playBtn.position.set(MX - 260, 935);
     this.discardBtn = new Button('Discard', 230, 72, C.mult, () => this.discard(), 28);
     this.discardBtn.position.set(MX + 260, 935);
-    this.sortRankBtn = new Button('Rank', 116, 56, 0x6b5a9e, () => this.setSort('rank'), 22);
+    this.sortRankBtn = new Button('Rank', 116, 56, 0xf2711c, () => this.setSort('rank'), 22);
     this.sortRankBtn.position.set(MX - 64, 935);
-    this.sortSuitBtn = new Button('Suit', 116, 56, 0x6b5a9e, () => this.setSort('suit'), 22);
+    this.sortSuitBtn = new Button('Suit', 116, 56, 0xf2711c, () => this.setSort('suit'), 22);
     this.sortSuitBtn.position.set(MX + 64, 935);
     const sortLbl = label('Sortieren', 16, C.textDim);
     sortLbl.position.set(MX, 892);
     this.handControls.addChild(this.playBtn, this.discardBtn, this.sortRankBtn, this.sortSuitBtn, sortLbl);
     t.addChild(this.handControls);
 
-    this.totalText = label('', 64, C.text, { stroke: { color: 0x0b0814, width: 8 } });
+    this.totalText = label('', 64, C.text, { stroke: { color: 0x070b11, width: 8 } });
     this.totalText.position.set(MX, 600);
     this.totalText.alpha = 0;
     this.fxLayer.addChild(this.totalText);
@@ -302,9 +302,9 @@ export class Game {
     const r = run.round;
     const boss = blind === 'boss' ? (r ? activeBoss(run) : run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined) : undefined;
     this.blindBg.clear()
-      .roundRect(0, 4, 330, 160, 14).fill({ color: 0, alpha: 0.35 })
-      .roundRect(0, 0, 330, 160, 14).fill(boss ? boss.color : BLIND_COLORS[blind]).stroke({ width: 2, color: 0xffffff, alpha: 0.2 })
-      .roundRect(10, 56, 310, 96, 10).fill({ color: 0x0b0814, alpha: 0.45 });
+      .roundRect(0, 4, 330, 160, 8).fill(STYLE.shadowColor)
+      .roundRect(0, 0, 330, 160, 8).fill(boss ? boss.color : BLIND_COLORS[blind]).stroke({ width: 3, color: C.panelLine })
+      .roundRect(10, 56, 310, 96, 6).fill(shade(boss ? boss.color : BLIND_COLORS[blind], 0.4));
     this.blindName.text = boss ? boss.name : BLIND_NAMES[blind];
     this.blindName.scale.set(1);
     if (this.blindName.width > 310) this.blindName.scale.set(310 / this.blindName.width);
@@ -854,7 +854,7 @@ export class Game {
       if (ev.mult) popup(this.fxLayer, p.x, y, `+${fmtMult(ev.mult)} Mult`, C.mult, 28);
       if (ev.xMult) popup(this.fxLayer, p.x, y, `×${fmtMult(ev.xMult)} Mult`, C.mult, 30);
       if (ev.money) popup(this.fxLayer, p.x, y, `+$${ev.money}`, C.money);
-      if (ev.message) popup(this.fxLayer, p.x, y, ev.message, ev.phase === 'debuff' ? 0x6b5a9e : C.accent, 26);
+      if (ev.message) popup(this.fxLayer, p.x, y, ev.message, ev.phase === 'debuff' ? 0xf2711c : C.accent, 26);
     } else if (ev.message) {
       // Regel Events (Balance, Boss) erscheinen über der Chips mal Mult Anzeige
       const p = this.fxLayer.toLocal(this.multBox.getGlobalPosition());
@@ -1038,7 +1038,7 @@ export class Game {
       sd.anchor.set(0.5, 0);
       sd.position.set(380, 452);
       const arrow = (txt: string, x: number, y: number, fn: () => void) => {
-        const b = new Button(txt, 70, 70, 0x4a3f6b, fn, 34);
+        const b = new Button(txt, 70, 70, 0x3b5068, fn, 34);
         b.position.set(x, y);
         content.addChild(b);
       };
@@ -1049,7 +1049,7 @@ export class Game {
       arrow('›', 650, 440, () => { stakeIdx = (stakeIdx + 1) % STAKES.length; render(); });
       const seedLbl = label('Seed', 20, C.textDim);
       seedLbl.position.set(380, 520);
-      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 56, 0x4a3f6b, () => {
+      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 56, 0x3b5068, () => {
         saveSetupPref({ deckId: deck.id, stakeId: stake.id });
         this.showSeedEntry();
       }, 26);
@@ -1091,11 +1091,11 @@ export class Game {
     }
     const nr = new Button('Neuer Run', 400, 76, C.mult, () => this.startNewRun(), 30);
     nr.position.set(310, y);
-    const coll = new Button('Sammlung', 400, 76, 0x6b5a9e, () => this.showCollection(), 30);
+    const coll = new Button('Sammlung', 400, 76, 0xf2711c, () => this.showCollection(), 30);
     coll.position.set(310, y + 100);
     box.addChild(nr, coll);
     const small = (text: string, x: number, fn: () => void) => {
-      const b = new Button(text, 180, 64, 0x4a3f6b, fn, 22);
+      const b = new Button(text, 180, 64, 0x3b5068, fn, 22);
       b.position.set(x, y + 200);
       box.addChild(b);
     };
@@ -1147,7 +1147,7 @@ export class Game {
       };
       const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
         const y = row(i, name, desc);
-        const b = new Button(on ? 'An' : 'Aus', 130, 56, on ? C.green : 0x4a3f6b, () => { toggle(); render(); }, 24);
+        const b = new Button(on ? 'An' : 'Aus', 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
         b.position.set(W - 115, y);
         dyn.addChild(b);
       };
@@ -1157,19 +1157,19 @@ export class Game {
         this.fx.shake(6);
       });
       const vy = row(2, 'Lautstärke', `${Math.round(st.volume * 100)} Prozent`);
-      const minus = new Button('−', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      const minus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       minus.position.set(W - 175, vy);
-      const plus = new Button('+', 60, 56, 0x4a3f6b, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       plus.position.set(W - 95, vy);
       const sy = row(3, 'Animationstempo', 'Zählen, Karten und Übergänge');
       const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
-      const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x4a3f6b, () => {
+      const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x3b5068, () => {
         updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
         render();
       }, 22);
       speed.position.set(W - 150, sy);
       const qy = row(4, 'Grafik', st.quality === 'sparsam' ? '30 FPS, ohne CRT und Edition Glanz' : 'Volle Effekte');
-      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x4a3f6b, () => {
+      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
         updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
         render();
       }, 22);
@@ -1213,7 +1213,7 @@ export class Game {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       for (let i = 0; i < SEED_LENGTH; i++) {
         const x = W / 2 + (i - (SEED_LENGTH - 1) / 2) * 76;
-        dyn.addChild(new Graphics().roundRect(x - 32, 130, 64, 76, 10).fill(0x15111f).stroke({ width: 3, color: i === seed.length ? C.accent : C.panelLine }));
+        dyn.addChild(new Graphics().roundRect(x - 32, 130, 64, 76, 10).fill(0x141d29).stroke({ width: 3, color: i === seed.length ? C.accent : C.panelLine }));
         if (seed[i]) {
           const ch = label(seed[i], 40, C.text);
           ch.position.set(x, 168);
@@ -1223,7 +1223,7 @@ export class Game {
       // Kein O auf der Tastatur: es gilt ohnehin als 0 und sähe in der Systemschrift gleich aus (O40)
       const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ0123456789';
       [...chars].forEach((ch, i) => {
-        const b = new Button(ch, 66, 66, 0x4a3f6b, () => { seed = normalizeSeed(seed + ch); render(); }, 30);
+        const b = new Button(ch, 66, 66, 0x3b5068, () => { seed = normalizeSeed(seed + ch); render(); }, 30);
         b.position.set(W / 2 + ((i % 9) - 4) * 76, 270 + Math.floor(i / 9) * 76);
         b.enabled = seed.length < SEED_LENGTH;
         dyn.addChild(b);
@@ -1231,7 +1231,7 @@ export class Game {
       const del = new Button('Löschen', 200, 62, C.mult, () => { seed = seed.slice(0, -1); render(); }, 24);
       del.position.set(W / 2 - 230, 620);
       del.enabled = seed.length > 0;
-      const rnd = new Button('Zufällig', 200, 62, 0x6b5a9e, () => { seed = ''; render(); }, 24);
+      const rnd = new Button('Zufällig', 200, 62, 0xf2711c, () => { seed = ''; render(); }, 24);
       rnd.position.set(W / 2, 620);
       const ok = new Button('Fertig', 200, 62, C.green, () => {
         this.setupSeed = seed;
@@ -1259,13 +1259,14 @@ export class Game {
       const boss = kind === 'boss' && run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined;
       const color = boss ? boss.color : BLIND_COLORS[kind];
       const g = new Graphics()
-        .roundRect(0, 0, 300, 490, 16).fill(state === 'current' ? color : C.panel)
-        .stroke({ width: 3, color: state === 'current' ? 0xffffff : C.panelLine, alpha: state === 'current' ? 0.6 : 1 });
+        .roundRect(0, 6, 300, 490, 10).fill(STYLE.shadowColor)
+        .roundRect(0, 0, 300, 490, 10).fill(state === 'current' ? color : C.panel)
+        .stroke({ width: 4, color: C.panelLine });
       col.addChild(g);
       const name = label(boss ? boss.name : BLIND_NAMES[kind], 26);
       name.position.set(150, 36);
       if (name.width > 280) name.scale.set(280 / name.width);
-      const chip = new Graphics().circle(150, 108, 40).fill({ color: 0x0b0814, alpha: 0.4 }).stroke({ width: 4, color: 0xffffff, alpha: 0.5 });
+      const chip = new Graphics().circle(150, 108, 40).fill(shade(color, 0.45)).stroke({ width: 4, color: C.panelLine });
       const chipT = label(kind === 'boss' ? '☠' : kind === 'big' ? '◆' : '●', 38, 0xffffff);
       chipT.position.set(150, 108);
       col.addChild(name, chip, chipT);
@@ -1285,7 +1286,7 @@ export class Game {
       col.addChild(zl, target, rew);
       if (kind !== 'boss' && run.anteTags) {
         const tag = TAG_BY_ID[run.anteTags[kind]];
-        const tb = new Graphics().roundRect(16, 322, 268, 86, 12).fill({ color: 0x0b0814, alpha: 0.35 });
+        const tb = new Graphics().roundRect(16, 322, 268, 86, 6).fill(shade(state === 'current' ? color : C.panel, 0.45));
         const tn = label(`Skip Tag: ${tag.name}`, 17, C.accent);
         tn.position.set(150, 342);
         const td = new Text({ text: tag.description, style: { fontFamily: FONT, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
@@ -1298,7 +1299,7 @@ export class Game {
         play.position.set(kind === 'boss' ? 150 : 85, 448);
         col.addChild(play);
         if (kind !== 'boss') {
-          const skip = new Button('Skip', 110, 58, 0x6b5a9e, () => this.doSkip(), 24);
+          const skip = new Button('Skip', 110, 58, 0xf2711c, () => this.doSkip(), 24);
           skip.position.set(222, 448);
           col.addChild(skip);
         }
@@ -1541,7 +1542,7 @@ export class Game {
         });
       }
 
-      const skip = new Button('Überspringen', 240, 56, 0x6b5a9e, () => {
+      const skip = new Button('Überspringen', 240, 56, 0xf2711c, () => {
         closePack(run);
         saveRun(run);
         this.clearOverlay();

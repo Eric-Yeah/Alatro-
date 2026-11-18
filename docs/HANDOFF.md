@@ -64,6 +64,10 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 * **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/patchnotes.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
 * **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit den Patch Notes). Bei Regeländerungen die Texte mitpflegen.
 
+## Klarer Grafikstil
+
+Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. CRT ist standardmäßig aus. **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen.
+
 ## Hinweise für M6 (Rest)
 
 * Fertig: Animationstempo (`SPEED_STEPS`, wirkt in `tween`/`wait`), Grafikstufe Voll oder Sparsam (`QUALITY_PROFILE`, in `main.ts` und `editionFx.ts` angewendet), FPS Anzeige (`ui/perf.ts`), Seed Tastatur ohne O. Einzelheiten in `AUDIT.md` Abschnitt M6, O56, O57.

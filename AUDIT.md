@@ -215,9 +215,17 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Animationstempo** (`data/juice.ts` `SPEED_STEPS`, `settings.ts` `speedFactor`): Normal, Schnell (1,6), Sehr schnell (2,5), Blitz (5). Wirkt zentral in `tween()` und `wait()`, also auf Zählen, Karten, Übergänge und Zwischenpausen. Der wackelnde Titel im Menü bleibt im Takt (`ambient`).
 * **Grafikstufe** (`QUALITY_PROFILE`): Voll oder Sparsam. Sparsam deckelt die Bildrate auf 30, die Auflösung auf 1, schaltet den CRT Filter ab und blendet die Edition Shader aus (`renderable`, kein Filter Durchlauf pro Karte). Wechsel gilt sofort ohne Neustart.
 * **FPS Anzeige** (`ui/perf.ts` `FpsMeter`): kleine Anzeige oben rechts mit Bildrate und längstem Frame, abschaltbar. Gedacht für die Prüfung auf dem iPad.
-* **Optionen** (Menü): jetzt CRT, Screen Shake, Lautstärke, Tempo, Grafik, FPS Anzeige. Gespeichert unter `alatro.settings.v1`, fehlende Felder alter Spielstände werden mit Standardwerten ergänzt.
+* **Optionen** (Menü): jetzt CRT, Screen Shake, Lautstärke, Tempo, Grafik, FPS Anzeige. Gespeichert unter `alatro.settings.v2` (früher v1), fehlende Felder alter Spielstände werden mit Standardwerten ergänzt.
 * **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
 * **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
+
+### Klarer Grafikstil (nach M6)
+
+* **Anlass:** Das Bild wirkte unscharf. Ursachen: CRT Filter (Wölbung, Scanlines, Rauschen, Farbversatz, schwarzer Rand), verlaufender Shader Hintergrund mit Randabdunklung, halbtransparente Panels mit weichen Schatten, Text wird mit Renderer Auflösung gerendert, das Spielfeld aber auf das Fenster herunterskaliert.
+* **Neu:** Flacher Stil mit harten Kanten (`STYLE` und `shade` in `ui/theme.ts`): feste dunkle Kontur, versetzter voller Schatten, keine Glanzlichter, kleinere Radien, blaue Nachtpalette mit Orange, Rot und Gold als Akzent. Hintergrund `Background.ts` in fünf harten Farbstufen auf grobem Raster mit scharfen Sternen, ohne Vignette. Textauflösung wird mit der Spielfeld Skalierung multipliziert (`ui/textRes.ts`).
+* **CRT Effekt** ist jetzt standardmäßig aus (Option bleibt). Einstellungen liegen unter `alatro.settings.v2`, vorhandene v1 Werte werden einmal übernommen, CRT dabei ausgeschaltet.
+* **Geprüft:** Menü, Run Setup, Blind Auswahl, Tisch mit Handkarten im Browser (Chromium, iPad Seitenverhältnis). Shop, Packs, Boss Stimmungen und Edition Shader nur im Code angepasst, nicht Bild für Bild geprüft.
+* **Stilvorbild:** Nur die Anmutung (klare Flächen, harte Konturen). Farben, Formen und Inhalte sind eigene Entwürfe.
 
 ## Behalten
 
