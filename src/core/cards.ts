@@ -1,37 +1,34 @@
-export type Suit = 'S' | 'H' | 'D' | 'C';
-export const SUITS: readonly Suit[] = ['S', 'H', 'D', 'C'];
-export const SUIT_NAMES: Record<Suit, string> = { S: 'Pik', H: 'Herz', D: 'Karo', C: 'Kreuz' };
-export const SUIT_SYMBOLS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
+import { FACE_RANKS, RANKS, RANK_CHIPS, RANK_LABELS, SUITS, SUIT_NAMES, SUIT_SYMBOLS } from '../data/cards';
+import { ENHANCEMENTS } from '../data/modifiers';
+import type { Card, Rank, Suit } from './types';
 
-/** 2..10, 11 = Bube, 12 = Dame, 13 = König, 14 = Ass */
-export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
-export const RANKS: readonly Rank[] = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-
-export interface Card {
-  id: number;
-  suit: Suit;
-  rank: Rank;
-  // Later: enhancement, edition, seal
-}
+export type { Card, Rank, Suit } from './types';
+export { RANKS, SUITS, SUIT_NAMES, SUIT_SYMBOLS };
 
 export function chipValue(rank: Rank): number {
-  if (rank === 14) return 11;
-  if (rank >= 11) return 10;
-  return rank;
+  return RANK_CHIPS[rank];
 }
 
 export function rankLabel(rank: Rank): string {
-  switch (rank) {
-    case 11: return 'B';
-    case 12: return 'D';
-    case 13: return 'K';
-    case 14: return 'A';
-    default: return String(rank);
-  }
+  return RANK_LABELS[rank];
 }
 
 export function isFace(rank: Rank): boolean {
-  return rank >= 11 && rank <= 13;
+  return FACE_RANKS.includes(rank);
+}
+
+export function isRankless(card: Card): boolean {
+  return !!card.enhancement && !!ENHANCEMENTS[card.enhancement]?.rankless;
+}
+
+export function isAnySuit(card: Card): boolean {
+  return !!card.enhancement && !!ENHANCEMENTS[card.enhancement]?.anySuit;
+}
+
+/** Hat die Karte (für Joker Bedingungen) diese Suit? Ranglose Karten haben keine. */
+export function hasSuit(card: Card, suit: Suit): boolean {
+  if (isRankless(card)) return false;
+  return isAnySuit(card) || card.suit === suit;
 }
 
 export function createStandardDeck(): Card[] {

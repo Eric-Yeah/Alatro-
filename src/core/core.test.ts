@@ -1,3 +1,4 @@
+import './index';
 import { describe, expect, it } from 'vitest';
 import type { Card, Rank, Suit } from './cards';
 import { evaluateHand } from './handEval';

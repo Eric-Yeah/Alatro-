@@ -1,25 +1,63 @@
-export type BlindKind = 'small' | 'big' | 'boss';
+import {
+  ANTE_ZERO_BASE, BASE_BY_SCALING, BLIND_FACTOR, BLIND_NAMES, BLIND_REWARD, ENDLESS, FINAL_ANTE, SHOWDOWN_EVERY,
+  type Scaling,
+} from '../data/blinds';
+import type { BlindKind } from './types';
+
+export type { BlindKind } from './types';
+export type { Scaling } from '../data/blinds';
+export { FINAL_ANTE, BLIND_NAMES };
 export const BLIND_KINDS: readonly BlindKind[] = ['small', 'big', 'boss'];
 
-export const BLIND_INFO: Record<BlindKind, { name: string; factor: number; reward: number }> = {
-  small: { name: 'Kleiner Blind', factor: 1, reward: 3 },
-  big: { name: 'Großer Blind', factor: 1.5, reward: 4 },
-  boss: { name: 'Boss', factor: 2, reward: 5 },
+/** Auf n signifikante Stellen abrunden (Briefing 5.2). */
+export function floorSignificant(x: number, digits: number): number {
+  const mag = Math.pow(10, Math.floor(Math.log10(x)) - (digits - 1));
+  return Math.floor(x / mag + 1e-9) * mag;
+}
+
+/** Basiswert einer Ante (Briefing 5.1, 5.2). */
+export function baseTarget(ante: number, scaling: Scaling = 1): number {
+  if (ante <= 0) return ANTE_ZERO_BASE;
+  const table = BASE_BY_SCALING[scaling];
+  if (ante <= table.length) return table[ante - 1];
+  const n = ante - table.length;
+  const a8 = table[table.length - 1];
+  const raw = a8 * Math.pow(ENDLESS.growth + Math.pow(ENDLESS.nScale * n, 1 + ENDLESS.expScale * n), n);
+  return floorSignificant(raw, ENDLESS.significantDigits);
+}
+
+/** Kompatibilität */
+export const anteBase = (ante: number) => baseTarget(ante);
+
+export interface TargetOptions {
+  scaling?: Scaling;
+  /** eigener Faktor eines Bosses statt des Standard Boss Faktors */
+  bossFactor?: number;
+  /** Faktor des Decks auf alle Blinds */
+  deckFactor?: number;
+}
+
+export function blindTarget(ante: number, kind: BlindKind, opts: TargetOptions = {}): number {
+  const factor = kind === 'boss' && opts.bossFactor !== undefined ? opts.bossFactor : BLIND_FACTOR[kind];
+  return Math.floor(baseTarget(ante, opts.scaling ?? 1) * factor * (opts.deckFactor ?? 1));
+}
+
+export function isShowdown(ante: number): boolean {
+  return ante > 0 && ante % SHOWDOWN_EVERY === 0;
+}
+
+/** Belohnung eines Blinds (Briefing 5.3). smallOverride: Stake Regel für den Small Blind. */
+export function blindReward(ante: number, kind: BlindKind, smallOverride: number | null = null): number {
+  if (kind === 'small' && smallOverride !== null) return smallOverride;
+  if (kind === 'boss' && isShowdown(ante)) return BLIND_REWARD.showdown;
+  return BLIND_REWARD[kind];
+}
+
+/** Kompatibilität für die UI */
+export const BLIND_INFO: Record<BlindKind, { name: string; reward: number }> = {
+  small: { name: BLIND_NAMES.small, reward: BLIND_REWARD.small },
+  big: { name: BLIND_NAMES.big, reward: BLIND_REWARD.big },
+  boss: { name: BLIND_NAMES.boss, reward: BLIND_REWARD.boss },
 };
 
-const ANTE_BASE = [300, 800, 2000, 5000, 11000, 20000, 35000, 50000];
-export const FINAL_ANTE = 8;
-
-export function anteBase(ante: number): number {
-  if (ante <= 0) return 100;
-  if (ante <= ANTE_BASE.length) return ANTE_BASE[ante - 1];
-  // Endless: grows fast
-  const extra = ante - ANTE_BASE.length;
-  const raw = ANTE_BASE[ANTE_BASE.length - 1] * Math.pow(1.6, extra) * (1 + 0.2 * extra * extra);
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)) - 1);
-  return Math.floor(raw / mag) * mag;
-}
-
-export function blindTarget(ante: number, kind: BlindKind): number {
-  return Math.floor(anteBase(ante) * BLIND_INFO[kind].factor);
-}
+export { FINAL_ANTE as LAST_ANTE };
