@@ -72,3 +72,12 @@ export async function juice(target: { scale: { x: number; y: number }; rotation:
   await tween(target, { 'scale.x': s, 'scale.y': s }, 80);
   await tween(target, { 'scale.x': 1, 'scale.y': 1 }, 200, easeOutBack);
 }
+
+/** Dauerhafte, ruhige Hin und Her Bewegung zwischen a und b. Endet von selbst, sobald das Ziel zerstört ist. */
+export function loop(target: any, prop: string, a: number, b: number, ms: number) {
+  const step = (to: number) => {
+    if (!target || target.destroyed) return;
+    tween(target, { [prop]: to }, ms, easeInOutCubic, true).then(() => step(to === a ? b : a));
+  };
+  step(b);
+}

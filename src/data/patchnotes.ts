@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.5.1',
+    date: '19.11.2026',
+    title: 'Neuer Titel',
+    items: [
+      'Neu: Der Titel ALATRO im Hauptmenü besteht jetzt aus sechs Spielkarten, die beim Öffnen nacheinander hingeworfen werden. Berühr eine Karte, dann hebt sie sich. Tipp auf den Titel dreht alle Karten um, ein zweiter Tipp dreht sie zurück.',
+    ],
+  },
+  {
     version: '0.5.0',
     date: '19.11.2026',
     title: 'Erfolge, Einführung und Schwierigkeit',

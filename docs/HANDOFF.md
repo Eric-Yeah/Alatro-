@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Erfolgen, Einführung und Schwierigkeit (Version 0.5.0)
+# Übergabe: Stand nach Erfolgen, Einführung und Schwierigkeit (Version 0.5.1)
 
 Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -17,6 +17,10 @@ Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderunge
 Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Version 0.5.1: Titel aus Karten
+
+Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards.ts`, Zahlen in `src/data/homeTitle.ts`): Hinwerfen beim Öffnen, Anheben beim Berühren, Umdrehen per Tipp. Auf dem iPad prüfen: Tippgefühl der Karten, Abstand zum Untertitel. Siehe `AUDIT.md` O79.
 
 ## Version 0.5.0: Erfolge, Einführung, Schwierigkeit
 

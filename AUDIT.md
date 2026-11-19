@@ -23,6 +23,7 @@ Stand: Audit vor Beginn der Umbauten.
 | M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün |
 | M5 und M6 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen, Tempo, Grafikstufe, FPS Messung) | `npm test` | 15 von 15 grün |
 | Review 0.4.0 (`src/core/fuzz.test.ts` Zufallsläufe mit Bot und Eingabeprüfung, Viewport mit sicheren Rändern) | `npm test` | gesamt 266 von 266 grün in `src`, Spezifikation 87 von 87 |
+| Version 0.5.1 (`src/homeTitle.test.ts` Titel Daten) | `npm test` | gesamt 303 von 303 grün in `src`, Spezifikation 87 von 87 |
 | Version 0.5.0 (`src/progress.test.ts` Stakes, skalierende Stufen, Tageslauf, Speicherversion 5, Profil, Erfolge; `src/tutorial.test.ts` Einführung; erweiterter Zufallslauf) | `npm test` | gesamt 301 von 301 grün in `src`, Spezifikation 87 von 87 |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
@@ -257,6 +258,10 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * Design: tiefere Nachtpalette, warmer Shop Ton, mehr Sterne. Alle Zahlen weiter in `src/data/juice.ts`.
 * Offen: Hochformat Layout am iPad (O68), Klang und Bildrate auf dem Gerät, leere Tischmitte im Ruhezustand.
 
+### Titel aus Karten (Version 0.5.1)
+
+* **Home Titel:** Der Schriftzug ALATRO ist kein Text mehr, sondern sechs Karten (`src/ui/TitleCards.ts`, Zahlen in `src/data/homeTitle.ts`). Beim Öffnen werden sie nacheinander hingeworfen und wiegen danach leicht. Berühren hebt eine Karte an, Antippen dreht alle auf den Rücken mit Stern und wieder zurück. Entwurf war die Variante "Kartenwurf" aus der Designstudie. `loop` liegt jetzt in `src/ui/tween.ts` und wird von Titel und Home Bildschirm genutzt.
+
 ### Erfolge, Einführung und Schwierigkeit (Version 0.5.0)
 
 * **Erfolge:** 61 eigene Erfolge in acht Kategorien (`src/data/achievements.ts`), jeder mit 1 bis 3 Sternen, daraus ergibt sich der Rang (acht Ränge im Thema der Sternwarte). Bedingungen sind deklarativ (`Cond`), die Auswertung steht in `src/achievements.ts` (rein, getestet). Das Profil (`src/profile.ts`, Speicherort `alatro.profile.v1`) zählt Statistik über alle Runs. `observeRun` ist idempotent und rechnet nur Differenzen eines Runs (über `RunState.runId`) dazu, deshalb genügt ein Aufruf nach jedem Speichern (`Game.persist`). Ansicht: `src/ui/AchievementsView.ts` mit Rang, Kategorien, Fortschrittsbalken und Statistik. Freischaltungen erscheinen als Banner (`Game.showAchievementBanner`).
@@ -374,3 +379,4 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O76 | Einführung mit gelenkten Karten | Hand, Nachziehstapel und Shop sind festgelegt (Seed LERNEN01). Das ist bewusst keine Zufallsrunde, damit jeder Schritt gelingt. Zahlen und Karten in `data/tutorialRun.ts`, Texte in `data/guide.ts`. Ändern sich Basiswerte der Hände, müssen die Zielwerte der Tests in `src/tutorial.test.ts` (60, 308, 720) angepasst werden |
 | O77 | Tageswandlungen | Wandlungen sind reine `RunMods`. Das Datum zählt in lokaler Zeit, zwei Geräte in verschiedenen Zeitzonen können am selben Moment verschiedene Tage haben. Der Verlauf behält 30 Tage |
 | O78 | Banner Dauer | Erfolgs Banner bleiben 2,8 Sekunden stehen, unabhängig vom Animationstempo (`setTimeout`), damit sie auch auf Blitz lesbar bleiben. Mehrere Erfolge laufen nacheinander durch eine Warteschlange |
+| O79 | Home Titel aus Karten | Der Titel wird bei jedem Öffnen des Home Bildschirms neu hingeworfen (auch beim Zurückkehren aus dem Spiel). Das Umdrehen ist reine Spielerei ohne Wirkung. Suits und Neigung der Karten sind festgelegt, nicht zufällig, damit der Titel immer gleich aussieht. Die Schrift der Buchstaben ist `Alatro Pixel`, Karten und Rücken nutzen Maße und Farben der Spielkarten (`CARD_W`, `CARD_H`). Ist die Einführung noch offen, liegt das Willkommensfenster über dem Titel |

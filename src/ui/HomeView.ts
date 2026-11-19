@@ -5,12 +5,13 @@ import { scaleName } from '../data/difficulty';
 import type { RunState } from '../core/run';
 import { cardBack } from './CardView';
 import { C, VIEW_H, VIEW_W, fmt } from './theme';
-import { easeInOutCubic, easeOutCubic, tween } from './tween';
+import { easeOutCubic, loop, tween } from './tween';
+import { buildTitleCards } from './TitleCards';
 import { Button, label } from './widgets';
 
 /** Zahlen und Layout des Home Bildschirms */
 const HOME = {
-  titleY: 190,
+  titleY: 168,
   subtitleY: 290,
   taglineY: 335,
   buttonX: VIEW_W / 2,
@@ -70,15 +71,6 @@ function hash01(i: number, k: number): number {
   return s - Math.floor(s);
 }
 
-/** Dauerhafte, ruhige Hin und Her Bewegung. Endet von selbst, sobald das Ziel zerstört ist. */
-function loop(target: Container, prop: string, a: number, b: number, ms: number) {
-  const step = (to: number) => {
-    if (target.destroyed) return;
-    tween(target, { [prop]: to }, ms, easeInOutCubic, true).then(() => step(to === a ? b : a));
-  };
-  step(b);
-}
-
 function buildStars(): Container {
   const c = new Container();
   for (let i = 0; i < HOME.stars; i++) {
@@ -118,10 +110,8 @@ export function buildHome(input: HomeInput): Container {
   blocker.eventMode = 'static';
   root.addChild(blocker, buildStars(), buildFan(HOME.fanX, false), buildFan(VIEW_W - HOME.fanX, true));
 
-  const title = label('ALATRO', 160, C.text, { stroke: { color: C.mult, width: 14 }, letterSpacing: 10 });
+  const title = buildTitleCards();
   title.position.set(VIEW_W / 2, HOME.titleY);
-  title.rotation = -0.02;
-  loop(title, 'rotation', -0.02, 0.02, 1800);
   const sub = label('Sternwarte der Alchemisten', 34, C.money);
   sub.position.set(VIEW_W / 2, HOME.subtitleY);
   const tag = label('Roguelike Poker Deckbuilder', 22, C.textDim);
