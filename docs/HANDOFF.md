@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Ladekarte (Version 0.8.3)
+# Übergabe: Stand nach Geräte Sync (Version 0.9.0)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 

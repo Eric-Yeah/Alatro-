@@ -8,6 +8,17 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.9.0',
+    date: '19.11.2026',
+    title: 'Geräte koppeln',
+    items: [
+      'Neu: Du kannst jetzt auf mehreren Geräten mit demselben Stand spielen. In den Optionen unter "Geräte koppeln" erzeugst Du auf dem ersten Gerät einen Kopplungscode und gibst ihn auf den anderen Geräten ein. Ein Konto brauchst Du dafür nicht.',
+      'Neu: Profil, Sammlung und der laufende Run wandern mit. Die Daten liegen verschlüsselt in der Cloud, ohne Deinen Code kann sie niemand lesen. Schreib Dir den Code auf, ohne ihn kommst Du nicht mehr an den Cloud Stand.',
+      'Neu: Ein Run aus der Cloud wird nur am Home Bildschirm geladen, nie mitten in einer Runde. Laufen auf zwei Geräten verschiedene Runs, fragt das Spiel, welcher gelten soll.',
+      'Neu: In den Optionen unter "Spielstand" kannst Du Profil, Sammlung und Run als Datei oder Text sichern und wieder einlesen. Das dient auch als Backup.',
+    ],
+  },
+  {
     version: '0.8.3',
     date: '19.11.2026',
     title: 'Ladekarte',
