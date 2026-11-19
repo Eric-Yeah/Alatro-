@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { MUSIC, MUSIC_OFF, TRACKS, TRACK_IDS, getTrack } from './data/music';
+import { MUSIC, MUSIC_MIX, MUSIC_OFF, TRACKS, TRACK_IDS, getTrack, tracksFor } from './data/music';
 import { DEFAULT_SETTINGS } from './data/juice';
 import { parseSettings } from './settings';
-import { composeSegment, noteFreq } from './ui/musicScore';
+import { MusicPlanner, composeSegment, noteFreq } from './ui/musicScore';
 
 describe('Hintergrundmusik: Daten', () => {
   it('hat mindestens zwei Stücke mit eindeutigen IDs und ohne Kollision mit "aus"', () => {
     expect(TRACKS.length).toBeGreaterThanOrEqual(2);
     expect(new Set(TRACK_IDS).size).toBe(TRACKS.length);
     expect(TRACK_IDS).not.toContain(MUSIC_OFF);
+    expect(TRACK_IDS).not.toContain(MUSIC_MIX);
     for (const t of TRACKS) expect(getTrack(t.id)).toBe(t);
   });
 
@@ -31,8 +32,25 @@ describe('Hintergrundmusik: Daten', () => {
     }
   });
 
-  it('Standard Einstellung nennt ein vorhandenes Stück', () => {
-    expect(getTrack(DEFAULT_SETTINGS.music)).toBeDefined();
+  it('Standard Einstellung ist ein gültiger Wert', () => {
+    expect(tracksFor(DEFAULT_SETTINGS.music).length).toBeGreaterThan(0);
+  });
+
+  it('tracksFor liefert beim Mix alle Stücke, sonst eines oder keines', () => {
+    expect(tracksFor(MUSIC_MIX)).toHaveLength(TRACKS.length);
+    expect(tracksFor(TRACK_IDS[1])).toEqual([TRACKS[1]]);
+    expect(tracksFor(MUSIC_OFF)).toEqual([]);
+    expect(tracksFor('unbekannt')).toEqual([]);
+  });
+
+  it('Pad Breite und Ruhe Wahrscheinlichkeit liegen zwischen 0 und 1', () => {
+    for (const t of TRACKS) {
+      expect(t.pad.width).toBeGreaterThanOrEqual(0);
+      expect(t.pad.width).toBeLessThanOrEqual(1);
+      expect(t.melody.rest).toBeGreaterThanOrEqual(0);
+      expect(t.melody.rest).toBeLessThan(1);
+    }
+    expect(MUSIC.mixFadeSec).toBeLessThan(MUSIC.mixChords * Math.min(...TRACKS.map((t) => t.chordSec)));
   });
 });
 
@@ -49,7 +67,7 @@ describe('Hintergrundmusik: Komposition', () => {
       for (let i = 0; i < 12; i++) {
         const seg = composeSegment(t, i, 7 + i);
         const base = seg.bells.length;
-        expect(base).toBeGreaterThanOrEqual(t.melody.notes[0]);
+        expect(base).toBeGreaterThanOrEqual(1);
         expect(base).toBeLessThanOrEqual(t.melody.notes[1] * 2);
         const lo = noteFreq(t.root, t.melody.low) - 0.01;
         const hi = noteFreq(t.root, t.melody.high) + 0.01;
@@ -86,10 +104,42 @@ describe('Hintergrundmusik: Komposition', () => {
   });
 });
 
+describe('Hintergrundmusik: Mix', () => {
+  it('wechselt nach der festen Zahl Akkorde zum nächsten Stück, der Reihe nach und im Kreis', () => {
+    const plan = new MusicPlanner(TRACKS, 0, MUSIC.mixChords, 1);
+    const seen: string[] = [];
+    let time = 0;
+    for (let i = 0; i < MUSIC.mixChords * (TRACKS.length + 1); i++) {
+      const it = plan.step();
+      expect(it.time).toBeCloseTo(time);
+      time += it.track.chordSec;
+      if (it.first) {
+        seen.push(it.track.id);
+        expect(it.index).toBe(0);
+      }
+    }
+    expect(seen).toEqual([TRACKS[1].id, TRACKS[2].id, TRACKS[0].id, TRACKS[1].id]);
+  });
+
+  it('bleibt bei einem einzelnen Stück endlos dabei und meldet nur einmal einen Anfang', () => {
+    const plan = new MusicPlanner([TRACKS[0]], 5, MUSIC.mixChords);
+    let firsts = 0;
+    for (let i = 0; i < 40; i++) if (plan.step().first) firsts++;
+    expect(firsts).toBe(1);
+  });
+
+  it('zählt den Aufenthalt hoch, damit jede Runde andere Glocken bekommt', () => {
+    const plan = new MusicPlanner(TRACKS, 0, 2);
+    const stays = Array.from({ length: 8 }, () => plan.step().stay);
+    expect(stays).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
+  });
+});
+
 describe('Hintergrundmusik: Einstellungen', () => {
   it('nimmt gültige Stücke und "aus" an, ersetzt ungültige', () => {
     expect(parseSettings({ music: MUSIC_OFF }).music).toBe(MUSIC_OFF);
     expect(parseSettings({ music: TRACK_IDS[1] }).music).toBe(TRACK_IDS[1]);
+    expect(parseSettings({ music: MUSIC_MIX }).music).toBe(MUSIC_MIX);
     expect(parseSettings({ music: 'unbekannt' }).music).toBe(DEFAULT_SETTINGS.music);
     expect(parseSettings({ music: 5 }).music).toBe(DEFAULT_SETTINGS.music);
   });

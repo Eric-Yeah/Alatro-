@@ -1,8 +1,8 @@
 import { BELLS, MUSIC, type TrackDef } from '../data/music';
-import { composeSegment, mulberry32 } from './musicScore';
+import { composeSegment, mulberry32, MusicPlanner, type PlanItem } from './musicScore';
 
 // Synthese der Hintergrundmusik. Alles läuft über einen eigenen Bus pro Stück
-// (Hall, Echo, Ein und Ausblenden), damit ein Wechsel des Stücks sauber überblendet.
+// (Hochpass, Hall, Echo, Ein und Ausblenden), damit ein Wechsel des Stücks sauber überblendet.
 // Die Funktionen nehmen einen BaseAudioContext, darum laufen sie live und im OfflineAudioContext.
 
 type Ctx = BaseAudioContext;
@@ -15,44 +15,73 @@ export interface MusicBus {
   noise: AudioBuffer;
   sources: Set<AudioScheduledSourceNode>;
   nodes: AudioNode[];
+  disposed: boolean;
 }
 
-/** Halbkosinus von 0 nach 1, für weiche Ein und Ausblendungen ohne Knackser */
+/** Halbkosinus von `from` nach `to`, für weiche Ein und Ausblendungen ohne Knackser */
 function curve(from: number, to: number, points = 48): Float32Array {
   const c = new Float32Array(points);
   for (let i = 0; i < points; i++) c[i] = from + (to - from) * (0.5 - 0.5 * Math.cos((Math.PI * i) / (points - 1)));
   return c;
 }
 
-/** Eigener Nachhall: abklingendes, leicht abgedunkeltes Rauschen, fester Seed */
-function impulse(ctx: Ctx, seconds: number, decay: number): AudioBuffer {
-  const len = Math.floor(ctx.sampleRate * seconds);
-  const buf = ctx.createBuffer(2, len, ctx.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const rng = mulberry32(ch + 11);
-    const d = buf.getChannelData(ch);
-    let lp = 0;
-    for (let i = 0; i < len; i++) {
-      lp += (rng() * 2 - 1 - lp) * 0.4;
-      d[i] = lp * Math.pow(1 - i / len, decay);
-    }
-  }
-  return buf;
+// Hall und Rauschen sind pro Kontext und Größe gleich, werden darum nur einmal berechnet
+const buffers = new WeakMap<Ctx, Map<string, AudioBuffer>>();
+function cached(ctx: Ctx, key: string, make: () => AudioBuffer): AudioBuffer {
+  let m = buffers.get(ctx);
+  if (!m) buffers.set(ctx, (m = new Map()));
+  let b = m.get(key);
+  if (!b) m.set(key, (b = make()));
+  return b;
 }
 
-export function createBus(ctx: Ctx, track: TrackDef, out: AudioNode): MusicBus {
+/** Eigener Nachhall: abklingendes, leicht abgedunkeltes Rauschen, fester Seed */
+function impulse(ctx: Ctx, seconds: number, decay: number): AudioBuffer {
+  return cached(ctx, `ir${seconds}:${decay}`, () => {
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const rng = mulberry32(ch + 11);
+      const d = buf.getChannelData(ch);
+      let lp = 0;
+      for (let i = 0; i < len; i++) {
+        lp += (rng() * 2 - 1 - lp) * 0.4;
+        d[i] = lp * Math.pow(1 - i / len, decay);
+      }
+    }
+    return buf;
+  });
+}
+
+function noiseBuffer(ctx: Ctx): AudioBuffer {
+  return cached(ctx, 'noise', () => {
+    const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const rng = mulberry32(7);
+    const nd = noise.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = rng() * 2 - 1;
+    return noise;
+  });
+}
+
+export function createBus(ctx: Ctx, track: TrackDef, out: AudioNode, lite = false): MusicBus {
   const input = ctx.createGain();
   const level = ctx.createGain();
   level.gain.value = track.level;
   const fade = ctx.createGain();
   fade.gain.value = 0;
 
+  // Kein Dröhnen: unter dem tiefsten Ton wird alles abgeschnitten, auch im Hall und Echo
+  const hp = ctx.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = MUSIC.highpass;
+  hp.Q.value = 0.5;
+
   const dry = ctx.createGain();
   input.connect(dry);
   dry.connect(level);
 
   const conv = ctx.createConvolver();
-  conv.buffer = impulse(ctx, track.reverb.seconds, track.reverb.decay);
+  conv.buffer = impulse(ctx, track.reverb.seconds * (lite ? MUSIC.lite.reverbFactor : 1), track.reverb.decay);
   const wet = ctx.createGain();
   wet.gain.value = track.reverb.wet;
   input.connect(conv);
@@ -75,15 +104,11 @@ export function createBus(ctx: Ctx, track: TrackDef, out: AudioNode): MusicBus {
   tone.connect(echoWet);
   echoWet.connect(level);
 
-  level.connect(fade);
+  level.connect(hp);
+  hp.connect(fade);
   fade.connect(out);
 
-  const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
-  const rng = mulberry32(7);
-  const nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = rng() * 2 - 1;
-
-  return { input, fade, noise, sources: new Set(), nodes: [input, dry, conv, wet, delay, tone, feedback, echoWet, level, fade] };
+  return { input, fade, noise: noiseBuffer(ctx), sources: new Set(), nodes: [input, dry, conv, wet, delay, tone, feedback, echoWet, level, hp, fade], disposed: false };
 }
 
 function reg(bus: MusicBus, s: AudioScheduledSourceNode) {
@@ -91,9 +116,10 @@ function reg(bus: MusicBus, s: AudioScheduledSourceNode) {
   s.onended = () => bus.sources.delete(s);
 }
 
-/** Weiche Fläche: Akkordtöne mit mehreren leicht verstimmten Stimmen durch einen langsam wandernden Tiefpass */
-function pad(ctx: Ctx, bus: MusicBus, track: TrackDef, freqs: number[], t0: number) {
+/** Weiche Fläche: Akkordtöne mit mehreren leicht verstimmten Stimmen (links und rechts verteilt) durch einen langsam wandernden Tiefpass */
+function pad(ctx: Ctx, bus: MusicBus, track: TrackDef, freqs: number[], t0: number, lite: boolean) {
   const p = track.pad;
+  const voices = lite ? MUSIC.lite.voices : p.voices;
   const end = t0 + track.chordSec + p.release;
   const filter = ctx.createBiquadFilter();
   filter.type = 'lowpass';
@@ -117,17 +143,25 @@ function pad(ctx: Ctx, bus: MusicBus, track: TrackDef, freqs: number[], t0: numb
   filter.connect(env);
   env.connect(bus.input);
 
-  const per = 1 / (freqs.length * p.voices);
+  const stereo = typeof ctx.createStereoPanner === 'function' && voices > 1;
+  const per = 1 / (freqs.length * voices);
   for (const f of freqs) {
-    for (let v = 0; v < p.voices; v++) {
+    for (let v = 0; v < voices; v++) {
       const osc = ctx.createOscillator();
       osc.type = p.wave;
       osc.frequency.value = f;
-      osc.detune.value = (v - (p.voices - 1) / 2) * p.detune;
+      osc.detune.value = (v - (voices - 1) / 2) * p.detune;
       const g = ctx.createGain();
       g.gain.value = per;
       osc.connect(g);
-      g.connect(filter);
+      if (stereo) {
+        const sp = ctx.createStereoPanner();
+        sp.pan.value = ((v / (voices - 1)) * 2 - 1) * p.width;
+        g.connect(sp);
+        sp.connect(filter);
+      } else {
+        g.connect(filter);
+      }
       osc.start(t0);
       osc.stop(end + 0.1);
       reg(bus, osc);
@@ -193,43 +227,119 @@ function air(ctx: Ctx, bus: MusicBus, track: TrackDef, t0: number) {
 }
 
 /** Plant einen Abschnitt (einen Akkord mit Glocken und Hauch) ab dem Zeitpunkt t0 */
-export function scheduleSegment(ctx: Ctx, bus: MusicBus, track: TrackDef, index: number, t0: number, seed: number) {
+export function scheduleSegment(ctx: Ctx, bus: MusicBus, track: TrackDef, index: number, t0: number, seed: number, lite = false) {
   const seg = composeSegment(track, index, seed);
-  pad(ctx, bus, track, seg.chord, t0);
+  pad(ctx, bus, track, seg.chord, t0, lite);
   air(ctx, bus, track, t0);
   for (const b of seg.bells) bell(ctx, bus, track, b.freq, b.gain, b.pan, t0 + b.t);
 }
 
-/** Plant ein ganzes Stück im Voraus, für Hörproben im OfflineAudioContext */
-export function scheduleTrack(ctx: Ctx, track: TrackDef, out: AudioNode, seconds: number, seed: number): MusicBus {
-  const bus = createBus(ctx, track, out);
-  bus.fade.gain.setValueAtTime(0, 0);
-  bus.fade.gain.linearRampToValueAtTime(1, MUSIC.fadeInSec);
-  for (let i = 0; i * track.chordSec < seconds; i++) scheduleSegment(ctx, bus, track, i, 0.1 + i * track.chordSec, seed);
-  return bus;
+/** Blendet einen Bus ab dem Zeitpunkt `at` über `sec` Sekunden aus und baut ihn danach ab */
+function fadeOutBus(ctx: Ctx, bus: MusicBus, at: number, sec: number, done: (b: MusicBus) => void) {
+  const now = ctx.currentTime;
+  const t = Math.max(at, now);
+  const g = bus.fade.gain;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(at > now ? 1 : g.value, t);
+  g.linearRampToValueAtTime(0, t + sec);
+  // Nach dem Ausblenden alle noch geplanten Stimmen beenden und den Bus abbauen
+  setTimeout(() => {
+    if (bus.disposed) return;
+    bus.disposed = true;
+    for (const s of bus.sources) {
+      try {
+        s.stop();
+      } catch {
+        /* schon beendet */
+      }
+    }
+    for (const n of bus.nodes) {
+      try {
+        n.disconnect();
+      } catch {
+        /* schon getrennt */
+      }
+    }
+    done(bus);
+  }, (t - now + sec + 0.3) * 1000);
+}
+
+/**
+ * Führt einen Plan aus: erzeugt pro Stück einen Bus, plant die Abschnitte und überblendet beim Wechsel.
+ * Live ruft ein Zeitgeber `pump` regelmäßig auf, im OfflineAudioContext genügt ein Aufruf.
+ */
+export class Conductor {
+  private planner: MusicPlanner;
+  private current: MusicBus | null = null;
+  private live = new Set<MusicBus>();
+
+  constructor(
+    private ctx: Ctx,
+    private out: AudioNode,
+    tracks: readonly TrackDef[],
+    startTime: number,
+    private seed: number,
+    private lite = false,
+    startIdx = 0,
+  ) {
+    this.planner = new MusicPlanner(tracks, startTime, MUSIC.mixChords, startIdx);
+  }
+
+  /** Plant alle Abschnitte, die vor `until` beginnen */
+  pump(until: number) {
+    while (this.planner.time < until) {
+      const item = this.planner.step();
+      if (item.first) this.begin(item);
+      scheduleSegment(this.ctx, this.current!, item.track, item.index, item.time, (this.seed + item.stay * 7919) | 0, this.lite);
+    }
+  }
+
+  private begin(item: PlanItem) {
+    const prev = this.current;
+    const bus = createBus(this.ctx, item.track, this.out, this.lite);
+    this.live.add(bus);
+    const fade = prev ? MUSIC.mixInSec : MUSIC.fadeInSec;
+    bus.fade.gain.setValueAtTime(0, item.time);
+    bus.fade.gain.linearRampToValueAtTime(1, item.time + fade);
+    // Das alte Stück läuft aus (Pad Release, Glockenklang), erst am Ende wird der Bus geschlossen
+    if (prev) fadeOutBus(this.ctx, prev, item.time + MUSIC.mixFadeSec - MUSIC.mixOutSec, MUSIC.mixOutSec, (b) => this.live.delete(b));
+    this.current = bus;
+  }
+
+  /** Blendet alles jetzt aus (auch Stücke, die gerade überblendet werden) */
+  fadeOutAll(sec: number) {
+    for (const bus of this.live) fadeOutBus(this.ctx, bus, this.ctx.currentTime, sec, (b) => this.live.delete(b));
+  }
+}
+
+/** Plant Musik im Voraus für `seconds` Sekunden, für Hörproben im OfflineAudioContext */
+export function scheduleMusic(ctx: Ctx, tracks: readonly TrackDef[], out: AudioNode, seconds: number, seed: number, startIdx = 0, lite = false) {
+  const c = new Conductor(ctx, out, tracks, 0.1, seed, lite, startIdx);
+  c.pump(seconds);
+  return c;
 }
 
 /** Spielt die Musik live: plant die Abschnitte kurz vor ihrem Beginn, überblendet beim Wechsel. */
 export class MusicPlayer {
-  private run: { track: TrackDef; bus: MusicBus; next: number; index: number; timer: ReturnType<typeof setInterval>; seed: number } | null = null;
+  private run: { choice: string; lite: boolean; conductor: Conductor; timer: ReturnType<typeof setInterval> } | null = null;
 
   constructor(private ctx: AudioContext, private out: AudioNode) {}
 
-  /** ID des laufenden Stücks */
+  /** Auswahl, die gerade läuft (ID eines Stücks oder Mix) */
   get playing(): string | null {
-    return this.run?.track.id ?? null;
+    return this.run?.choice ?? null;
   }
 
-  play(track: TrackDef, seed = Math.floor(Math.random() * 0x7fffffff)) {
-    if (this.run?.track.id === track.id) return;
+  /** Spielt die Stücke der Auswahl, bei mehreren im Wechsel. Gleiche Auswahl ändert nichts. */
+  play(choice: string, tracks: readonly TrackDef[], lite = false) {
+    if (this.run?.choice === choice && this.run.lite === lite) return;
     this.stop();
-    const now = this.ctx.currentTime;
-    const bus = createBus(this.ctx, track, this.out);
-    bus.fade.gain.setValueAtTime(0, now);
-    bus.fade.gain.linearRampToValueAtTime(1, now + MUSIC.fadeInSec);
-    const run = { track, bus, next: now + 0.1, index: 0, seed, timer: setInterval(() => this.tick(), MUSIC.tickMs) };
+    if (!tracks.length) return;
+    const seed = Math.floor(Math.random() * 0x7fffffff);
+    const conductor = new Conductor(this.ctx, this.out, tracks, this.ctx.currentTime + 0.1, seed, lite, Math.floor(Math.random() * tracks.length));
+    const run = { choice, lite, conductor, timer: setInterval(() => conductor.pump(this.ctx.currentTime + MUSIC.lookaheadSec), MUSIC.tickMs) };
     this.run = run;
-    this.tick();
+    conductor.pump(this.ctx.currentTime + MUSIC.lookaheadSec);
   }
 
   stop() {
@@ -237,31 +347,6 @@ export class MusicPlayer {
     if (!run) return;
     this.run = null;
     clearInterval(run.timer);
-    const now = this.ctx.currentTime;
-    const { bus } = run;
-    bus.fade.gain.cancelScheduledValues(now);
-    bus.fade.gain.setValueAtTime(bus.fade.gain.value, now);
-    bus.fade.gain.linearRampToValueAtTime(0, now + MUSIC.fadeOutSec);
-    // Nach dem Ausblenden alle noch geplanten Stimmen beenden und den Bus abbauen
-    setTimeout(() => {
-      for (const s of bus.sources) {
-        try {
-          s.stop();
-        } catch {
-          /* schon beendet */
-        }
-      }
-      for (const n of bus.nodes) n.disconnect();
-    }, (MUSIC.fadeOutSec + 0.3) * 1000);
-  }
-
-  private tick() {
-    const run = this.run;
-    if (!run) return;
-    while (run.next < this.ctx.currentTime + MUSIC.lookaheadSec) {
-      scheduleSegment(this.ctx, run.bus, run.track, run.index, run.next, run.seed);
-      run.next += run.track.chordSec;
-      run.index++;
-    }
+    run.conductor.fadeOutAll(MUSIC.fadeOutSec);
   }
 }

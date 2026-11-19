@@ -50,9 +50,13 @@ export function composeSegment(track: TrackDef, index: number, seed: number): Se
     if (tone || scaleClasses.has(mod12(s))) pool.push({ n: s, tone });
   }
 
-  const count = m.notes[0] + Math.floor(rng() * (m.notes[1] - m.notes[0] + 1));
+  let count = m.notes[0] + Math.floor(rng() * (m.notes[1] - m.notes[0] + 1));
+  // Ruhiger Akkord: nur halb so viele Glocken, die Musik atmet
+  if (rng() < m.rest) count = Math.max(1, Math.floor(count / 2));
   const bells: BellNote[] = [];
-  let prev = pool[Math.floor(rng() * pool.length)].n;
+  // Start in der Mitte des Tonraums, damit die Melodie nicht von Akkord zu Akkord springt
+  const target = (m.low + m.high) / 2 + (rng() * 8 - 4);
+  let prev = pool.reduce((best, p) => (Math.abs(p.n - target) < Math.abs(best.n - target) ? p : best)).n;
   for (let i = 0; i < count; i++) {
     // Zeit: ein Platz pro Glocke, darin zufällig verschoben, so entsteht kein Raster
     const t = ((i + 0.15 + 0.7 * rng()) * track.chordSec) / count;
@@ -85,4 +89,52 @@ export function composeSegment(track: TrackDef, index: number, seed: number): Se
   }
   bells.sort((a, b) => a.t - b.t);
   return { chord: semis.map((s) => noteFreq(track.root, s)), bells };
+}
+
+export interface PlanItem {
+  track: TrackDef;
+  /** Akkord Index innerhalb des Aufenthalts */
+  index: number;
+  /** Beginn des Abschnitts im Takt der Audiouhr (Sekunden) */
+  time: number;
+  /** Ein neues Stück beginnt hier (beim Mix: Überblendung) */
+  first: boolean;
+  /** Wievielter Aufenthalt, für einen eigenen Seed pro Stück und Runde */
+  stay: number;
+}
+
+/**
+ * Plant der Reihe nach alle Abschnitte. Mit einem Stück läuft es endlos im Kreis, mit mehreren
+ * (Mix) bleibt jedes `chords` Akkorde lang und das nächste übernimmt. Reihenfolge fest, Start wählbar.
+ */
+export class MusicPlanner {
+  private idx: number;
+  private seg = 0;
+  private stay = 0;
+  private started = false;
+  /** Beginn des nächsten Abschnitts */
+  time: number;
+
+  constructor(private tracks: readonly TrackDef[], startTime: number, private chords: number, startIdx = 0) {
+    this.time = startTime;
+    this.idx = ((startIdx % tracks.length) + tracks.length) % tracks.length;
+  }
+
+  step(): PlanItem {
+    let first = false;
+    if (!this.started) {
+      this.started = true;
+      first = true;
+    } else if (this.tracks.length > 1 && this.seg >= this.chords) {
+      this.idx = (this.idx + 1) % this.tracks.length;
+      this.seg = 0;
+      this.stay++;
+      first = true;
+    }
+    const track = this.tracks[this.idx];
+    const item: PlanItem = { track, index: this.seg, time: this.time, first, stay: this.stay };
+    this.time += track.chordSec;
+    this.seg++;
+    return item;
+  }
 }

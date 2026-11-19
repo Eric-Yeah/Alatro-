@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Hintergrundmusik (Version 0.7.0)
+# Übergabe: Stand nach Hintergrundmusik im Mix (Version 0.7.1)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -18,12 +18,12 @@ Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 gr
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
-## Version 0.7.0: Hintergrundmusik
+## Version 0.7.1: Hintergrundmusik im Mix
 
-Drei mystische Stücke ohne Beat und Bass (Sternenglas, Mondlabor, Sphärenklang), live synthetisiert, in den Optionen wählbar mit eigener Lautstärke. Daten `src/data/music.ts`, Komposition `src/ui/musicScore.ts`, Klang und Player `src/ui/music.ts`, Einbindung in `src/ui/audio.ts` (`syncMusic`). Einzelheiten und offene Punkte: `AUDIT.md`, Abschnitt "Hintergrundmusik" und O88.
+Drei mystische Stücke ohne Beat und Bass (Sternenglas, Mondlabor, Sphärenklang), live synthetisiert. Standard ist **Mix**: die Stücke wechseln sich ab (je etwa zwei Minuten, weiche Überblendung), in den Optionen auch einzeln wählbar, mit eigener Lautstärke. Große Effekte ziehen die Musik kurz leiser (Ducking), Sparsam spielt eine leichtere Variante. Daten `src/data/music.ts`, Komposition `src/ui/musicScore.ts`, Klang und Player `src/ui/music.ts`, Einbindung in `src/ui/audio.ts` (`syncMusic`). Einzelheiten und offene Punkte: `AUDIT.md`, Abschnitt "Hintergrundmusik" und O88.
 
-* **Neues Stück anlegen:** Eintrag in `TRACKS` (Akkorde, Pad, Glocken, Hall), Kurzbeschreibung höchstens `MUSIC.infoMax` Zeichen. Danach `level` so einstellen, dass alle Stücke etwa gleich laut sind.
-* **Als Nächstes:** Auf dem iPad anhören und ein Stück wählen, die anderen können dann gestrichen oder als Auswahl behalten werden. Akku und Bildrate mit Musik prüfen.
+* **Neues Stück anlegen:** Eintrag in `TRACKS` (Akkorde, Pad, Glocken, Hall), Kurzbeschreibung höchstens `MUSIC.infoMax` Zeichen. Danach `level` so einstellen, dass alle Stücke etwa gleich laut sind (Hörprobe mit `scheduleMusic` im `OfflineAudioContext` rendern und Lautheit messen). Ein neues Stück kommt automatisch in den Mix.
+* **Als Nächstes:** Auf dem iPad anhören: Gefällt der Mix, ist das Ducking zu stark oder zu schwach (`MUSIC.duck`), ist zwei Minuten pro Stück gut (`MUSIC.mixChords`). Akku und Bildrate mit Musik prüfen.
 
 ## Version 0.6.2: Titel aus Karten
 

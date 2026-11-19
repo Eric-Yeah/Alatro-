@@ -18,6 +18,24 @@ export const MUSIC = {
   minFreq: 140,
   /** Längste Kurzbeschreibung in Zeichen */
   infoMax: 38,
+  /** Mix: so viele Akkorde bleibt ein Stück, bevor das nächste übernimmt */
+  mixChords: 8,
+  /**
+   * Mix: So lange läuft das alte Stück beim Wechsel noch aus (Sekunden). Die Überblendung selbst
+   * machen die Hüllkurven der Flächen und das Abklingen der Glocken, der Bus blendet nur den Rand,
+   * sonst blenden sich Flächen doppelt aus und der Pegel bricht ein.
+   */
+  mixFadeSec: 10,
+  /** Mix: Einblenden des neuen Busses (kurz, die Fläche steigt selbst langsam an) */
+  mixInSec: 1.5,
+  /** Mix: Ausblenden des alten Busses am Ende der Auslaufzeit */
+  mixOutSec: 2,
+  /** Hochpass auf dem Musikbus in Hz, nimmt Dröhnen aus Hall und Echo */
+  highpass: 130,
+  /** Musik leiser ziehen, wenn ein großer Effekt klingt (Aufschlag, Fanfare) */
+  duck: { amount: 0.5, attackSec: 0.05, holdSec: 0.5, releaseSec: 1.6 },
+  /** Sparsam: weniger Stimmen und kürzerer Hall (Faktor auf die Hallzeit) */
+  lite: { voices: 1, reverbFactor: 0.6 },
   /** Länge der Abschnitte beim Rendern einer Hörprobe (Sekunden) */
   previewSec: 76,
 } as const;
@@ -51,6 +69,8 @@ export interface TrackDef {
     voices: number;
     /** Verstimmung in Cent zwischen den Stimmen */
     detune: number;
+    /** Stereobreite der Stimmen (0 bis 1), abwechselnd links und rechts */
+    width: number;
     lowpass: number;
     /** langsame Bewegung des Filters (Hz und Tiefe in Hz Filterfrequenz) */
     lfoHz: number;
@@ -79,6 +99,8 @@ export interface TrackDef {
     pairs: number;
     /** Breite im Stereobild (0 bis 1) */
     pan: number;
+    /** Wahrscheinlichkeit für einen ruhigen Akkord mit wenigen Glocken */
+    rest: number;
   };
   /** Leiser Hauch (gefiltertes Rauschen), null für keinen */
   air: { gain: number; freq: number; q: number } | null;
@@ -101,12 +123,12 @@ export const TRACKS: readonly TrackDef[] = [
       [-5, 2, 7, 9, 12], // A sus mit 9
     ],
     chordSec: 14,
-    pad: { wave: 'triangle', voices: 2, detune: 6, lowpass: 1400, lfoHz: 0.07, lfoDepth: 300, attack: 4.5, release: 4.5, gain: 0.16 },
-    melody: { kind: 'glas', scale: [0, 2, 4, 6, 7, 9, 11], low: 12, high: 31, notes: [4, 7], gain: 0.12, decay: 4.5, chordBias: 0.65, leap: 5, pairs: 0.2, pan: 0.7 },
+    pad: { wave: 'triangle', voices: 2, detune: 6, width: 0.45, lowpass: 1400, lfoHz: 0.07, lfoDepth: 300, attack: 4.5, release: 4.5, gain: 0.16 },
+    melody: { kind: 'glas', scale: [0, 2, 4, 6, 7, 9, 11], low: 12, high: 31, notes: [4, 7], gain: 0.12, decay: 4.5, chordBias: 0.65, leap: 5, pairs: 0.2, pan: 0.7, rest: 0.25 },
     air: { gain: 0.02, freq: 3000, q: 0.7 },
     reverb: { seconds: 5, decay: 2.2, wet: 0.9 },
     echo: { time: 0.63, feedback: 0.38, wet: 0.22 },
-    level: 1.29,
+    level: 1.55,
   },
   {
     id: 'mondlabor',
@@ -120,12 +142,12 @@ export const TRACKS: readonly TrackDef[] = [
       [-7, 0, 3, 8, 10], // Dm7 mit 11
     ],
     chordSec: 16,
-    pad: { wave: 'sawtooth', voices: 2, detune: 9, lowpass: 650, lfoHz: 0.05, lfoDepth: 250, attack: 5, release: 5, gain: 0.1 },
-    melody: { kind: 'spieluhr', scale: [0, 2, 3, 5, 7, 8, 11], low: 15, high: 36, notes: [5, 9], gain: 0.1, decay: 1.6, chordBias: 0.55, leap: 4, pairs: 0.4, pan: 0.8 },
+    pad: { wave: 'sawtooth', voices: 2, detune: 9, width: 0.6, lowpass: 650, lfoHz: 0.05, lfoDepth: 250, attack: 5, release: 5, gain: 0.1 },
+    melody: { kind: 'spieluhr', scale: [0, 2, 3, 5, 7, 8, 11], low: 15, high: 36, notes: [5, 9], gain: 0.1, decay: 1.6, chordBias: 0.55, leap: 4, pairs: 0.4, pan: 0.8, rest: 0.2 },
     air: { gain: 0.03, freq: 1400, q: 1.2 },
     reverb: { seconds: 4, decay: 2.5, wet: 0.8 },
     echo: { time: 0.47, feedback: 0.45, wet: 0.3 },
-    level: 2.85,
+    level: 3.42,
   },
   {
     id: 'sphaerenklang',
@@ -139,12 +161,12 @@ export const TRACKS: readonly TrackDef[] = [
       [3, 10, 17, 24], // auf As
     ],
     chordSec: 18,
-    pad: { wave: 'triangle', voices: 2, detune: 4, lowpass: 900, lfoHz: 0.04, lfoDepth: 200, attack: 6, release: 6, gain: 0.14 },
-    melody: { kind: 'schale', scale: [0, 2, 5, 7, 10], low: 12, high: 31, notes: [2, 4], gain: 0.16, decay: 8, chordBias: 0.8, leap: 7, pairs: 0.1, pan: 0.5 },
+    pad: { wave: 'triangle', voices: 2, detune: 4, width: 0.35, lowpass: 900, lfoHz: 0.04, lfoDepth: 200, attack: 6, release: 6, gain: 0.14 },
+    melody: { kind: 'schale', scale: [0, 2, 5, 7, 10], low: 12, high: 31, notes: [2, 4], gain: 0.16, decay: 8, chordBias: 0.8, leap: 7, pairs: 0.1, pan: 0.5, rest: 0.3 },
     air: { gain: 0.04, freq: 700, q: 0.9 },
     reverb: { seconds: 6, decay: 2, wet: 1 },
     echo: { time: 0.8, feedback: 0.3, wet: 0.15 },
-    level: 0.97,
+    level: 1.16,
   },
 ];
 
@@ -156,3 +178,14 @@ export function getTrack(id: string): TrackDef | undefined {
 
 /** Wert der Option "Musik" wenn nichts spielen soll */
 export const MUSIC_OFF = 'aus';
+/** Wert der Option "Musik" für alle Stücke im Wechsel */
+export const MUSIC_MIX = 'mix';
+export const MUSIC_MIX_NAME = 'Mix';
+export const MUSIC_MIX_INFO = 'Alle drei Stücke im Wechsel';
+
+/** Stücke für eine Auswahl der Option: Mix gibt alle zurück, sonst das eine, sonst nichts */
+export function tracksFor(choice: string): TrackDef[] {
+  if (choice === MUSIC_MIX) return [...TRACKS];
+  const t = getTrack(choice);
+  return t ? [t] : [];
+}

@@ -24,7 +24,7 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
-import { MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
+import { MUSIC_MIX, MUSIC_MIX_INFO, MUSIC_MIX_NAME, MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
 import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
 import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
@@ -1776,11 +1776,12 @@ export class Game {
       minus.position.set(W - 175, vy);
       const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       plus.position.set(W - 95, vy);
-      const musicIds = [MUSIC_OFF, ...TRACK_IDS];
+      const musicIds = [MUSIC_MIX, ...TRACK_IDS, MUSIC_OFF];
       const mi = Math.max(0, musicIds.indexOf(st.music));
       const mt = getTrack(st.music);
-      const my = row(3, 'Musik', mt ? mt.info : 'Ruhige Hintergrundmusik, aus');
-      const music = new Button(mt ? mt.name : 'Aus', 230, 56, mt ? C.chips : 0x3b5068, () => {
+      const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : 'Aus';
+      const my = row(3, 'Musik', st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : 'Ruhige Hintergrundmusik, aus');
+      const music = new Button(musicName, 230, 56, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
         updateSettings({ music: musicIds[(mi + 1) % musicIds.length] });
         render();
       }, 22);

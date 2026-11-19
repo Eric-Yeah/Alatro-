@@ -8,6 +8,17 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.7.1',
+    date: '19.11.2026',
+    title: 'Musik im Wechsel',
+    items: [
+      'Neu: Mix ist jetzt die Standard Musik. Die drei Stücke wechseln sich ab, jedes bleibt etwa zwei Minuten und wird weich ins nächste überblendet. Du kannst in den Optionen weiterhin ein einzelnes Stück wählen.',
+      'Neu: Bei großen Effekten (Aufschlag der Punkte, Fanfaren, Erfolge, Pack öffnen) wird die Musik kurz leiser gezogen, damit der Effekt frei steht.',
+      'Besser: Die Flächen klingen breiter im Stereobild, es gibt ruhigere Akkorde mit wenigen Glocken, und ein Hochpass nimmt jedes Dröhnen aus Hall und Echo. Alle Stücke sind gleich laut.',
+      'Besser: In der Grafikstufe Sparsam läuft die Musik in einer leichteren Variante, das schont Akku und Rechenleistung.',
+    ],
+  },
+  {
     version: '0.7.0',
     date: '19.11.2026',
     title: 'Hintergrundmusik',
