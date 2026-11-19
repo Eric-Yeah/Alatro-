@@ -1,0 +1,641 @@
+{
+ "scale": 4,
+ "tileW": 52,
+ "tileH": 70,
+ "gap": 3,
+ "cols": 10,
+ "names": [
+  {
+   "page": 1,
+   "id": "funke",
+   "name": "Funke",
+   "rarity": "common",
+   "x": 3,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "treppe",
+   "name": "Treppe",
+   "rarity": "common",
+   "x": 58,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "kiesel",
+   "name": "Kiesel",
+   "rarity": "common",
+   "x": 113,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "blasebalg",
+   "name": "Blasebalg",
+   "rarity": "common",
+   "x": 168,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "kerzenlicht",
+   "name": "Kerzenlicht",
+   "rarity": "common",
+   "x": 223,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "doppelflamme",
+   "name": "Doppelflamme",
+   "rarity": "common",
+   "x": 278,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "milchglas",
+   "name": "Milchglas",
+   "rarity": "common",
+   "x": 333,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "fuenfklang",
+   "name": "Fünfklang",
+   "rarity": "common",
+   "x": 388,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "leisetreter",
+   "name": "Leisetreter",
+   "rarity": "common",
+   "x": 443,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "hochstapler",
+   "name": "Hochstapler",
+   "rarity": "common",
+   "x": 498,
+   "y": 3
+  },
+  {
+   "page": 1,
+   "id": "dreifuss",
+   "name": "Dreifuß",
+   "rarity": "uncommon",
+   "x": 3,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "gaestehaus",
+   "name": "Gästehaus",
+   "rarity": "uncommon",
+   "x": 58,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "einzelgaenger",
+   "name": "Einzelgänger",
+   "rarity": "uncommon",
+   "x": 113,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "letzte_chance",
+   "name": "Letzte Chance",
+   "rarity": "uncommon",
+   "x": 168,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "glut",
+   "name": "Glut",
+   "rarity": "common",
+   "x": 223,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "frost",
+   "name": "Frost",
+   "rarity": "common",
+   "x": 278,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "kleinvieh",
+   "name": "Kleinvieh",
+   "rarity": "common",
+   "x": 333,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "herzblut",
+   "name": "Herzblut",
+   "rarity": "common",
+   "x": 388,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "diamantstaub",
+   "name": "Diamantstaub",
+   "rarity": "common",
+   "x": 443,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "nachtschatten",
+   "name": "Nachtschatten",
+   "rarity": "common",
+   "x": 498,
+   "y": 76
+  },
+  {
+   "page": 1,
+   "id": "efeu",
+   "name": "Efeu",
+   "rarity": "common",
+   "x": 3,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "hofstaat",
+   "name": "Hofstaat",
+   "rarity": "common",
+   "x": 58,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "gleichmut",
+   "name": "Gleichmut",
+   "rarity": "common",
+   "x": 113,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "kauz",
+   "name": "Kauz",
+   "rarity": "common",
+   "x": 168,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "adlerauge",
+   "name": "Adlerauge",
+   "rarity": "common",
+   "x": 223,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "fruehaufsteher",
+   "name": "Frühaufsteher",
+   "rarity": "common",
+   "x": 278,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "schlussakkord",
+   "name": "Schlussakkord",
+   "rarity": "common",
+   "x": 333,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "wachposten",
+   "name": "Wachposten",
+   "rarity": "common",
+   "x": 388,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "ruhekissen",
+   "name": "Ruhekissen",
+   "rarity": "common",
+   "x": 443,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "vorrat",
+   "name": "Vorrat",
+   "rarity": "common",
+   "x": 498,
+   "y": 149
+  },
+  {
+   "page": 1,
+   "id": "kleines_echo",
+   "name": "Kleines Echo",
+   "rarity": "common",
+   "x": 3,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "hofecho",
+   "name": "Hofecho",
+   "rarity": "uncommon",
+   "x": 58,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "adlerecho",
+   "name": "Adlerecho",
+   "rarity": "uncommon",
+   "x": 113,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "erstschlag",
+   "name": "Erstschlag",
+   "rarity": "uncommon",
+   "x": 168,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "schlussecho",
+   "name": "Schlussecho",
+   "rarity": "uncommon",
+   "x": 223,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "haltegriff",
+   "name": "Haltegriff",
+   "rarity": "rare",
+   "x": 278,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "schneeball",
+   "name": "Schneeball",
+   "rarity": "uncommon",
+   "x": 333,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "lawine",
+   "name": "Lawine",
+   "rarity": "common",
+   "x": 388,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "glimmer",
+   "name": "Glimmer",
+   "rarity": "common",
+   "x": 443,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "pfadfinder",
+   "name": "Pfadfinder",
+   "rarity": "common",
+   "x": 498,
+   "y": 222
+  },
+  {
+   "page": 1,
+   "id": "gezeiten",
+   "name": "Gezeiten",
+   "rarity": "common",
+   "x": 3,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "wachskerze",
+   "name": "Wachskerze",
+   "rarity": "uncommon",
+   "x": 58,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "zwillingsring",
+   "name": "Zwillingsring",
+   "rarity": "rare",
+   "x": 113,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "sparschwein",
+   "name": "Sparschwein",
+   "rarity": "rare",
+   "x": 168,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "muenzquelle",
+   "name": "Münzquelle",
+   "rarity": "common",
+   "x": 223,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "handarbeit",
+   "name": "Handarbeit",
+   "rarity": "common",
+   "x": 278,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "zinsmeister",
+   "name": "Zinsmeister",
+   "rarity": "uncommon",
+   "x": 333,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "goldwaescher",
+   "name": "Goldwäscher",
+   "rarity": "common",
+   "x": 388,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "glueckstaler",
+   "name": "Glückstaler",
+   "rarity": "common",
+   "x": 443,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "kartenhaendler",
+   "name": "Kartenhändler",
+   "rarity": "common",
+   "x": 498,
+   "y": 295
+  },
+  {
+   "page": 1,
+   "id": "beutezug",
+   "name": "Beutezug",
+   "rarity": "uncommon",
+   "x": 3,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "rentner",
+   "name": "Rentner",
+   "rarity": "common",
+   "x": 58,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "wuerfelhand",
+   "name": "Würfelhand",
+   "rarity": "common",
+   "x": 113,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "marktschreier",
+   "name": "Marktschreier",
+   "rarity": "uncommon",
+   "x": 168,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "kundenkarte",
+   "name": "Kundenkarte",
+   "rarity": "uncommon",
+   "x": 223,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "hehler",
+   "name": "Hehler",
+   "rarity": "common",
+   "x": 278,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "lagerfeuer",
+   "name": "Lagerfeuer",
+   "rarity": "common",
+   "x": 333,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "sternwart",
+   "name": "Sternwart",
+   "rarity": "uncommon",
+   "x": 388,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "lehrling",
+   "name": "Lehrling",
+   "rarity": "common",
+   "x": 443,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "schnellgriff",
+   "name": "Schnellgriff",
+   "rarity": "uncommon",
+   "x": 498,
+   "y": 368
+  },
+  {
+   "page": 1,
+   "id": "sprungbrett",
+   "name": "Sprungbrett",
+   "rarity": "uncommon",
+   "x": 3,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "farbwechsel",
+   "name": "Farbwechsel",
+   "rarity": "uncommon",
+   "x": 58,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "streuguss",
+   "name": "Streuguss",
+   "rarity": "uncommon",
+   "x": 113,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "maskenball",
+   "name": "Maskenball",
+   "rarity": "common",
+   "x": 168,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "uhrwerk",
+   "name": "Uhrwerk",
+   "rarity": "rare",
+   "x": 223,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "pendel",
+   "name": "Pendel",
+   "rarity": "common",
+   "x": 278,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "falttasche",
+   "name": "Falttasche",
+   "rarity": "common",
+   "x": 333,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "gluecksklee",
+   "name": "Glücksklee",
+   "rarity": "uncommon",
+   "x": 388,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "guerteltasche",
+   "name": "Gürteltasche",
+   "rarity": "common",
+   "x": 443,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "lastkarren",
+   "name": "Lastkarren",
+   "rarity": "rare",
+   "x": 498,
+   "y": 441
+  },
+  {
+   "page": 1,
+   "id": "spiegelbild",
+   "name": "Spiegelbild",
+   "rarity": "rare",
+   "x": 3,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "urbild",
+   "name": "Urbild",
+   "rarity": "rare",
+   "x": 58,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "schutzengel",
+   "name": "Schutzengel",
+   "rarity": "rare",
+   "x": 113,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "kupferschmied",
+   "name": "Kupferschmied",
+   "rarity": "uncommon",
+   "x": 168,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "schleifstein",
+   "name": "Schleifstein",
+   "rarity": "uncommon",
+   "x": 223,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "gefolgschaft",
+   "name": "Gefolgschaft",
+   "rarity": "uncommon",
+   "x": 278,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "sternenkoenig",
+   "name": "Sternenkönig",
+   "rarity": "legendary",
+   "x": 333,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "ewiges_licht",
+   "name": "Ewiges Licht",
+   "rarity": "legendary",
+   "x": 388,
+   "y": 514
+  },
+  {
+   "page": 1,
+   "id": "meister_der_tinkturen",
+   "name": "Meister der Tinkturen",
+   "rarity": "legendary",
+   "x": 443,
+   "y": 514
+  }
+ ]
+}
