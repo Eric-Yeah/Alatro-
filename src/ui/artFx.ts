@@ -154,25 +154,29 @@ export function addShimmer(parent: Container, w: number, h: number, count: numbe
  * Aufprall beim Berühren: bei Maus über der Fläche hebt und vergrößert sich body, beim Antippen sinkt es ein und federt zurück.
  * Der Auslöser (host) bleibt unverändert, so stört es Layout und Verschiebungen von außen nicht.
  */
-export function attachPop(host: Container, body: Container) {
+export function attachPop(host: Container, body: Container, opts: { hoverScale?: () => number | undefined; onHover?: (on: boolean) => void; always?: () => boolean } = {}) {
   let hover = false;
-  const rest = () => (hover ? POP_FX.hoverScale : 1);
+  const hs = () => opts.hoverScale?.() ?? POP_FX.hoverScale;
+  const rest = () => (hover ? hs() : 1);
+  const allowed = () => fxMode().pop || !!opts.always?.();
   host.on('pointerover', () => {
-    if (!fxMode().pop || body.destroyed) return;
+    if (!allowed() || body.destroyed) return;
     hover = true;
-    void tween(body, { 'scale.x': POP_FX.hoverScale, 'scale.y': POP_FX.hoverScale, y: -POP_FX.hoverLift }, POP_FX.hoverMs, easeOutBack);
+    opts.onHover?.(true);
+    void tween(body, { 'scale.x': hs(), 'scale.y': hs(), y: -POP_FX.hoverLift }, POP_FX.hoverMs, easeOutBack);
   });
   host.on('pointerout', () => {
     hover = false;
+    opts.onHover?.(false);
     if (body.destroyed) return;
     void tween(body, { 'scale.x': 1, 'scale.y': 1, y: 0 }, POP_FX.hoverMs);
   });
   host.on('pointerdown', () => {
-    if (!fxMode().pop || body.destroyed) return;
+    if (!allowed() || body.destroyed) return;
     void tween(body, { 'scale.x': POP_FX.pressScale, 'scale.y': POP_FX.pressScale }, POP_FX.pressMs);
   });
   const release = () => {
-    if (!fxMode().pop || body.destroyed) return;
+    if (!allowed() || body.destroyed) return;
     void tween(body, { 'scale.x': rest(), 'scale.y': rest(), y: hover ? -POP_FX.hoverLift : 0 }, POP_FX.releaseMs, easeOutBack);
   };
   host.on('pointerup', release);

@@ -11,6 +11,7 @@ import { haptics } from './haptics';
 import { CARD_H, CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { PackView, packPixelSize } from './PackView';
+import { attachPop } from './artFx';
 import { VOUCHER_H, VOUCHER_W, VoucherView } from './VoucherView';
 import { JokerView } from './JokerView';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
@@ -280,16 +281,20 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   ) => {
     const item = new Container();
     item.position.set(x, y);
+    item.addChild(view);
+    // Preisfahne über der Ansicht, damit sie beim Aufprall sichtbar bleibt
     if (priceInfo) {
       const tag = priceTag(priceInfo.price, run.money >= priceInfo.price);
       tag.y = -h / 2;
       item.addChild(tag);
     }
-    item.addChild(view);
     view.eventMode = 'none';
     item.hitArea = new Rectangle(-w / 2, -h / 2 - L.tagH, w, h + L.tagH);
     item.eventMode = 'static';
     item.cursor = 'pointer';
+    // Aufprall beim Berühren: das Fach fängt die Berührung auf, die Ansicht stellt nur ihren inneren Container (body) bereit
+    const popBody = (view as { body?: Container }).body;
+    if (popBody) attachPop(item, popBody);
     itemLayer.addChild(item);
     const slot: Slot = { item, homeY: y, x, top: y - h / 2 - L.tagH, bottom: y + h / 2, dir, detail };
     slots.push(slot);

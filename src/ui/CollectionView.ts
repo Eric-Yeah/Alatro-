@@ -3,6 +3,11 @@ import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS } from './theme';
 import { Button, label, tabBar } from './widgets';
+import { ConsumableView } from './ConsumableView';
+import { JokerView } from './JokerView';
+import { VoucherView } from './VoucherView';
+import { CONSUMABLE_BY_ID } from '../data/consumables';
+import { COLLECTION_TILE } from '../data/consumableArt';
 
 export const COLLECTION_W = 1280;
 export const COLLECTION_H = 860;
@@ -20,6 +25,22 @@ function entryColor(e: CollectionEntry): number {
   if (e.group in RARITY_COLORS) return RARITY_COLORS[e.group as keyof typeof RARITY_COLORS];
   if (e.group in CONSUMABLE_COLORS) return CONSUMABLE_COLORS[e.group as keyof typeof CONSUMABLE_COLORS];
   return 0xf2711c;
+}
+
+/** Pixel Art Kachel eines entdeckten Eintrags (Joker, Consumable, Voucher), sonst null. Ohne Bedienung, nur Anzeige. */
+function tileFor(e: CollectionEntry): { view: Container; w: number; h: number } | null {
+  const [kind, id] = e.key.split(':');
+  let view: Container | null = null;
+  let w = 104, h = 140;
+  if (kind === 'joker') view = new JokerView({ uid: -1, defId: id, vars: {} });
+  else if (kind === 'consumable' && CONSUMABLE_BY_ID[id]) view = new ConsumableView(id);
+  else if (kind === 'voucher') { view = new VoucherView(e.name); w = 132; h = 180; }
+  if (!view) return null;
+  const k = Math.min(COLLECTION_TILE.maxW / w, COLLECTION_TILE.maxH / h, 1);
+  view.scale.set(k);
+  view.eventMode = 'none';
+  view.interactiveChildren = false;
+  return { view, w: w * k, h: h * k };
 }
 
 /** Sammlung: alle Inhalte nach Reitern, nicht gesehene Einträge bleiben verdeckt. */
@@ -65,11 +86,20 @@ export function buildCollection(box: Container, close: () => void) {
         .roundRect(x, y + 4, CELL_W, CELL_H, 14).fill({ color: 0, alpha: 0.35 })
         .roundRect(x, y, CELL_W, CELL_H, 14).fill(known ? C.panel : 0x141d29).stroke({ width: 3, color: known ? color : C.panelLine }));
       if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(color));
-      const name = label(known ? e.name : '???', 24, known ? C.text : C.textDim);
-      name.position.set(x + CELL_W / 2, y + 42);
-      if (name.width > CELL_W - 24) name.scale.set((CELL_W - 24) / name.width);
+      const tile = known ? tileFor(e) : null;
+      // Textbereich: mit Kachel rechts von ihr, sonst über die ganze Zelle
+      const tx = tile ? x + COLLECTION_TILE.pad * 2 + tile.w : x;
+      const tw = tile ? CELL_W - COLLECTION_TILE.pad * 3 - tile.w : CELL_W;
+      const cx = tx + tw / 2;
+      if (tile) {
+        tile.view.position.set(x + COLLECTION_TILE.pad + tile.w / 2, y + CELL_H / 2 + 6);
+        dyn.addChild(tile.view);
+      }
+      const name = label(known ? e.name : '???', tile ? 20 : 24, known ? C.text : C.textDim);
+      name.position.set(cx, y + (tile ? 36 : 42));
+      if (name.width > tw - 16) name.scale.set((tw - 16) / name.width);
       const sub = label(known ? groupName(e.group) : 'Noch nicht gesehen', 15, known ? color === 0x2e2838 ? C.textDim : C.accent : C.textDim);
-      sub.position.set(x + CELL_W / 2, y + 70);
+      sub.position.set(cx, y + (tile ? 60 : 70));
       dyn.addChild(name, sub);
       if (known && fresh.has(e.key)) {
         const badge = label('NEU', 14, 0x1a1a1a);
@@ -84,8 +114,10 @@ export function buildCollection(box: Container, close: () => void) {
         dyn.addChild(hint);
       }
       if (known) {
-        const d = richText(e.description, CELL_W - 28, { size: 15, theme: 'dark' });
-        d.position.set(x + CELL_W / 2, y + 92);
+        const d = richText(e.description, tw - 12, { size: tile ? 14 : 15, theme: 'dark' });
+        d.position.set(cx, y + (tile ? 76 : 92));
+        const maxH = CELL_H - (tile ? 76 : 92) - 10;
+        if (d.height > maxH) d.scale.set(maxH / d.height);
         dyn.addChild(d);
       }
     });

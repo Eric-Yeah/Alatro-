@@ -1,5 +1,5 @@
 // Erzeugt einen Spielstand (JSON) für Vorschau Screenshots im echten Spiel: Shop mit Packs und Consumables.
-// Aufruf: npx vite-node tools/ingameSave.ts <shop|pack> <ausgabedatei>
+// Aufruf: npx vite-node tools/ingameSave.ts <shop|pack|round> <ausgabedatei>
 // Der Spielstand wird in Playwright in localStorage (alatro.run.v1) gelegt und über "Fortsetzen" geladen.
 import { writeFileSync } from 'node:fs';
 import '../src/core/index';
@@ -11,13 +11,17 @@ const out = process.argv[3] ?? 'ingame-save.json';
 
 const run = createRun({ seed: 'POLISH' });
 selectBlind(run);
-run.round!.score = run.round!.target;
-afterHand(run);
-cashOut(run);
+if (mode !== 'round') {
+  run.round!.score = run.round!.target;
+  afterHand(run);
+  cashOut(run);
+}
 run.money = 60;
 run.consumableSlots = 5;
 for (const id of ['sternbild_flush', 'elixier_gold', 'omen_hexenkessel', 'elixier_stern', 'sternbild_fiveKind']) addConsumable(run, id);
-if (mode === 'shop') {
+if (mode === 'round') {
+  // Runde läuft, nur die Consumable Leiste füllen
+} else if (mode === 'shop') {
   run.shop!.packs = [
     { packId: 'sternbild_normal', price: 4 },
     { packId: 'omen_jumbo', price: 6 },

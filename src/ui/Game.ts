@@ -46,6 +46,7 @@ import { haptics } from './haptics';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { playPackOpen, type FanTarget } from './packFx';
+import { trayLayout } from './consumableTray';
 import { OPEN_FX } from '../data/artFx';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
@@ -801,9 +802,8 @@ export class Game {
 
   // ────────────────────────────────────────────────────────────── consumables
 
-  private consumableX(i: number, n: number) {
-    const spacing = Math.min(124, (CONS_TRAY_W - 40) / Math.max(n, 1));
-    return CONS_TRAY_X + CONS_TRAY_W / 2 + (i - (n - 1) / 2) * spacing;
+  private consumableSlots(n: number) {
+    return trayLayout(n, CONS_TRAY_X + CONS_TRAY_W / 2, CONS_TRAY_W, JOKER_Y);
   }
 
   private syncConsumables() {
@@ -815,17 +815,20 @@ export class Game {
       v.destroy({ children: true });
       this.consumableViews.delete(uid);
     }
+    const slots = this.consumableSlots(list.length);
     list.forEach((c, i) => {
       let v = this.consumableViews.get(c.uid);
       if (!v) {
         v = new ConsumableView(c.defId);
-        v.position.set(this.consumableX(i, list.length), JOKER_Y);
+        v.position.set(slots[i].x, slots[i].y);
+        v.scale.set(slots[i].scale);
         v.on('pointertap', () => { if (!this.busy) this.showConsumableTooltip(c.uid); });
         this.consumableViews.set(c.uid, v);
         this.jokerLayer.addChild(v);
       }
       v.zIndex = i;
-      tween(v, { x: this.consumableX(i, list.length), y: JOKER_Y }, 220, easeOutBack);
+      v.setCompact(slots[i].scale);
+      tween(v, { x: slots[i].x, y: slots[i].y }, 220, easeOutBack);
     });
     this.refreshInfo();
   }

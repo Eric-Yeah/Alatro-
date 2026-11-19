@@ -21,8 +21,8 @@ export const IDLE_FX = {
 
 /** Aufprall beim Berühren (Maus über der Karte) und Antippen */
 export const POP_FX = {
-  hoverScale: 1.07,
-  hoverLift: 4,
+  hoverScale: 1.12,
+  hoverLift: 8,
   hoverMs: 150,
   /** Antippen: kurz einsinken, dann zurückfedern */
   pressScale: 0.94,

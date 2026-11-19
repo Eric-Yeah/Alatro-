@@ -52,3 +52,28 @@ export const RARE_CONSUMABLE_IDS = new Set<string>([
   'elixier_alchemistentisch', 'elixier_erntemond',
 ]);
 export const RARE_CONSUMABLE_TYPES = new Set<ConsumableType>(['omen']);
+
+/**
+ * Consumable Leiste (oben rechts, im Shop und im Kampf): ab compactFrom Karten werden sie verkleinert und bei mehr als
+ * drei in zwei Reihen gelegt, damit alle Motive und (gekürzte) Namen erkennbar bleiben. Berührt man eine verkleinerte
+ * Karte, springt sie nach vorn und zeigt sich fast in voller Größe mit ganzem Namen.
+ */
+export const CONS_TRAY = {
+  compactFrom: 3,
+  compactScale: 0.62,
+  /** Abstand der Kartenmitten waagerecht und senkrecht (verkleinert) */
+  colSpacing: 76,
+  rowSpacing: 80,
+  /** Höchster Abstand bei ein oder zwei Karten in voller Größe */
+  fullSpacing: 124,
+  /** Absolute Größe einer berührten verkleinerten Karte */
+  hoverScale: 0.95,
+  /** Schriftgröße des Namens in der verkleinerten Karte (scheinbar, in logischen Punkten) und kleinste erlaubte Größe, bevor gekürzt wird */
+  nameSize: 9.5,
+  nameSizeMin: 6.5,
+  /** Breite des Fachs, das nicht beschrieben wird (Rand links und rechts) */
+  margin: 40,
+};
+
+/** Pixel Art Kachel in den Zellen des Sternenatlas: größte Maße und Rand links */
+export const COLLECTION_TILE = { maxW: 104, maxH: 140, pad: 8 };
