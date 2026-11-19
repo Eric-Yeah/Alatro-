@@ -384,8 +384,8 @@ export const JOKER_DEFS: JokerDef[] = [
     passive: (cfg) => ({ discount: cfg.discount }),
   },
   {
-    id: 'hehler', name: 'Hehler', rarity: 'common', cost: 3, copyCompat: false,
-    config: { money: 10 }, description: 'Beim Verkauf dieses Jokers: +${money}',
+    id: 'hehler', name: 'Hehler', rarity: 'common', cost: 7, copyCompat: false,
+    config: { money: 8 }, description: 'Beim Verkauf dieses Jokers: +${money}',
     calculate: (ctx, _s, cfg) => (ctx.phase === 'sell' ? { money: cfg.money } : undefined),
   },
   {

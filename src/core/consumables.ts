@@ -215,8 +215,8 @@ export function applyConsumable(run: RunState, defId: string, targetIds: number[
       if (j) {
         addJoker(run, j.id, { buyPrice: j.cost });
         res.joker = j.id;
+        run.money = Math.min(run.money, 0);
       }
-      run.money = Math.min(run.money, 0);
       break;
     }
     case 'cauldron': {

@@ -495,13 +495,13 @@ describe('Gruppe 6: Blind und Shop Jokers', () => {
     expect(run.shop!.packs[0]!.price).toBe(3);
   });
 
-  it('Hehler: Verkauf gibt den Verkaufswert plus $10', () => {
+  it('Hehler: Verkauf gibt den Verkaufswert plus $8', () => {
     const run = runWith('SHOPJ004', 'hehler');
     const inst = run.jokers[0];
-    inst.buyPrice = 3;
+    inst.buyPrice = 7;
     const before = run.money;
     expect(sellJoker(run, inst.uid)).toBe(true);
-    expect(run.money).toBe(before + 1 + 10);
+    expect(run.money).toBe(before + 3 + 8);
     expect(run.jokers).toHaveLength(0);
   });
 
@@ -539,11 +539,11 @@ describe('Gruppe 6: Blind und Shop Jokers', () => {
     const run = createRun({ seed: 'SHOPJ008' });
     wonRound(run);
     run.money = 100;
-    run.shop!.cards[0] = { kind: 'joker', defId: 'hehler', price: 3 };
+    run.shop!.cards[0] = { kind: 'joker', defId: 'hehler', price: 7 };
     expect(buyCard(run, 0)).toBe(true);
     const money = run.money;
     sellJoker(run, run.jokers[0].uid);
-    expect(run.money).toBe(money + 1 + 10);
+    expect(run.money).toBe(money + 3 + 8);
   });
 });
 

@@ -395,7 +395,8 @@ function heldSternbilder(run: RunState): { uid: number; hand: HandType }[] {
 
 export function playCards(run: RunState, ids: number[]): ScoreResult {
   const r = run.round!;
-  if (ids.length === 0 || ids.length > START.maxPlay) throw new Error('invalid selection');
+  if (ids.length === 0 || ids.length > START.maxPlay || new Set(ids).size !== ids.length) throw new Error('invalid selection');
+  if (!ids.every((id) => r.hand.some((c) => c.id === id))) throw new Error('invalid selection');
   if (r.handsLeft <= 0) throw new Error('no hands left');
   const played = takeFromHand(r, ids);
   r.handsLeft--;
@@ -440,7 +441,8 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
 
 export function discardCards(run: RunState, ids: number[]): void {
   const r = run.round!;
-  if (ids.length === 0 || ids.length > START.maxDiscard) throw new Error('invalid selection');
+  if (ids.length === 0 || ids.length > START.maxDiscard || new Set(ids).size !== ids.length) throw new Error('invalid selection');
+  if (!ids.every((id) => r.hand.some((c) => c.id === id))) throw new Error('invalid selection');
   if (r.discardsLeft <= 0) throw new Error('no discards left');
   const discarded = takeFromHand(r, ids);
   r.discardPile.push(...discarded);
