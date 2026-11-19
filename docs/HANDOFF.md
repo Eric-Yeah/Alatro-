@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Kuppelblende (Version 0.8.1)
+# Übergabe: Stand nach Ladekarte (Version 0.8.2)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -18,12 +18,12 @@ Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 gr
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
-## Version 0.8.1: Kuppelblende
+## Version 0.8.2: Ladekarte
 
-Übergangsanimation zwischen den großen Screens: zwei Hälften der Sternwarten Kuppel schließen sich, der Screen dahinter wird getauscht, dann öffnen sie sich (`src/ui/ScreenTransition.ts`, Zahlen in `src/data/transition.ts`, Einbindung in `Game.transit`). Sie läuft beim Start der App und bei Home zu Spiel und zurück. Details und offene Punkte: `AUDIT.md` O94.
+Übergangsanimation zwischen den großen Screens: der Bildschirm blendet ins Nachtblau, eine Karte fällt in die Mitte und lädt (Balken), dahinter wird der Screen getauscht, die Karte dreht sich um, die Blende löst sich auf (`src/ui/ScreenTransition.ts`, Zahlen in `src/data/transition.ts`, Einbindung in `Game.transit`). Sie läuft beim Start der App und bei Home zu Spiel und zurück. Die Kuppelblende aus 0.8.1 wirkte wie ein Fehler und ist ersetzt. Details und offene Punkte: `AUDIT.md` O94.
 
 * **Weitere Blende anlegen:** Wechsel in `Game.transit(() => ...)` einpacken, der Aufbau des neuen Screens gehört in den Rückruf.
-* **Als Nächstes:** Auf dem iPad prüfen: Dauer und Ruckeln beim Tausch.
+* **Als Nächstes:** Auf dem iPad prüfen: Dauer (etwa 2,5 s) und Ruckeln beim Tausch.
 
 ## Version 0.7.1: Hintergrundmusik im Mix
 

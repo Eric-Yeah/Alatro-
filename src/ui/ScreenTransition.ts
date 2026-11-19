@@ -1,12 +1,9 @@
 import { Container, Graphics } from 'pixi.js';
 import { TRANSITION as T } from '../data/transition';
-import { VIEW_H, VIEW_W } from './theme';
-import { easeInOutCubic, tween, wait } from './tween';
-
-/** Wie weit eine Hälfte vom Schluss bis zur offenen Stellung wandert (logische Pixel) */
-const TRAVEL = VIEW_W / 2 + T.margin;
-/** Breite einer Hälfte, reicht bis über den Rand des sichtbaren Bereichs */
-const HALF_W = VIEW_W / 2 + T.margin;
+import { CARD_H, cardBack } from './CardView';
+import { cardFront } from './TitleCards';
+import { C, STYLE, VIEW_H, VIEW_W } from './theme';
+import { easeInOutCubic, easeOutBack, easeOutCubic, tween, wait } from './tween';
 
 /** Einfacher, wiederholbarer Zufall, damit die Sterne bei jedem Start gleich stehen */
 function lcg(seed: number): () => number {
@@ -14,55 +11,52 @@ function lcg(seed: number): () => number {
   return () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
 }
 
-/** Baut eine Kuppelhälfte. Die Naht liegt bei x = 0, die Fläche reicht nach links (die rechte Hälfte wird gespiegelt). */
-function buildHalf(): Graphics {
+/** Nachtblauer Grund mit Sternen und einem weichen Schein hinter der Karte */
+function buildDim(): Graphics {
   const g = new Graphics();
-  const top = -T.margin;
-  const h = VIEW_H + T.margin * 2;
-  g.rect(-HALF_W, top, HALF_W, h).fill(T.body);
-  // Rippen wie die Segmente einer Kuppel
-  for (let x = -T.ribGap; x > -HALF_W; x -= T.ribGap) g.rect(x - 1, top, 2, h).fill({ color: T.rib });
-  // Sterne
-  const rnd = lcg(7);
+  g.rect(-T.margin, -T.margin, VIEW_W + T.margin * 2, VIEW_H + T.margin * 2).fill(T.body);
+  const rnd = lcg(11);
   for (let i = 0; i < T.stars; i++) {
-    const x = -rnd() * (VIEW_W / 2 + 200) - 14;
-    const y = rnd() * VIEW_H;
     const r = 1 + rnd() * 2;
-    g.circle(x, y, r).fill({ color: 0xffffff, alpha: 0.25 + rnd() * 0.5 });
+    g.circle(rnd() * VIEW_W, rnd() * VIEW_H, r).fill({ color: 0xffffff, alpha: 0.2 + rnd() * 0.5 });
   }
-  // Leuchten an der Naht
-  g.rect(-T.glowW, top, T.glowW, h).fill({ color: T.glow, alpha: T.glowAlpha });
-  g.rect(-T.seamW, top, T.seamW, h).fill(T.seam);
-  // Ring mit Strichen, beide Hälften ergeben zusammen einen vollen Kreis
-  const cy = VIEW_H / 2;
-  g.arc(0, cy, T.ringR, Math.PI / 2, Math.PI * 1.5).stroke({ color: T.seam, width: 4 });
-  g.arc(0, cy, T.ringInnerR, Math.PI / 2, Math.PI * 1.5).stroke({ color: T.glow, width: 2, alpha: 0.7 });
-  for (let i = 0; i <= T.ringTicks / 2; i++) {
-    const a = Math.PI / 2 + (i / (T.ringTicks / 2)) * Math.PI;
-    const c = Math.cos(a), s = Math.sin(a);
-    g.moveTo(c * T.ringInnerR, cy + s * T.ringInnerR).lineTo(c * T.ringR, cy + s * T.ringR).stroke({ color: T.seam, width: 3 });
+  for (let i = 0; i < T.haloSteps; i++) {
+    g.circle(VIEW_W / 2, T.cardY, T.haloR * (1 - i / T.haloSteps)).fill({ color: T.halo, alpha: T.haloStepAlpha });
   }
   return g;
 }
 
 /**
- * Kuppelblende zwischen den großen Screens: zwei Hälften der Sternwarten Kuppel schließen sich,
- * der Screen dahinter wird getauscht, dann öffnet sich die Kuppel wieder. Fängt während der
- * Animation alle Berührungen ab.
+ * Übergang zwischen den großen Screens: der Bildschirm blendet ins Nachtblau, eine Karte fällt in die
+ * Mitte und lädt, dahinter wird der Screen getauscht, dann dreht sich die Karte um und die Blende löst
+ * sich auf. Fängt während der Animation alle Berührungen ab.
  */
 export class ScreenTransition {
   readonly root = new Container();
-  private left = buildHalf();
-  private right = buildHalf();
+  private dim = buildDim();
+  private hold = new Container();
+  private back = cardBack();
+  private front = cardFront(T.faceChar, T.faceSuit);
+  private bar = new Container();
+  private fill = new Graphics();
   private blocker = new Graphics();
   private running = false;
 
   constructor() {
     this.blocker.rect(-T.margin, -T.margin, VIEW_W + T.margin * 2, VIEW_H + T.margin * 2).fill({ color: 0x000000, alpha: 0.001 });
     this.blocker.eventMode = 'static';
-    this.right.scale.x = -1;
-    this.root.addChild(this.blocker, this.left, this.right);
-    this.place(1);
+    // Ladebalken: dunkle Schiene, goldene Füllung wächst von links
+    const track = new Graphics()
+      .roundRect(-T.barW / 2, 3, T.barW, T.barH, 5).fill(STYLE.shadowColor)
+      .roundRect(-T.barW / 2, 0, T.barW, T.barH, 5).fill(0x1d2a3a).stroke({ width: 2, color: C.panelLine });
+    this.fill.roundRect(0, 0, T.barW - 6, T.barH - 6, 3).fill(C.money);
+    this.fill.position.set(-T.barW / 2 + 3, 3);
+    this.bar.addChild(track, this.fill);
+    this.bar.position.set(VIEW_W / 2, T.cardY + CARD_H / 2 + T.barGap);
+    this.hold.position.set(VIEW_W / 2, T.cardY);
+    this.hold.addChild(this.back, this.front);
+    this.root.addChild(this.blocker, this.dim, this.bar, this.hold);
+    this.reset();
     this.root.visible = false;
   }
 
@@ -71,56 +65,91 @@ export class ScreenTransition {
     return this.running;
   }
 
-  /** 0 = geschlossen, 1 = offen */
-  private place(open: number) {
-    const c = VIEW_W / 2;
-    this.left.x = c - TRAVEL * open;
-    this.right.x = c + TRAVEL * open;
+  /** Grundstellung: Grund durchsichtig, Karte oben und klein, Rücken zu sehen, Balken leer */
+  private reset() {
+    this.root.alpha = 1;
+    this.dim.alpha = 0;
+    this.hold.alpha = 0;
+    this.hold.y = T.cardY + T.cardDropY;
+    this.hold.scale.set(T.cardStartScale);
+    this.hold.rotation = -T.sway;
+    this.back.scale.x = 1;
+    this.front.scale.x = 0;
+    this.bar.alpha = 0;
+    this.fill.scale.x = 0;
   }
 
-  private async slide(from: number, to: number, ms: number) {
-    this.place(from);
-    const c = VIEW_W / 2;
-    await Promise.all([
-      tween(this.left, { x: c - TRAVEL * to }, ms, easeInOutCubic),
-      tween(this.right, { x: c + TRAVEL * to }, ms, easeInOutCubic),
-    ]);
+  /** Karte steht in der Mitte (für den Start der App) */
+  private placeCard() {
+    this.dim.alpha = 1;
+    this.hold.alpha = 1;
+    this.hold.y = T.cardY;
+    this.hold.scale.set(1);
+    this.bar.alpha = 1;
+  }
+
+  /** Ladebalken füllt sich, die Karte wiegt sich dabei einmal hin und her */
+  private load(ms: number): Promise<void> {
+    this.hold.rotation = -T.sway;
+    void tween(this.hold, { rotation: T.sway }, ms, easeInOutCubic);
+    return tween(this.fill, { 'scale.x': 1 }, ms, easeInOutCubic);
+  }
+
+  /** Karte dreht sich um, der Balken blendet aus */
+  private async reveal() {
+    void tween(this.bar, { alpha: 0 }, T.flipMs * 2);
+    void tween(this.hold, { rotation: 0 }, T.flipMs * 2);
+    await tween(this.back, { 'scale.x': 0 }, T.flipMs, easeInOutCubic);
+    await tween(this.front, { 'scale.x': 1 }, T.flipMs, easeOutCubic);
+    await wait(T.revealMs);
+  }
+
+  private async dissolve(ms: number) {
+    await tween(this.root, { alpha: 0 }, ms, easeInOutCubic);
+    this.root.visible = false;
+    this.reset();
+    this.running = false;
   }
 
   /**
-   * Schließt die Kuppel, ruft `swap` auf (der Screen dahinter wird getauscht) und öffnet sie wieder.
-   * Gibt false zurück und tut nichts, wenn schon eine Blende läuft.
+   * Blendet ein, ruft `swap` auf (der Screen dahinter wird getauscht) und blendet wieder aus.
+   * Tut nichts, wenn schon eine Blende läuft.
    */
   async run(swap: () => void): Promise<boolean> {
     if (this.running) return false;
     this.running = true;
+    this.reset();
     this.root.visible = true;
-    await this.slide(1, 0, T.closeMs);
+    await tween(this.dim, { alpha: 1 }, T.fadeInMs, easeOutCubic);
+    await Promise.all([
+      tween(this.hold, { alpha: 1, y: T.cardY, 'scale.x': 1, 'scale.y': 1 }, T.cardInMs, easeOutBack),
+      tween(this.bar, { alpha: 1 }, T.cardInMs),
+    ]);
     try {
       swap();
     } finally {
-      await wait(T.holdMs);
-      await this.slide(0, 1, T.openMs);
-      this.root.visible = false;
-      this.running = false;
+      await this.load(T.loadMs);
+      await this.reveal();
+      await this.dissolve(T.fadeOutMs);
     }
     return true;
   }
 
-  /** Beim Start der App: die Kuppel ist zu und öffnet sich langsam. */
+  /** Bei geschlossener Blende starten (vor dem ersten Frame), damit der Home Bildschirm nicht aufblitzt */
+  cover() {
+    this.running = true;
+    this.root.visible = true;
+    this.placeCard();
+  }
+
+  /** Beim Start der App: die Karte steht schon, lädt und dreht sich um. */
   async intro(): Promise<void> {
     this.running = true;
     this.root.visible = true;
-    this.place(0);
+    this.placeCard();
     await wait(T.introHoldMs);
-    await this.slide(0, 1, T.introOpenMs);
-    this.root.visible = false;
-    this.running = false;
-  }
-
-  /** Bei geschlossener Kuppel starten (vor dem ersten Frame), damit der Home Bildschirm nicht aufblitzt */
-  cover() {
-    this.root.visible = true;
-    this.place(0);
+    await this.load(T.introLoadMs);
+    await this.reveal();
+    await this.dissolve(T.introFadeOutMs);
   }
 }
