@@ -280,6 +280,17 @@ Umsetzung der Vorschläge V2, V3, V4 und V8 (teilweise) aus `docs/HOOK_REPORT.md
 * **Spielstand:** `SAVE_VERSION` bleibt 5, kein neues Feld im Run.
 * **Bewusst nicht gebaut:** V5 (Joker Pool freischalten), V10 bis V14. Gating von Inhalten ist eine Entscheidung des Eigentümers (O79).
 
+### Pixel Art Spielkarten (nach Version 0.6.0, Branch `claude/confident-hawking-9wzkrq`)
+
+Neues Kartendesign für das 52er Deck als farbiges Pixel Art, komplett im Code gezeichnet (keine Bilddateien, keine fremden Assets, die Stilreferenzen wurden nicht eingelesen oder nachgezeichnet). Die Joker Grafiken sind nicht Teil dieses Schritts.
+
+* **System:** Karte 37 mal 51 Pixel, auf dem Bildschirm dreifach vergrößert (111 mal 153, `CARD_PX_SCALE`). Raster als Zeichen in `src/data/cardArt/` (`cardGlyphs.ts`: Index Schrift, Farbsymbole, Pip Layouts, Ass; `courtSprites.ts`: Figuren und gehaltene Gegenstände; `cardPalettes.ts`: Farben). Renderer ohne DOM in `src/ui/cardArt/` (`pixelBuffer.ts`, `cardRender.ts`), Pixi Texturen mit `scaleMode` nearest in `cardTextures.ts`, Cache pro Karte und Palette.
+* **Inhalt:** weißer Rand mit abgerundeten Ecken, Rang und Farbe oben links und um 180 Grad gedreht unten rechts, Pips 2 bis 10 klassisch, großes Ass, Bildkarten J, Q, K als Doppelfiguren (obere Hälfte, untere um 180 Grad gedreht) im Thema: Pik Sternbeobachter, Herz Alchemisten, Karo Goldmacher, Kreuz Kräuterkundige, je mit eigenem Gegenstand und Hintergrundmuster. Kartenrücken im Pixel Stil in der Farbe des Decks. Karten ohne Rang zeigen einen Kristall.
+* **Paletten:** "Standard" (Pik dunkelblau, Herz pink, Kreuz dunkelgrün, Karo orange) und "Hoher Kontrast" (Pik dunkel, Herz rot, Kreuz blau, Karo gold). Wahl in den Optionen ("Kartenfarben"), wirkt sofort auch auf Karten im Bild.
+* **Einstellung:** Neues Feld `cardPalette` in `Settings` (Schlüssel `alatro.settings.v2`). `parseSettings` setzt bei fehlendem oder ungültigem Wert Standard, deshalb ist keine Migration nötig. **`SAVE_VERSION` bleibt 5**, der Run Spielstand ändert sich nicht.
+* **UI Eingriffe:** `CardView` (Sprite statt Text und Formen, Enhancement Fläche als Texturfarbe, Name, Siegel und Edition bleiben Overlays), `cardBack`, `ShopView` (Kartenmaß aus `CARD_H`), Optionen in `Game.ts`. Die Engine ist unberührt.
+* **Tests:** `src/cardArt.test.ts` (alle 104 Karten rendern, sind verschieden, Pips ohne Überlappung, gedrehter Index, gedrehte Figurenhälfte, Raster gültig, Einstellung). Vorschau: `preview/cards-standard.png`, `preview/cards-contrast.png` (erzeugt mit `node tools/cardPreview.cjs`).
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
@@ -393,3 +404,8 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O82 | Siegel nur für feste Stufen | Siege auf skalierenden Stufen zählen weiter für `bestScale`, nicht für das Siegel. Siege vor Version 0.6.0 sind nicht nachgetragen (die Daten fehlten) |
 | O83 | Tippen beschleunigt | Ein Tippen während `busy` gibt für 1,2 Sekunden Faktor 3 auf das Tempo (`TAP_BOOST`). Es wirkt von der nächsten Animationsstufe an, laufende Tweens behalten ihre Dauer |
 | O84 | Hinweise abgeleitet | Atlas Hinweise sind aus Rarity, `minAnte` und Art abgeleitet, nicht handgeschrieben. Sie sind allgemein gehalten (zum Beispiel "Häufig im Shop"), konkrete Fundorte stehen nicht drin |
+| O85 | Kartenmaß | Die Karte ist jetzt 111 mal 153 statt 112 mal 156 (37 mal 51 Pixel mal 3), damit die Pixel ganzzahlig und gleich groß bleiben. Gedrehte oder nicht ganzzahlig skalierte Karten (Hand Fächer, Pack Auswahl nutzt 2 zu 3) zeigen leicht ungleiche Pixel. Auf dem iPad prüfen |
+| O86 | Index unten rechts | Der gedrehte Index liegt unten rechts, wie bei echten Karten (der Auftrag nannte "unten links"). Falls wirklich links gewünscht, ist es eine Zeile in `renderCard` |
+| O87 | Figuren Eigenentwurf | Die zwölf Bildkarten teilen sich drei gezeichnete Grundfiguren (Gehilfe, Alchemistin, Sternenkönig), die Farbe, gehaltener Gegenstand und Hintergrundmuster unterscheiden. Eigene Entwürfe im Thema, keine Vorlage. Mehr Einzelheiten pro Farbe sind möglich, kosten aber jeweils ein eigenes Raster |
+| O88 | Palette nur in den Optionen | Die Kartenpalette gilt für alle Karten gleichzeitig, auch Atlas und Shop. Sie ist keine Run Einstellung. Der Kartenrücken ist von der Palette unabhängig (Deckfarbe) |
+| O89 | Patch Notes | Dieser Schritt hat keinen Eintrag in `src/data/patchnotes.ts` und keine neue Versionsnummer, damit er sich nicht mit der parallelen Joker Arbeit überschneidet. Beim Zusammenführen einen gemeinsamen Eintrag anlegen |

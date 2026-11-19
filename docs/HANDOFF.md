@@ -18,6 +18,14 @@ Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 gr
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
+## Pixel Art Spielkarten (Branch `claude/confident-hawking-9wzkrq`, nicht live)
+
+Neues Kartendesign (Details und offene Punkte O85 bis O89 in `AUDIT.md`). Karten sind Pixel Raster im Code: Daten in `src/data/cardArt/`, Renderer ohne DOM in `src/ui/cardArt/`, `CardView` zeigt sie als Sprite mit nearest Skalierung. Zwei Paletten (Standard, Hoher Kontrast), Wahl in den Optionen, gespeichert in `settings.cardPalette` (keine Save Migration).
+
+* **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (halbe Zeilen, werden gespiegelt), Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
+* **Live stellen:** erst nach Freigabe des Eigentümers. Dann diesen Branch nach `main` mergen (löst den Pages Deploy aus). Bis dahin nicht auf `main` oder `claude/funny-brahmagupta-ic0bpe` pushen.
+* **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit von Rang und Farbe bei dreifacher Vergrößerung, Schärfe der Karten im Hand Fächer (leichte Drehung).
+
 ## Version 0.6.0: Sternenatlas, Siegel, Rückschau
 
 Grundlage ist der Bericht `docs/HOOK_REPORT.md` (Recherche, Vergleich, 14 Vorschläge). Was umgesetzt wurde und die Entscheidungen: `AUDIT.md`, Abschnitt "Sternenatlas, Siegel und Rückschau" und O79 bis O84.

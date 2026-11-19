@@ -90,7 +90,7 @@ function drawPattern(half: PixelBuffer, kind: 'stars' | 'bubbles' | 'diamonds' |
   }
 }
 
-function courtColors(s: SuitColors): ColorMap {
+export function courtColors(s: SuitColors): ColorMap {
   return {
     a: s.main, A: s.light, b: s.dark,
     t: s.trim, T: s.trimLight, u: s.trimDark,
