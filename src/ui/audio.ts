@@ -1,4 +1,5 @@
 import { getSettings, onSettings } from '../settings';
+import { BLIND_FANFARE } from '../data/report';
 import { scaleFreq } from './juiceMath';
 
 // Eigene Klänge per WebAudio Synthese, keine Audiodateien.
@@ -140,9 +141,18 @@ class Sfx {
 
   // ───────────────────────────────────────────── Spielfluss
 
-  win() {
-    [523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.28, 'triangle', 0.2, { delay: i * 0.11 }));
-    this.tone(1047, 0.7, 'sine', 0.14, { delay: 0.44 });
+  win(kind: 'small' | 'big' | 'boss' = 'small', big = false) {
+    const steps = BLIND_FANFARE[kind];
+    steps.forEach((semi, i) => this.tone(523 * Math.pow(2, semi / 12), 0.28, 'triangle', 0.2, { delay: i * 0.11 }));
+    const top = 523 * Math.pow(2, steps[steps.length - 1] / 12);
+    this.tone(top, 0.7, 'sine', 0.14, { delay: steps.length * 0.11 });
+    // Großer Überschuss: zusätzlicher heller Schimmer obenauf
+    if (big) [2, 2.5, 3].forEach((m, i) => this.tone(523 * m, 0.5, 'sine', 0.1, { delay: 0.1 + i * 0.07 }));
+  }
+  /** Ziel des Blinds beim Hochzählen erreicht: kurzer, heller Zweiklang */
+  goal() {
+    this.tone(880, 0.12, 'triangle', 0.16);
+    this.tone(1318, 0.3, 'triangle', 0.16, { delay: 0.09 });
   }
   lose() {
     [392, 330, 262, 196].forEach((f, i) => this.tone(f, 0.4, 'sawtooth', 0.12, { delay: i * 0.18, lowpass: 900 }));

@@ -1,6 +1,6 @@
-# Übergabe: Stand nach Erfolgen, Einführung und Schwierigkeit (Version 0.5.0)
+# Übergabe: Stand nach Sternenatlas, Siegeln und Rückschau (Version 0.6.0)
 
-Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
+Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
 ## Wo wir stehen
 
@@ -17,6 +17,21 @@ Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderunge
 Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Version 0.6.0: Sternenatlas, Siegel, Rückschau
+
+Grundlage ist der Bericht `docs/HOOK_REPORT.md` (Recherche, Vergleich, 14 Vorschläge). Was umgesetzt wurde und die Entscheidungen: `AUDIT.md`, Abschnitt "Sternenatlas, Siegel und Rückschau" und O79 bis O84.
+
+| Thema | Wo |
+|---|---|
+| Atlas mit Fortschritt, Hinweisen, Neu Markern | `src/collection.ts`, `src/ui/CollectionView.ts`, Knopf in `src/ui/HomeView.ts`, Toast `Game.announceDiscoveries` |
+| Siegel am Deck | `src/profile.ts` (`winsByDeckStake`, `deckSeal`, `nextSealGoal`), Anzeige in `Game.showRunSetup` |
+| Rückschau, Sofort nochmal | `src/report.ts` (rein), `src/data/report.ts` (Zahlen), `Game.showGameOver`, `Game.runSummary` |
+| Juice | Ziel erreicht und Überschuss in `Game.play` und `Game.showRoundWon`, Fanfare und `sfx.goal` in `src/ui/audio.ts`, Tippen beschleunigt über `tapBoost` in `src/settings.ts` |
+
+* **Als Nächstes:** Auf dem iPad prüfen: Tippgefühl von Sofort nochmal, ob der Tipp Schub stört (Faktor `TAP_BOOST`), Lesbarkeit der Atlas Hinweise. Danach Bildrate messen und erst dann Partikel (V8) bauen.
+* **Offene Entscheidungen aus dem Bericht (Abschnitt 7):** Soll es Gating von Inhalten geben (V5)? Export und Import des Spielstands? Kurzlauf (V11)? Challenge Runs (V10)? Hochformat Layout (O68)?
+* **Nicht umgesetzt:** V5, V10 bis V14 aus dem Bericht.
 
 ## Version 0.5.0: Erfolge, Einführung, Schwierigkeit
 

@@ -106,7 +106,7 @@ export const TUTORIAL: readonly TutorialPage[] = [
       '* Enhancement (Material): zum Beispiel Kupfer, Rubin oder Gold mit Chips, Mult oder Geld.',
       '* Seal: ein Zeichen, etwa Echo Seal (Karte zählt zweimal) oder Münz Seal (Geld). Auf der Karte zeigt ein Kreis mit E, M oder S das Seal an.',
       '* Edition: Schimmer, Aura oder Prisma. Der Name steht oben auf der Karte.',
-      'In der Sammlung siehst du alle Inhalte, die du schon entdeckt hast.',
+      'Im Sternenatlas (Knopf Atlas im Hauptmenü) siehst du alle Inhalte, die du schon entdeckt hast, mit Hinweisen auf die übrigen.',
     ],
   },
   {
