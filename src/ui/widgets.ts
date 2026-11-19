@@ -36,7 +36,7 @@ export class Button extends Container {
 
   constructor(text: string, private w: number, private h: number, private color: number, onTap: () => void, size = 28) {
     super();
-    this.txt = label(text, size);
+    this.txt = label(text, size, C.text, { align: 'center' });
     this.txt.position.set(w / 2, h / 2);
     this.addChild(this.bg, this.txt);
     this.pivot.set(w / 2, h / 2);
@@ -53,6 +53,9 @@ export class Button extends Container {
   }
 
   setText(t: string) { this.txt.text = t; }
+
+  /** Verschiebt die Beschriftung senkrecht, z. B. um darunter einen Preis zu zeigen. */
+  nudgeText(dy: number) { this.txt.y += dy; }
 
   set enabled(v: boolean) {
     this._enabled = v;

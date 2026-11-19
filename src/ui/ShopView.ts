@@ -1,16 +1,19 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle, Ticker } from 'pixi.js';
+import { SUIT_NAMES, isRankless, rankLabel } from '../core/cards';
 import { canBuyAndUse, canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
 import { getJoker, jokerDescription } from '../core/jokers';
 import { richText } from './richText';
 import type { RunState } from '../core/run';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import type { PackDef } from '../data/packs';
+import { sfx } from './audio';
 import { CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
-import { easeOutBack, tween } from './tween';
-import { Button, label, panel } from './widgets';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, shade } from './theme';
+import { easeOutBack, tween, wait } from './tween';
+import { Button, label, panel, wrapText } from './widgets';
 
 export interface ShopCallbacks {
   buyCard(index: number): void;
@@ -22,186 +25,509 @@ export interface ShopCallbacks {
 }
 
 export const SHOP_X = 380;
-export const SHOP_Y = 250;
+export const SHOP_Y = 240;
 export const SHOP_W = 1040;
-export const SHOP_H = 610;
+export const SHOP_H = 700;
 
+/** Layout (Koordinaten im Shop Panel) */
+const L = {
+  pad: 24,
+  /** linke Spalte mit Next Round und Reroll */
+  btnW: 190,
+  btnH: 110,
+  /** obere Ablage für Karten Slots */
+  cardsX: 240,
+  cardsY: 24,
+  cardsW: 776,
+  cardsH: 300,
+  /** untere Reihe: Voucher und Packs */
+  rowY: 344,
+  rowH: 332,
+  voucherW: 340,
+  /** Höhe der Preis Fahne über einem Artikel */
+  tagH: 32,
+  /** so weit hebt sich ein angetippter Artikel */
+  lift: 14,
+  /** Karten Maße vor dem Skalieren (Joker, Consumable) */
+  itemW: 104,
+  itemH: 140,
+  packW: 124,
+  packH: 168,
+  packScale: 1.15,
+  voucherScale: 1.2,
+  calloutW: 290,
+};
+
+const INSET = 0x141b27;
+const INSET_LINE = 0x0b1018;
+const SHOP_FRAME = 0xc8412f;
+
+/** Mischt eine Farbe mit Weiß, k = 0 unverändert, 1 weiß. */
+function lighten(hex: number, k: number): number {
+  const r = Math.round(((hex >> 16) & 255) + (255 - ((hex >> 16) & 255)) * k);
+  const g = Math.round(((hex >> 8) & 255) + (255 - ((hex >> 8) & 255)) * k);
+  const b = Math.round((hex & 255) + (255 - (hex & 255)) * k);
+  return (r << 16) | (g << 8) | b;
+}
+
+/** Preis Fahne: dunkles Schild mit Goldrand, sitzt mit der Unterkante auf dem Artikel. */
 function priceTag(price: number, affordable: boolean): Container {
   const c = new Container();
-  const t = label(price === 0 ? 'Gratis' : `$${price}`, 22, affordable ? C.money : 0x8a7f99);
-  const w = Math.max(56, t.width + 20);
-  c.addChild(new Graphics().roundRect(-w / 2, -16, w, 32, 10).fill(0x141d29).stroke({ width: 2, color: affordable ? C.money : 0x3b5068 }), t);
+  const t = label(price === 0 ? 'Gratis' : `$${price}`, 24, affordable ? C.money : 0x8a7f99);
+  const w = Math.max(60, t.width + 26);
+  const line = affordable ? C.money : 0x3b5068;
+  c.addChild(
+    new Graphics()
+      .roundRect(-w / 2, -L.tagH + 4, w, L.tagH, 10).fill(0x1b2230).stroke({ width: 3, color: C.panelLine })
+      .roundRect(-w / 2 + 3, -L.tagH + 7, w - 6, L.tagH - 6, 8).stroke({ width: 1.5, color: line, alpha: 0.9 }),
+    t,
+  );
+  t.y = -L.tagH / 2 + 5;
   return c;
 }
 
-/** Beschreibung mit farbigen Schlüsselwörtern, Anker oben mittig */
-function smallText(text: string, width: number, size = 16): Container {
-  return richText(text, width, { size, theme: 'dark' });
+/** Vertiefte Ablage (dunkle Fläche mit Innenschatten), wie ein Fach im Shop. */
+function inset(x: number, y: number, w: number, h: number): Graphics {
+  return new Graphics()
+    .roundRect(x, y, w, h, 14).fill(INSET).stroke({ width: 3, color: INSET_LINE })
+    .roundRect(x + 3, y + 3, w - 6, 8, 5).fill({ color: 0x000000, alpha: 0.35 });
 }
 
-/** Baut die Shop Szene (Briefing 9.1): Next Round, Reroll, Karten Slots, Voucher, Packs. */
+function emptySlot(x: number, y: number, w: number, h: number): Graphics {
+  return new Graphics().roundRect(x - w / 2, y - h / 2, w, h, 10).stroke({ width: 2, color: 0x3b5068, alpha: 0.7 });
+}
+
+/** Symbol für Pack und Beutel: Stern, Kolben, Mond oder Karte. */
+function packSymbol(kind: PackDef['kind'], cx: number, cy: number): Graphics {
+  const g = new Graphics();
+  if (kind === 'joker' || kind === 'sternbild') {
+    g.star(cx, cy, 5, 22, 10).fill({ color: 0xffffff, alpha: 0.95 });
+  } else if (kind === 'elixier') {
+    g.roundRect(cx - 6, cy - 24, 12, 14, 3).fill({ color: 0xffffff, alpha: 0.95 });
+    g.circle(cx, cy + 6, 17).fill({ color: 0xffffff, alpha: 0.95 });
+    g.circle(cx, cy + 8, 10).fill({ color: CONSUMABLE_COLORS.elixier, alpha: 0.95 });
+  } else if (kind === 'omen') {
+    g.circle(cx, cy, 20).fill({ color: 0xffffff, alpha: 0.95 });
+    g.circle(cx + 9, cy - 4, 17).fill(CONSUMABLE_COLORS.omen);
+  } else {
+    g.roundRect(cx - 14, cy - 20, 28, 40, 4).fill({ color: 0xffffff, alpha: 0.95 }).stroke({ width: 2, color: C.cardEdge });
+    g.circle(cx, cy, 6).fill(C.mult);
+  }
+  return g;
+}
+
+/** Folienbeutel eines Booster Packs: Quetschkanten oben und unten, Folienglanz, Namensschild. */
+function packArt(def: PackDef, color: number): Container {
+  const c = new Container();
+  const w = L.packW, h = L.packH;
+  const crimp = 18;
+  const g = new Graphics()
+    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.4 })
+    .roundRect(-w / 2, -h / 2, w, h, 8).fill(color).stroke({ width: 3, color: C.panelLine });
+  // Quetschkanten mit senkrechten Rillen
+  for (const y0 of [-h / 2, h / 2 - crimp]) {
+    g.rect(-w / 2 + 2, y0 + 2, w - 4, crimp - 2).fill(shade(color, 0.78));
+    for (let x = -w / 2 + 8; x < w / 2 - 4; x += 8) g.rect(x, y0 + 3, 3, crimp - 4).fill({ color: 0xffffff, alpha: 0.28 });
+  }
+  // Glanzstreifen
+  g.poly([-w / 2 + 10, h / 2 - crimp, -w / 2 + 40, h / 2 - crimp, w / 2 - 6, -h / 2 + crimp, w / 2 - 36, -h / 2 + crimp]).fill({ color: 0xffffff, alpha: 0.13 });
+  // Emblem und Namensschild
+  g.circle(0, -22, 32).fill(shade(color, 0.55)).stroke({ width: 3, color: lighten(color, 0.55) });
+  g.roundRect(-w / 2 + 8, 22, w - 16, 52, 8).fill(0x151b27).stroke({ width: 2, color: lighten(color, 0.4), alpha: 0.9 });
+  c.addChild(g, packSymbol(def.kind, 0, -22));
+  const name = label(def.name, 16, 0xffffff, { wordWrap: true, wordWrapWidth: w - 28, align: 'center', lineHeight: 18 });
+  name.position.set(0, 48);
+  if (name.height > 46) name.scale.set(46 / name.height);
+  c.addChild(name);
+  return c;
+}
+
+/** Voucher als Eintrittskarte: Kopfstreifen, Kristallkugel aus Stern, Name. */
+function voucherArt(name: string): Container {
+  const c = new Container();
+  const w = 112, h = 150;
+  const g = new Graphics()
+    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.4 })
+    .roundRect(-w / 2, -h / 2, w, h, 10).fill(0x3b2a86).stroke({ width: 3, color: C.cardEdge })
+    .roundRect(-w / 2 + 5, -h / 2 + 5, w - 10, 26, 6).fill(C.money)
+    .circle(0, -8, 30).fill(0x23185a).stroke({ width: 3, color: lighten(0x3b2a86, 0.5) })
+    .circle(-9, -17, 7).fill({ color: 0xffffff, alpha: 0.25 })
+    .star(0, -8, 5, 20, 9).fill({ color: C.money })
+    .poly([-w / 2 + 6, h / 2 - 30, -w / 2 + 28, h / 2 - 30, w / 2 - 6, -h / 2 + 34, w / 2 - 28, -h / 2 + 34]).fill({ color: 0xffffff, alpha: 0.08 });
+  // gestrichelte Abrisslinie
+  for (let x = -w / 2 + 8; x < w / 2 - 8; x += 12) g.rect(x, 33, 6, 2).fill({ color: 0xffffff, alpha: 0.35 });
+  const head = label('Voucher', 15, 0x2b2540);
+  head.position.set(0, -h / 2 + 18);
+  const t = label(name, 16, 0xffffff, { wordWrap: true, wordWrapWidth: w - 14, align: 'center', lineHeight: 18 });
+  t.position.set(0, 46);
+  if (t.width > w - 12) t.scale.set((w - 12) / t.width);
+  if (t.height > 46) t.scale.set(Math.min(t.scale.x, 46 / t.height));
+  c.addChild(g, head, t);
+  return c;
+}
+
+/** Zahlen des Leuchtschilds in der Seitenleiste */
+const SIGN = { w: 330, h: 160, bulbStep: 22, blinkMs: 520 };
+
+/**
+ * Leuchtschild "SHOP" für die Seitenleiste: Rahmen mit Glühbirnen, die abwechselnd blinken.
+ * Das Blinken läuft nur, solange das Schild sichtbar ist.
+ */
+export function buildShopSign(): Container {
+  const { w, h } = SIGN;
+  const sign = new Container();
+  sign.addChild(
+    new Graphics()
+      .roundRect(0, 4, w, h, 12).fill(0x070b11)
+      .roundRect(0, 0, w, h, 12).fill(0x8f2a28).stroke({ width: 3, color: C.panelLine })
+      .roundRect(15, 15, w - 30, h - 30, 8).fill(0x151b27).stroke({ width: 3, color: C.panelLine })
+      .roundRect(19, 19, w - 38, 6, 3).fill({ color: 0x000000, alpha: 0.35 }),
+  );
+  // Glühbirnen entlang des Rahmens, gerade und ungerade im Wechsel
+  const pts: [number, number][] = [];
+  for (let x = 14; x <= w - 14; x += SIGN.bulbStep) { pts.push([x, 7.5]); }
+  for (let y = 7.5 + SIGN.bulbStep; y < h - 7.5; y += SIGN.bulbStep) { pts.push([w - 7.5, y]); }
+  for (let x = w - 14; x >= 14; x -= SIGN.bulbStep) { pts.push([x, h - 7.5]); }
+  for (let y = h - 7.5 - SIGN.bulbStep; y > 7.5; y -= SIGN.bulbStep) { pts.push([7.5, y]); }
+  const frames = [new Graphics(), new Graphics()];
+  frames.forEach((g, f) => {
+    pts.forEach(([x, y], i) => {
+      const on = i % 2 === f;
+      g.circle(x, y, 5).fill(on ? 0xfff0c2 : 0x6b2220).stroke({ width: 1.5, color: on ? 0xffc85a : 0x4a1614 });
+      if (on) g.circle(x, y, 8).fill({ color: 0xffd36b, alpha: 0.25 });
+    });
+  });
+  frames[1].visible = false;
+  sign.addChild(frames[0], frames[1]);
+
+  const title = label('SHOP', 66, C.money, { letterSpacing: 6 });
+  title.position.set(w / 2, 70);
+  if (title.width > w - 70) title.scale.set((w - 70) / title.width);
+  const sub = label('Rüste deinen Run auf!', 20, C.cardFace);
+  sub.position.set(w / 2, 122);
+  if (sub.width > w - 60) sub.scale.set((w - 60) / sub.width);
+  sign.addChild(title, sub);
+
+  let acc = 0;
+  let on = 0;
+  Ticker.shared.add((t) => {
+    if (!sign.visible || sign.destroyed) return;
+    acc += t.deltaMS;
+    if (acc < SIGN.blinkMs) return;
+    acc = 0;
+    on = 1 - on;
+    frames[0].visible = on === 0;
+    frames[1].visible = on === 1;
+  });
+  return sign;
+}
+
+/** Eine Aktion in der Detail Karte */
+interface Action {
+  text: string;
+  color: number;
+  enabled: boolean;
+  run: () => void;
+}
+
+/** Inhalt der Detail Karte, die beim Antippen eines Artikels erscheint */
+interface Detail {
+  name: string;
+  badge: string;
+  badgeColor: number;
+  badgeText?: number;
+  desc: string;
+  /** Hinweis, warum nicht gekauft werden kann */
+  hint?: string;
+  actions: Action[];
+}
+
+interface Slot {
+  item: Container;
+  homeY: number;
+  /** Mitte des Artikels und halbe Höhe (für die Platzierung der Detail Karte) */
+  x: number;
+  top: number;
+  bottom: number;
+  dir: 'below' | 'above';
+  detail: Detail;
+}
+
+/** Detail Karte. up = Karte sitzt oberhalb des Artikels, die Spitze zeigt dann nach unten. */
+function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; h: number } {
+  const w = L.calloutW;
+  const box = new Container();
+  const desc = richText(d.desc, w - 36, { size: 18, theme: 'light' });
+  const hint = d.hint ? wrapText(d.hint, w - 36, 15, 0xa8324a) : null;
+  desc.position.set(0, 82);
+  if (hint) hint.position.set(0, 82 + desc.height + 8);
+  const h = 82 + desc.height + (hint ? hint.height + 16 : 8) + 66;
+  const bg = new Graphics()
+    .poly(up ? [tailX - 14, h, tailX, h + 14, tailX + 14, h] : [tailX - 14, 0, tailX, -14, tailX + 14, 0]).fill(C.text).stroke({ width: 3, color: C.cardEdge })
+    .roundRect(-w / 2, 5, w, h, 14).fill({ color: 0x000000, alpha: 0.4 })
+    .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
+  bg.eventMode = 'static';
+  const name = label(d.name, 24, C.cardEdge);
+  name.position.set(0, 26);
+  if (name.width > w - 30) name.scale.set((w - 30) / name.width);
+  const badge = label(d.badge, 14, d.badgeText ?? 0xffffff);
+  const bw = Math.max(110, badge.width + 28);
+  const pill = new Graphics().roundRect(-bw / 2, 46, bw, 24, 12).fill(d.badgeColor);
+  badge.position.set(0, 58);
+  box.addChild(bg, name, pill, badge, desc);
+  if (hint) box.addChild(hint);
+  const n = d.actions.length;
+  const gap = 8;
+  const bwid = (w - 30 - gap * (n - 1)) / n;
+  d.actions.forEach((a, i) => {
+    const b = new Button(a.text, bwid, 46, a.color, a.run, n > 1 ? 18 : 20);
+    b.position.set(-w / 2 + 15 + bwid / 2 + i * (bwid + gap), h - 38);
+    b.enabled = a.enabled;
+    box.addChild(b);
+  });
+  return { box, h };
+}
+
+/** Baut die Shop Szene: Next Round und Reroll links, Karten Slots oben, Voucher und Packs unten. Ein Tipp auf einen Artikel zeigt die Details mit Kaufen. */
 export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Container {
   const shop = run.shop!;
   const root = new Container();
   root.position.set(SHOP_X, SHOP_Y);
-  root.addChild(panel(SHOP_W, SHOP_H, C.panelDark, 20));
 
-  const title = label('SHOP', 40, C.money, { letterSpacing: 6 });
-  title.position.set(110, 46);
-  root.addChild(title);
+  // Rahmen: dunkle Fläche mit roter Kante und feiner Leuchtlinie
+  const frame = panel(SHOP_W, SHOP_H, C.panelDark, 20, SHOP_FRAME);
+  root.addChild(frame);
+  // Tipp ins Leere schließt die Detail Karte
+  const catcher = new Graphics().rect(0, 0, SHOP_W, SHOP_H).fill({ color: 0, alpha: 0.001 });
+  catcher.eventMode = 'static';
+  root.addChild(catcher);
 
-  const next = new Button('Next Round', 180, 84, C.mult, () => cb.nextRound(), 24);
-  next.position.set(110, 150);
+  // Linke Spalte: Next Round und Reroll
+  const next = new Button('Next\nRound', L.btnW, L.btnH, C.mult, () => cb.nextRound(), 32);
+  next.position.set(L.pad + L.btnW / 2, L.pad + L.btnH / 2);
   const cost = rerollCost(run);
-  const rr = new Button(`Reroll $${cost}`, 180, 84, C.green, () => cb.reroll(), 24);
-  rr.position.set(110, 254);
+  const rr = new Button('Reroll', L.btnW, L.btnH, C.green, () => cb.reroll(), 32);
+  rr.position.set(L.pad + L.btnW / 2, L.pad + L.btnH + 28 + L.btnH / 2);
   rr.enabled = run.money >= cost;
+  rr.nudgeText(-18);
+  const price = label(cost === 0 ? 'Gratis' : `$${cost}`, 34, C.money);
+  price.position.set(L.btnW / 2, L.btnH / 2 + 24);
+  rr.addChild(price);
   root.addChild(next, rr);
   if (shop.freeRerolls > 0) {
-    const fr = label(`${shop.freeRerolls} gratis`, 16, C.green);
-    fr.position.set(110, 310);
+    const fr = label(`${shop.freeRerolls} gratis`, 18, C.green);
+    fr.position.set(L.pad + L.btnW / 2, L.pad + L.btnH * 2 + 28 + 38);
     root.addChild(fr);
   }
 
-  // Karten Slots
-  const slotsX = 260;
-  const slotsW = 560;
+  // Ablagen
+  const cardsInset = inset(L.cardsX, L.cardsY, L.cardsW, L.cardsH);
+  const voucherInset = inset(L.pad, L.rowY, L.voucherW, L.rowH);
+  const packsX = L.pad + L.voucherW + 20;
+  const packsW = SHOP_W - L.pad - packsX;
+  const packsInset = inset(packsX, L.rowY, packsW, L.rowH);
+  root.addChild(cardsInset, voucherInset, packsInset);
+
+  // Senkrechte Aufschrift im Voucher Fach
+  const vLabel = label(`Ante ${run.ante} Voucher`, 24, 0x5a6c82, { letterSpacing: 3 });
+  vLabel.rotation = -Math.PI / 2;
+  vLabel.position.set(L.pad + 28, L.rowY + L.rowH / 2);
+  root.addChild(vLabel);
+  const pLabel = label('Booster Packs', 18, 0x5a6c82, { letterSpacing: 2 });
+  pLabel.position.set(packsX + packsW / 2, L.rowY + L.rowH - 24);
+  root.addChild(pLabel);
+
+  const slots: Slot[] = [];
+  const slotLayer = new Container();
+  const itemLayer = new Container();
+  const calloutLayer = new Container();
+  root.addChild(slotLayer, itemLayer, calloutLayer);
+
+  const addSlot = (
+    view: Container,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    priceInfo: { price: number } | null,
+    dir: Slot['dir'],
+    detail: Detail,
+  ) => {
+    const item = new Container();
+    item.position.set(x, y);
+    if (priceInfo) {
+      const tag = priceTag(priceInfo.price, run.money >= priceInfo.price);
+      tag.y = -h / 2;
+      item.addChild(tag);
+    }
+    item.addChild(view);
+    view.eventMode = 'none';
+    item.hitArea = new Rectangle(-w / 2, -h / 2 - L.tagH, w, h + L.tagH);
+    item.eventMode = 'static';
+    item.cursor = 'pointer';
+    itemLayer.addChild(item);
+    const slot: Slot = { item, homeY: y, x, top: y - h / 2 - L.tagH, bottom: y + h / 2, dir, detail };
+    slots.push(slot);
+    item.on('pointertap', () => select(selected === slot ? null : slot));
+    return slot;
+  };
+
+  let selected: Slot | null = null;
+  let callout: Container | null = null;
+  const select = (slot: Slot | null) => {
+    if (selected) tween(selected.item, { y: selected.homeY }, 140);
+    callout?.destroy({ children: true });
+    callout = null;
+    selected = slot;
+    if (!slot) return;
+    sfx.click();
+    tween(slot.item, { y: slot.homeY - L.lift }, 140, easeOutBack);
+    const w = L.calloutW;
+    const cx = Math.max(w / 2 + 14, Math.min(SHOP_W - w / 2 - 14, slot.x));
+    let up = slot.dir === 'above';
+    let built = buildCallout(slot.detail, slot.x - cx, up);
+    // unterhalb ist kein Platz mehr: Karte über den Artikel setzen
+    if (!up && slot.bottom + 24 + built.h + 14 > SHOP_H) {
+      built.box.destroy({ children: true });
+      up = true;
+      built = buildCallout(slot.detail, slot.x - cx, true);
+    }
+    const { box, h } = built;
+    const y = up ? slot.top - L.lift - 22 - h : slot.bottom + 24;
+    box.position.set(cx, y);
+    box.alpha = 0;
+    box.scale.set(0.92);
+    tween(box, { alpha: 1, 'scale.x': 1, 'scale.y': 1 }, 140, easeOutBack);
+    calloutLayer.addChild(box);
+    callout = box;
+  };
+  catcher.on('pointertap', () => select(null));
+
+  // Karten Slots (oben)
   const n = shop.cards.length;
-  const spacing = Math.min(170, slotsW / Math.max(n, 1));
+  const innerW = L.cardsW - 40;
+  const spacing = Math.min(210, innerW / Math.max(n, 1));
+  const unit = Math.min(1.4, (spacing - 16) / L.itemW);
+  const cardsCy = L.cardsY + L.cardsH / 2 + 16;
   shop.cards.forEach((item, i) => {
-    const x = slotsX + spacing / 2 + i * spacing;
+    const x = L.cardsX + L.cardsW / 2 + (i - (n - 1) / 2) * spacing;
+    const w = L.itemW * unit, h = L.itemH * unit;
     if (!item) {
-      const empty = new Graphics().roundRect(x - 52, 60, 104, 140, 10).stroke({ width: 2, color: C.panelLine, alpha: 0.6 });
-      root.addChild(empty);
+      slotLayer.addChild(emptySlot(x, cardsCy, w, h));
       return;
     }
-    const tag = priceTag(item.price, run.money >= item.price);
-    tag.position.set(x, 40);
-    root.addChild(tag);
-    const badge = (text: string, color: number) => {
-      const g = new Graphics().roundRect(x - 52, 210, 104, 22, 11).fill(color);
-      const t = label(text, 13, 0xffffff);
-      t.position.set(x, 221);
-      root.addChild(g, t);
-    };
-    const buyButton = () => {
-      const buy = new Button('Kaufen', 120, 46, C.green, () => cb.buyCard(i), 20);
-      buy.position.set(x, 345);
-      buy.enabled = canBuyCard(run, i);
-      root.addChild(buy);
-    };
-
+    const affordable = run.money >= item.price;
+    const can = canBuyCard(run, i);
+    const why = !affordable ? 'Zu wenig Geld' : 'Kein freier Platz';
+    const buy: Action = { text: 'Kaufen', color: C.green, enabled: can, run: () => cb.buyCard(i) };
+    slotLayer.addChild(emptySlot(x, cardsCy, w, h));
     if (item.kind === 'joker') {
       const def = getJoker(item.defId)!;
-      const jv = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition });
-      jv.position.set(x, 130);
-      jv.eventMode = 'none';
-      badge(RARITY_NAMES[def.rarity], RARITY_COLORS[def.rarity]);
-      const desc = smallText(jokerDescription(def) + (item.edition ? `\n${EDITIONS[item.edition].name}: ${EDITIONS[item.edition].description}` : ''), spacing - 12, 15);
-      desc.position.set(x, 240);
-      root.addChild(jv, desc);
-      buyButton();
+      const view = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition });
+      view.scale.set(unit);
+      addSlot(view, x, cardsCy, w, h, item, 'below', {
+        name: def.name,
+        badge: RARITY_NAMES[def.rarity],
+        badgeColor: RARITY_COLORS[def.rarity],
+        desc: jokerDescription(def) + (item.edition ? `\n${EDITIONS[item.edition].name}: ${EDITIONS[item.edition].description}` : ''),
+        hint: can ? undefined : why,
+        actions: [buy],
+      });
     } else if (item.kind === 'consumable') {
       const def = CONSUMABLE_BY_ID[item.defId];
-      const cv = new ConsumableView(item.defId);
-      cv.position.set(x, 130);
-      cv.eventMode = 'none';
-      badge(CONSUMABLE_TYPE_NAMES[def.type], CONSUMABLE_COLORS[def.type]);
-      const desc = smallText(def.description, spacing - 12, 15);
-      desc.position.set(x, 240);
-      root.addChild(cv, desc);
-      if (!def.targets) {
-        // Kaufen in den Slot oder Kaufen und sofort Nutzen, die Breite passt sich dem Abstand an
-        const bw = Math.min(80, (spacing - 8) / 2);
-        const fs = bw < 70 ? 13 : 16;
-        const buy = new Button('Kaufen', bw, 46, C.green, () => cb.buyCard(i), fs);
-        buy.position.set(x - bw / 2 - 2, 345);
-        buy.enabled = canBuyCard(run, i);
-        const use = new Button('Nutzen', bw, 46, C.chips, () => cb.buyAndUse(i), fs);
-        use.position.set(x + bw / 2 + 2, 345);
-        use.enabled = canBuyAndUse(run, i);
-        root.addChild(buy, use);
-      } else {
-        buyButton();
-      }
+      const view = new ConsumableView(item.defId);
+      view.scale.set(unit);
+      const actions: Action[] = [buy];
+      if (!def.targets) actions.push({ text: 'Nutzen', color: C.chips, enabled: canBuyAndUse(run, i), run: () => cb.buyAndUse(i) });
+      addSlot(view, x, cardsCy, w, h, item, 'below', {
+        name: def.name,
+        badge: CONSUMABLE_TYPE_NAMES[def.type],
+        badgeColor: CONSUMABLE_COLORS[def.type],
+        desc: def.description,
+        hint: can ? undefined : why,
+        actions,
+      });
     } else {
-      const cv = new CardView(item.card);
-      cv.scale.set(0.9);
-      cv.position.set(x, 130);
-      cv.eventMode = 'none';
-      badge('Spielkarte', 0xf2711c);
+      const view = new CardView(item.card);
+      const k = (L.itemH / 156) * unit;
+      view.scale.set(k);
       const parts: string[] = [];
       if (item.card.enhancement) parts.push(`${ENHANCEMENTS[item.card.enhancement].name}: ${ENHANCEMENTS[item.card.enhancement].description}`);
       if (item.card.seal) parts.push(`${SEALS[item.card.seal].name}: ${SEALS[item.card.seal].description}`);
       if (item.card.edition) parts.push(`${EDITIONS[item.card.edition].name}: ${EDITIONS[item.card.edition].description}`);
-      const desc = smallText(parts.join('\n') || 'Kommt ins Deck', spacing - 12, 15);
-      desc.position.set(x, 240);
-      root.addChild(cv, desc);
-      buyButton();
+      addSlot(view, x, cardsCy, w, h, item, 'below', {
+        name: isRankless(item.card) ? 'Spielkarte' : `${rankLabel(item.card.rank)} ${SUIT_NAMES[item.card.suit]}`,
+        badge: 'Spielkarte',
+        badgeColor: 0xf2711c,
+        desc: parts.join('\n') || 'Kommt ins Deck',
+        hint: can ? undefined : why,
+        actions: [buy],
+      });
     }
   });
 
-  // Voucher
-  const vx = 920;
+  // Voucher (unten links)
+  const vcx = L.pad + 28 + (L.voucherW - 28) / 2 + 8;
+  const rowCy = L.rowY + L.rowH / 2 + 8;
   if (shop.voucher) {
     const v = VOUCHER_BY_ID[shop.voucher.voucherId];
-    const card = new Container();
-    card.position.set(vx, 140);
-    card.addChild(
-      new Graphics()
-        .roundRect(-56, -70, 112, 140, 12).fill(0x24407a).stroke({ width: 3, color: C.money })
-        .star(0, -18, 6, 26, 12).fill({ color: C.money, alpha: 0.85 }),
-    );
-    const vn = smallText(v.name, 100, 15);
-    vn.position.set(0, 26);
-    card.addChild(vn);
-    const badge = new Graphics().roundRect(vx - 52, 210, 104, 22, 11).fill(C.money);
-    const badgeT = label('Voucher', 13, 0x2b2540);
-    badgeT.position.set(vx, 221);
-    const desc = smallText(v.description, 190, 15);
-    desc.position.set(vx, 240);
-    const tag = priceTag(shop.voucher.price, run.money >= shop.voucher.price);
-    tag.position.set(vx, 40);
-    const buy = new Button('Einlösen', 140, 46, C.green, () => cb.buyVoucher(), 20);
-    buy.position.set(vx, 345);
-    buy.enabled = run.money >= shop.voucher.price;
-    root.addChild(card, badge, badgeT, desc, tag, buy);
+    const can = run.money >= shop.voucher.price;
+    const view = voucherArt(v.name);
+    view.scale.set(L.voucherScale);
+    addSlot(view, vcx, rowCy, 112 * L.voucherScale, 150 * L.voucherScale, shop.voucher, 'above', {
+      name: v.name,
+      badge: 'Voucher',
+      badgeColor: C.money,
+      badgeText: 0x2b2540,
+      desc: v.description,
+      hint: can ? undefined : 'Zu wenig Geld',
+      actions: [{ text: 'Einlösen', color: C.green, enabled: can, run: () => cb.buyVoucher() }],
+    });
   } else {
-    const none = label('Voucher ausverkauft', 18, C.textDim);
-    none.position.set(vx, 140);
+    const none = label('Ausverkauft', 22, 0x5a6c82);
+    none.position.set(vcx, rowCy);
     root.addChild(none);
   }
 
-  // Booster Packs
-  const packTitle = label('Booster Packs', 18, C.textDim);
-  packTitle.position.set(520, 410);
-  root.addChild(packTitle);
+  // Booster Packs (unten rechts)
+  const pn = Math.max(shop.packs.length, 1);
   shop.packs.forEach((p, i) => {
-    const x = 400 + i * 240;
+    const x = packsX + (packsW * (i + 0.5)) / pn;
     if (!p) {
-      root.addChild(new Graphics().roundRect(x - 100, 440, 200, 140, 12).stroke({ width: 2, color: C.panelLine, alpha: 0.6 }));
+      slotLayer.addChild(emptySlot(x, rowCy, L.packW * L.packScale, L.packH * L.packScale));
       return;
     }
     const def = PACK_BY_ID[p.packId];
-    const color = def.kind === 'joker' ? C.mult : C.chips;
-    const box = new Graphics()
-      .roundRect(x - 100, 440, 200, 92, 8).fill(color).stroke({ width: 3, color: C.panelLine });
-    const name = label(def.name, 18, 0xffffff);
-    name.position.set(x, 466);
-    const info = label(`Wähle ${def.picks} aus ${def.choices}`, 15, 0xffffff, { fontWeight: '700' });
-    info.position.set(x, 505);
-    const tag = priceTag(p.price, run.money >= p.price);
-    tag.position.set(x - 50, 560);
-    const buy = new Button('Öffnen', 110, 42, C.green, () => cb.buyPack(i), 18);
-    buy.position.set(x + 45, 560);
-    buy.enabled = run.money >= p.price;
-    root.addChild(box, name, info, tag, buy);
+    const color = def.kind === 'joker' ? C.mult : def.kind === 'karten' ? C.chips : CONSUMABLE_COLORS[def.kind];
+    const can = run.money >= p.price;
+    slotLayer.addChild(emptySlot(x, rowCy, L.packW * L.packScale, L.packH * L.packScale));
+    const pv = packArt(def, color);
+    pv.scale.set(L.packScale);
+    addSlot(pv, x, rowCy, L.packW * L.packScale, L.packH * L.packScale, p, 'above', {
+      name: def.name,
+      badge: def.size === 'normal' ? 'Normal' : def.size === 'jumbo' ? 'Jumbo' : 'Mega',
+      badgeColor: color,
+      desc: `Wähle ${def.picks} aus ${def.choices}`,
+      hint: can ? undefined : 'Zu wenig Geld',
+      actions: [{ text: 'Öffnen', color: C.green, enabled: can, run: () => cb.buyPack(i) }],
+    });
   });
 
   if (animate) {
     root.alpha = 0;
     root.y += 40;
     tween(root, { alpha: 1, y: SHOP_Y }, 260, easeOutBack);
+    // Artikel fallen nacheinander in ihre Fächer
+    slots.forEach((s, i) => {
+      s.item.alpha = 0;
+      s.item.y = s.homeY - 50;
+      wait(120 + i * 70).then(() => {
+        if (s.item.destroyed) return;
+        s.item.alpha = 1;
+        tween(s.item, { y: s.homeY }, 260, easeOutBack);
+      });
+    });
   }
   return root;
 }
+

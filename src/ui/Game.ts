@@ -32,7 +32,7 @@ import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_
 import { buildHome } from './HomeView';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
-import { buildShop } from './ShopView';
+import { buildShop, buildShopSign } from './ShopView';
 import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
 import { StageFx } from './stageFx';
@@ -92,6 +92,8 @@ export class Game {
 
   // Sidebar
   private blindBg = new Graphics();
+  private blindPanel = new Container();
+  private shopSign = new Container();
   private blindName!: Text;
   private targetText!: Text;
   private rewardText!: Text;
@@ -148,7 +150,7 @@ export class Game {
     t.addChild(side);
 
     // Blind panel
-    const bp = new Container();
+    const bp = this.blindPanel;
     bp.position.set(20, 20);
     this.blindBg = new Graphics();
     this.blindName = label('', 28);
@@ -164,6 +166,11 @@ export class Game {
     this.bossDesc.position.set(165, 140);
     bp.addChild(this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
     t.addChild(bp);
+    // Im Shop ersetzt ein Leuchtschild die Blind Anzeige
+    this.shopSign = buildShopSign();
+    this.shopSign.position.set(20, 20);
+    this.shopSign.visible = false;
+    t.addChild(this.shopSign);
 
     // Round score
     const sp = panel(330, 76, C.panelDark);
@@ -330,6 +337,9 @@ export class Game {
     this.consLabel.text = `Consumables ${run.consumables.length}/${run.consumableSlots}`;
     this.tagsText.text = run.pendingTags.length ? 'Tags: ' + run.pendingTags.map((id) => TAG_BY_ID[id]?.name ?? id).join(', ') : '';
     this.deckCount.text = r ? `${r.drawPile.length}/${run.deck.length}` : `${run.deck.length}/${run.deck.length}`;
+    const inShop = run.phase === 'shop' || run.phase === 'pack';
+    this.blindPanel.visible = !inShop;
+    this.shopSign.visible = inShop;
     this.handControls.visible = run.phase === 'round' || run.phase === 'roundWon';
     this.deckPile.visible = run.phase !== 'shop' && run.phase !== 'pack';
     for (const v of this.cardViews.values()) v.setDebuffed(isCardDebuffed(run, v.card));

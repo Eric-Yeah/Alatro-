@@ -8,7 +8,7 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
-    version: '0.3.1',
+    version: '0.3.3',
     date: '19.11.2026',
     title: 'Jokers auf einen Blick',
     items: [
@@ -17,6 +17,25 @@ export const PATCH_NOTES: readonly PatchNote[] = [
       'Neu: Kleine farbige Marken auf jeder Joker Karte zeigen die Wirkung: C Chips, M Mult, X X Mult, $ Geld, R Retrigger, W wächst, P passiv.',
       'Neu: Der Joker Tooltip nennt die Wirkungen mit Namen und sagt, wann der Joker wirkt.',
       'Gilt auch im Shop, in Packs, bei Consumables, in der Sammlung und in der Run Info.',
+    ],
+  },
+  {
+    version: '0.3.2',
+    date: '19.11.2026',
+    title: 'Neuer Shop',
+    items: [
+      'Neu: Der Shop hat ein eigenes Layout. Links Next Round und Reroll, oben die Karten Slots, unten der Voucher im eigenen Fach und die Booster Packs als Folienbeutel.',
+      'Neu: Leuchtschild SHOP mit blinkenden Glühbirnen in der Seitenleiste.',
+      'Neu: Preise hängen als Fahne über jedem Artikel. Ein Tipp auf einen Artikel hebt ihn an und zeigt Name, Beschreibung und die Knöpfe Kaufen, Nutzen, Einlösen oder Öffnen. Ein Tipp ins Leere schließt die Karte wieder.',
+      'Artikel fallen beim Betreten des Shops nacheinander in ihre Fächer.',
+    ],
+  },
+  {
+    version: '0.3.1',
+    date: '19.11.2026',
+    title: 'Weichere Schrift',
+    items: [
+      'Geändert: Die Schrift ist kräftiger, schmaler und hat abgerundete Ecken. Sie wirkt nicht mehr stufig gepixelt, aber auch nicht glatt und perfekt, sondern leicht handgemacht.',
     ],
   },
   {
