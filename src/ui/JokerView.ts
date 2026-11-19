@@ -3,7 +3,9 @@ import { getJoker, type JokerInstance } from '../core/jokers';
 import { EDITIONS } from '../data/modifiers';
 import { editionOverlay } from './editionFx';
 import { drawJokerArt } from './jokerArt';
+import { effectTags } from './jokerInfo';
 import { C, EDITION_COLORS, FONT_BODY, RARITY_COLORS } from './theme';
+import { label } from './widgets';
 
 export const JOKER_W = 104;
 export const JOKER_H = 140;
@@ -30,6 +32,20 @@ export class JokerView extends Container {
     // lange einzelne Wörter (z. B. Kartenhändler) verkleinern statt über den Kartenrand laufen
     if (name.width > w - 8) name.scale.set((w - 8) / name.width);
     this.addChild(g, art, name);
+    // Wirkungs Marken am unteren Rand der Grafik: Farbe und Buchstabe zeigen auf einen Blick, was der Joker tut
+    const tags = effectTags(def).slice(0, 5);
+    const pw = 22, ph = 17, gap = 3;
+    const rowW = tags.length * pw + (tags.length - 1) * gap;
+    tags.forEach((tg, i) => {
+      const px = -rowW / 2 + i * (pw + gap);
+      const py = h / 2 - 43 - ph - 4;
+      const pill = new Graphics()
+        .roundRect(px - 2, py - 2, pw + 4, ph + 4, 7).fill(C.cardEdge)
+        .roundRect(px, py, pw, ph, 5).fill(tg.color);
+      const t = label(tg.short, 12, 0xffffff);
+      t.position.set(px + pw / 2, py + ph / 2);
+      this.addChild(pill, t);
+    });
     if (joker.edition && EDITIONS[joker.edition]) {
       const ec = EDITION_COLORS[joker.edition] ?? C.accent;
       const glow = new Graphics()

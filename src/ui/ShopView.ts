@@ -1,13 +1,14 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { canBuyAndUse, canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
 import { getJoker, jokerDescription } from '../core/jokers';
+import { richText } from './richText';
 import type { RunState } from '../core/run';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
 import { easeOutBack, tween } from './tween';
 import { Button, label, panel } from './widgets';
 
@@ -33,10 +34,9 @@ function priceTag(price: number, affordable: boolean): Container {
   return c;
 }
 
-function smallText(text: string, width: number, size = 16, color = C.text): Text {
-  const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
-  t.anchor.set(0.5, 0);
-  return t;
+/** Beschreibung mit farbigen Schlüsselwörtern, Anker oben mittig */
+function smallText(text: string, width: number, size = 16): Container {
+  return richText(text, width, { size, theme: 'dark' });
 }
 
 /** Baut die Shop Szene (Briefing 9.1): Next Round, Reroll, Karten Slots, Voucher, Packs. */
@@ -152,7 +152,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
         .roundRect(-56, -70, 112, 140, 12).fill(0x24407a).stroke({ width: 3, color: C.money })
         .star(0, -18, 6, 26, 12).fill({ color: C.money, alpha: 0.85 }),
     );
-    const vn = smallText(v.name, 100, 15, 0xffffff);
+    const vn = smallText(v.name, 100, 15);
     vn.position.set(0, 26);
     card.addChild(vn);
     const badge = new Graphics().roundRect(vx - 52, 210, 104, 22, 11).fill(C.money);

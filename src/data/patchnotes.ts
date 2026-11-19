@@ -8,6 +8,18 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.3.1',
+    date: '19.11.2026',
+    title: 'Jokers auf einen Blick',
+    items: [
+      'Neu: Farbige Beschreibungen. Chips sind blau, Mult rot, X Mult als rote Pille, Geld gold, dazu Hands, Discards, Suits und Handnamen in eigenen Farben.',
+      'Neu: Bedingungen ("wenn die Hand ...", "Jede gewertete Karte") sind violett abgesetzt, aktuelle Werte wachsender Jokers grün.',
+      'Neu: Kleine farbige Marken auf jeder Joker Karte zeigen die Wirkung: C Chips, M Mult, X X Mult, $ Geld, R Retrigger, W wächst, P passiv.',
+      'Neu: Der Joker Tooltip nennt die Wirkungen mit Namen und sagt, wann der Joker wirkt.',
+      'Gilt auch im Shop, in Packs, bei Consumables, in der Sammlung und in der Run Info.',
+    ],
+  },
+  {
     version: '0.3.0',
     date: '18.11.2026',
     title: 'Pixel Schrift und Hologramm Look',

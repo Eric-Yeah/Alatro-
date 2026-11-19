@@ -1,4 +1,4 @@
-# Übergabe: Stand nach M5, M6 teilweise, klarer Pixel Stil (Version 0.3.0)
+# Übergabe: Stand nach M5, M6 teilweise, Joker Lesbarkeit (Version 0.3.1)
 
 Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
@@ -14,7 +14,7 @@ Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
 | M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
 
-Teststand: `npm test` 249 von 249 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 263 von 263 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
@@ -39,6 +39,7 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 | `src/data/juice.ts` | Zahlen für Juice: `SCORE_TIERS` (Shake und Flash nach Handpunkten durch Ziel), Tonleiter, `MOODS` (Hintergrund pro Blind), `CRT`, Standard Einstellungen |
 | `src/settings.ts` | Einstellungen (CRT, Shake, Lautstärke), `getSettings`, `updateSettings`, `onSettings`, Speicherort `alatro.settings.v1` |
 | `src/ui/` Juice | `audio.ts` (WebAudio Synthese, `sfx.*`), `crt.ts` (Post Processing), `editionFx.ts` (Edition Overlays), `stageFx.ts` (Shake über Pivot der Wurzel, Flash), `juiceMath.ts` (rein, getestet), `jokerArt.ts` (Embleme), `glsl.ts` (gemeinsamer Vertex Shader), `Background.ts` (Stimmungen über `setMood`) |
+| `src/ui/` Lesbarkeit | `richText.ts` und `richTokens.ts` (farbige Beschreibungen, `richText(text, breite, {size, align, theme})`), `jokerInfo.ts` (Wirkungs Marken `effectTags`, Auslöser `triggerLabel`). Neue Schlüsselwörter in `KEYWORD_PATTERNS` und `COLORS` ergänzen |
 | `src/ui/` weitere | `ShopView.ts`, `CardView.ts`, `JokerView.ts`, `ConsumableView.ts`, `RunInfoView.ts`, `CollectionView.ts`, `Background.ts` (Shader), `widgets.ts` (`tabBar`, `wrapText`), `theme.ts` |
 | `tests/spec/` | Testfälle aus Briefing 10.3 mit Adapter `helpers.ts` (neutrale Test Jokers) |
 | `src/core/*.test.ts` | Unit Tests (`core`, `m1`, `m2`, `m4`, `m4info`) |

@@ -9,6 +9,8 @@ import {
 import { consumableSellValue, type UseResult } from '../core/consumables';
 import { handDisplayName } from '../core/hands';
 import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
+import { effectTags, triggerLabel } from './jokerInfo';
+import { richText } from './richText';
 import { normalizeSeed, randomSeed, SEED_LENGTH } from '../core/rng';
 import {
   BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerPassive, jokerSellValue, type RunState,
@@ -580,25 +582,39 @@ export class Game {
     const tip = new Container() as Container & { jokerUid?: number };
     tip.jokerUid = v.joker.uid;
     const w = 280;
-    const desc = new Text({
-      text: jokerDescription(def, v.joker),
-      style: { fontFamily: FONT_BODY, fontSize: 19, fontWeight: '700', fill: C.cardEdge, wordWrap: true, wordWrapWidth: w - 30, align: 'center' },
+    const desc = richText(jokerDescription(def, v.joker), w - 30, { size: 19, theme: 'light' });
+    const tags = effectTags(def);
+    const tagRow = new Container();
+    const trig = wrapText(triggerLabel(def), w - 30, 15, 0x5a4f78);
+    // Wirkungs Marken mit Namen, mittig in einer Reihe
+    const tagW = tags.map((t) => Math.max(54, t.name.length * 9 + 18));
+    const rowW = tagW.reduce((x, y) => x + y, 0) + (tags.length - 1) * 6;
+    let tx = -rowW / 2;
+    tags.forEach((t, i) => {
+      const pill = new Graphics().roundRect(tx, 0, tagW[i], 24, 12).fill(t.color).stroke({ width: 2, color: C.cardEdge });
+      const pt = label(t.name, 13, 0xffffff);
+      pt.position.set(tx + tagW[i] / 2, 12);
+      tagRow.addChild(pill, pt);
+      tx += tagW[i] + 6;
     });
-    desc.anchor.set(0.5, 0);
-    const h = 152 + desc.height;
+    const h = 114 + trig.height + 10 + desc.height + 70;
     const bg = new Graphics()
       .roundRect(-w / 2, 4, w, h, 14).fill({ color: 0, alpha: 0.4 })
-      .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
+      .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge })
+      // farbiger Kopf in der Seltenheitsfarbe
+      .roundRect(-w / 2 + 3, 3, w - 6, 72, 11).fill({ color: RARITY_COLORS[def.rarity], alpha: 0.28 });
     bg.eventMode = 'static';
     const name = label(def.name, 24, C.cardEdge);
     name.position.set(0, 24);
-    const rar = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(RARITY_COLORS[def.rarity]);
+    const rar = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(RARITY_COLORS[def.rarity]).stroke({ width: 2, color: C.cardEdge });
     const rarT = label(RARITY_NAMES[def.rarity], 14, 0xffffff);
     rarT.position.set(0, 56);
-    desc.position.set(0, 78);
+    tagRow.position.set(0, 82);
+    trig.position.set(0, 114);
+    desc.position.set(0, 114 + trig.height + 10);
     const sell = new Button(`Verkaufen $${jokerSellValue(v.joker)}`, 200, 44, C.green, () => this.sellJoker(v.joker.uid), 20);
     sell.position.set(0, h - 34);
-    tip.addChild(bg, name, rar, rarT, desc, sell);
+    tip.addChild(bg, name, rar, rarT, tagRow, trig, desc, sell);
     tip.position.set(Math.max(JOKER_TRAY_X + w / 2, Math.min(VIEW_W - w / 2 - 10, v.x)), JOKER_Y + 82);
     tip.scale.set(0.8);
     tween(tip, { 'scale.x': 1, 'scale.y': 1 }, 160, easeOutBack);
@@ -660,7 +676,7 @@ export class Game {
     const tip = new Container() as Container & { consumableUid?: number };
     tip.consumableUid = uid;
     const w = 300;
-    const desc = wrapText(def.description, w - 30, 19, C.cardEdge);
+    const desc = richText(def.description, w - 30, { size: 19, theme: 'light' });
     const targets = this.selected().map((c) => c.card.id);
     const usable = canUseConsumable(run, inst.defId, targets, 'slot');
     let hint = '';
@@ -1513,8 +1529,7 @@ export class Game {
         }
         view.eventMode = 'none';
         view.position.set(x, 200);
-        const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: spacing - 14, align: 'center' } });
-        t.anchor.set(0.5, 0);
+        const t = richText(text, spacing - 14, { size: 15, theme: 'dark' });
         t.position.set(x, 295);
         const pick = new Button('Wählen', 130, 50, C.green, () => this.pickPackOption(i, targets), 20);
         pick.position.set(x, withHand ? 460 : 470);

@@ -1,3 +1,4 @@
+import { richText } from './richText';
 import { Container, Graphics } from 'pixi.js';
 import { BLIND_NAMES, blindReward, blindTarget } from '../core/blinds';
 import { SUIT_SYMBOLS, rankLabel } from '../core/cards';
@@ -157,7 +158,7 @@ function vouchers(c: Container, run: RunState) {
     const n = label(v.name, 20, C.money);
     n.anchor.set(0, 0.5);
     n.position.set(x + 16, y + 20);
-    const d = wrapText(v.description, 470, 15, C.text, 'left');
+    const d = richText(v.description, 470, { size: 15, align: 'left', theme: 'dark' });
     d.position.set(x + 16, y + 38);
     c.addChild(n, d);
   });

@@ -1,7 +1,8 @@
+import { richText } from './richText';
 import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, loadDiscovered, type CollectionEntry, type CollectionTab } from '../collection';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS } from './theme';
-import { Button, label, tabBar, wrapText } from './widgets';
+import { Button, label, tabBar } from './widgets';
 
 export const COLLECTION_W = 1280;
 export const COLLECTION_H = 860;
@@ -64,7 +65,7 @@ export function buildCollection(box: Container, close: () => void) {
       sub.position.set(x + CELL_W / 2, y + 70);
       dyn.addChild(name, sub);
       if (known) {
-        const d = wrapText(e.description, CELL_W - 28, 15);
+        const d = richText(e.description, CELL_W - 28, { size: 15, theme: 'dark' });
         d.position.set(x + CELL_W / 2, y + 92);
         dyn.addChild(d);
       }

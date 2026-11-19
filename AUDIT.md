@@ -231,6 +231,14 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Pixel Schrift (O55):** Skalierung ist nicht ganzzahlig, die Pixel der Schrift sind deshalb auf dem Bildschirm leicht unterschiedlich breit. Wenn das stört, wäre der nächste Schritt, Schriftgrößen auf ganze Vielfache zu runden.
 * **Stilvorbild:** Nur die Anmutung (klare Flächen, harte Konturen). Farben, Formen und Inhalte sind eigene Entwürfe.
 
+### Lesbarkeit der Jokers (Version 0.3.1)
+
+* **Anlass:** Rückmeldung, dass auf einen Blick schwer zu erkennen ist, was welcher Joker macht.
+* **Farbige Beschreibungen:** `ui/richText.ts` (Layout) und `ui/richTokens.ts` (reine Auszeichnung, getestet). Chips blau, Mult rot, X Mult als rote Pille, Geld gold, Hands grün, Discards orange, Suits in Rot und Dunkelblau, Handnamen orange, Bedingungen ("wenn ...", "Jede gewertete Karte") violett, aktuelle Werte skalierender Jokers grün. Zwei Paletten, hell für Tooltips auf Karten, dunkel für Panels. Genutzt in Joker Tooltip, Consumable Tooltip, Shop, Pack Auswahl, Sammlung und Run Info (Vouchers).
+* **Wirkungs Marken:** `ui/jokerInfo.ts` leitet aus Definition und Beschreibung Marken ab (Chips C, Mult M, X Mult X, Geld $, Retrigger R, Wächst W, Passiv P, Regel G, Kopie K, Rettung !). Auf der Joker Karte als kleine farbige Marken unter der Grafik, im Tooltip mit Namen. Dazu eine Zeile, wann der Joker wirkt (`triggerLabel`, aus dem Beschreibungstext abgeleitet).
+* **O62 (Auslöser Zeile):** Der Auslöser wird aus dem deutschen Beschreibungstext geraten (kein eigenes Datenfeld). Bei einem neuen Joker mit ungewöhnlichem Text prüfen, ob die Zeile passt, sonst das Muster in `triggerLabel` ergänzen. Ein Test stellt sicher, dass jeder Joker mindestens eine Marke und eine Zeile hat.
+* **Geprüft:** Joker Karten und Beschreibungen in beiden Paletten im Browser gerendert (Chromium). Tooltip im laufenden Spiel und die Pack Ansicht nur im Code angepasst, App startet ohne Fehler.
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
