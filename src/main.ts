@@ -11,7 +11,28 @@ import { Game } from './ui/Game';
 import { FpsMeter } from './ui/perf';
 import { setTextResolution } from './ui/textRes';
 import { FONT } from './ui/theme';
-import { computeView, isPhone } from './ui/viewport';
+import { computeView, isPhone, type Insets } from './ui/viewport';
+
+/** Liest die sicheren Ränder (Statusleiste, Home Indikator) der Seite, 0 ohne Unterstützung. */
+function readSafeInsets(): Insets {
+  try {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;'
+      + 'padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
+    document.body.appendChild(d);
+    const cs = getComputedStyle(d);
+    const r = {
+      top: parseFloat(cs.paddingTop) || 0,
+      right: parseFloat(cs.paddingRight) || 0,
+      bottom: parseFloat(cs.paddingBottom) || 0,
+      left: parseFloat(cs.paddingLeft) || 0,
+    };
+    d.remove();
+    return r;
+  } catch {
+    return { top: 0, right: 0, bottom: 0, left: 0 };
+  }
+}
 
 async function main() {
   // Schrift laden, bevor der erste Text gezeichnet wird (sonst bleibt die Systemschrift im Cache)
@@ -70,7 +91,7 @@ async function main() {
     bg.resize(w, h);
     crt.resize(app.renderer.width, app.renderer.height, app.renderer.resolution);
     // Handy im Hochformat: Spielfeld wird gedreht, damit es im Querformat erscheint.
-    const t = computeView(w, h, isPhone(window.screen.width, window.screen.height));
+    const t = computeView(w, h, isPhone(window.screen.width, window.screen.height), readSafeInsets());
     game.root.rotation = t.rotation;
     game.root.scale.set(t.scale);
     game.root.position.set(t.x, t.y);

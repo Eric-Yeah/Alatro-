@@ -45,4 +45,13 @@ describe('viewport', () => {
     expect(t.rotation).toBe(0);
     expect(t.scale).toBeCloseTo(820 / VIEW_W);
   });
+
+  it('sichere Ränder: das Spielfeld liegt innerhalb der Ränder und bleibt mittig', () => {
+    const insets = { top: 24, right: 0, bottom: 20, left: 0 };
+    const t = computeView(1194, 834, false, insets);
+    expect(t.y).toBeGreaterThanOrEqual(insets.top);
+    expect(t.y + VIEW_H * t.scale).toBeLessThanOrEqual(834 - insets.bottom + 1e-6);
+    expect(t.scale).toBeLessThan(computeView(1194, 834, false).scale);
+    expect(t.x + (VIEW_W * t.scale) / 2).toBeCloseTo(1194 / 2);
+  });
 });
