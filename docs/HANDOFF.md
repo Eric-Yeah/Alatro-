@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Kuppelblende (Version 0.8.1)
+# Übergabe: Stand nach Ladekarte (Version 0.8.3)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -18,12 +18,12 @@ Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 gr
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
-## Version 0.8.1: Kuppelblende
+## Version 0.8.3: Ladekarte
 
-Übergangsanimation zwischen den großen Screens: zwei Hälften der Sternwarten Kuppel schließen sich, der Screen dahinter wird getauscht, dann öffnen sie sich (`src/ui/ScreenTransition.ts`, Zahlen in `src/data/transition.ts`, Einbindung in `Game.transit`). Sie läuft beim Start der App und bei Home zu Spiel und zurück. Details und offene Punkte: `AUDIT.md` O94.
+Übergangsanimation zwischen den großen Screens: der Bildschirm blendet ins Nachtblau, eine Karte fällt in die Mitte und lädt (Balken), dahinter wird der Screen getauscht, die Karte dreht sich um, die Blende löst sich auf (`src/ui/ScreenTransition.ts`, Zahlen in `src/data/transition.ts`, Einbindung in `Game.transit`). Sie läuft beim Start der App und bei Home zu Spiel und zurück. Die Kuppelblende aus 0.8.1 wirkte wie ein Fehler und ist ersetzt. Details und offene Punkte: `AUDIT.md` O94.
 
 * **Weitere Blende anlegen:** Wechsel in `Game.transit(() => ...)` einpacken, der Aufbau des neuen Screens gehört in den Rückruf.
-* **Als Nächstes:** Auf dem iPad prüfen: Dauer und Ruckeln beim Tausch.
+* **Als Nächstes:** Auf dem iPad prüfen: Dauer (etwa 2,5 s) und Ruckeln beim Tausch.
 
 ## Version 0.7.1: Hintergrundmusik im Mix
 
@@ -55,6 +55,7 @@ Grundlage ist der Bericht `docs/HOOK_REPORT.md` (Recherche, Vergleich, 14 Vorsch
 | Rückschau, Sofort nochmal | `src/report.ts` (rein), `src/data/report.ts` (Zahlen), `Game.showGameOver`, `Game.runSummary` |
 | Juice | Ziel erreicht und Überschuss in `Game.play` und `Game.showRoundWon`, Fanfare und `sfx.goal` in `src/ui/audio.ts`, Tippen beschleunigt über `tapBoost` in `src/settings.ts` |
 
+* **Live stellen:** Der Deploy (GitHub Pages) läuft nur durch, wenn der Commit auf dem Branch `claude/funny-brahmagupta-ic0bpe` liegt. Ein Push nur auf `main` scheiterte beim Schritt "deploy" (Version 0.6.0, Lauf 21), derselbe Commit auf dem Deploy Branch ging durch (Lauf 22). Vermutlich erlaubt die Umgebung `github-pages` nur diesen Branch, die Einstellung selbst wurde nicht eingesehen. Vorgehen: Tests und Build lokal, Commit auf dem Arbeitsbranch, dann Fast Forward des Deploy Branches (`git push origin HEAD:claude/funny-brahmagupta-ic0bpe`), danach den Lauf unter Actions prüfen.
 * **Als Nächstes:** Auf dem iPad prüfen: Tippgefühl von Sofort nochmal, ob der Tipp Schub stört (Faktor `TAP_BOOST`), Lesbarkeit der Atlas Hinweise. Danach Bildrate messen und erst dann Partikel (V8) bauen.
 * **Offene Entscheidungen aus dem Bericht (Abschnitt 7):** Soll es Gating von Inhalten geben (V5)? Export und Import des Spielstands? Kurzlauf (V11)? Challenge Runs (V10)? Hochformat Layout (O68)?
 * **Nicht umgesetzt:** V5, V10 bis V14 aus dem Bericht.

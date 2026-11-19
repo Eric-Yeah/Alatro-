@@ -9,7 +9,7 @@ import { easeInOutCubic, easeOutBack, easeOutCubic, loop, tween, wait } from './
 import { label } from './widgets';
 
 /** Vorderseite: Buchstabe in der Farbe der Suit, Suit Zeichen in zwei Ecken */
-function cardFront(ch: string, suit: Suit): Container {
+export function cardFront(ch: string, suit: Suit): Container {
   const w = CARD_W, h = CARD_H;
   const color = SUIT_COLORS[suit];
   const c = new Container();
