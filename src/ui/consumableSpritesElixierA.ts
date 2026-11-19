@@ -204,25 +204,23 @@ export const SPRITES_ELIXIER_A: Record<string, Sprite> = {
       });
       p.set(x - 1, 34 - h + 3, 0xd0b0ff); p.line(x - 1, 34 - h + 4, x - 2, 34 - 3, 0x8a6ad8);
     }
-    // Tiegel
+    // Tiegel: schwarzes Glas mit Deckel und violettem Schimmer
     p.fig((q) => {
-      q.ell(20, 28, 11, 8, 0x1c1230);
-      q.rect(9, 20, 22, 9, 0x1c1230);
-      q.ell(20, 20, 11, 4, 0x2a1c48);
+      q.rrect(9, 19, 22, 16, 0x241a3c, 4);
+      q.rect(8, 14, 24, 6, 0x3a2a60);
+      q.disc(20, 12, 2.5, 0x3a2a60);
     });
-    p.ell(20, 20, 9, 3, 0x4a2a78);
-    p.ell(20, 20, 6, 2, 0x6a3aa0);
-    p.rect(11, 22, 2, 7, 0x6a50a8);
-    p.rect(11, 22, 1, 5, 0xd0c0ff);
-    p.rect(27, 24, 3, 5, 0x0a0618);
-    p.line(12, 33, 28, 35, 0x0a0618); p.rect(13, 34, 14, 1, 0x4a3a78);
-    p.ellRing(20, 28, 11, 8, 0x5a4098, 1); p.rect(13, 21, 6, 1, 0xb090ff); p.set(10, 26, 0xb090ff);
-    // Salbe mit Spatel
-    p.disc(20, 19, 3, 0x1a0e30); p.disc(19, 18, 1, 0x9a6ae0);
-    p.fig((q) => { q.poly([24, 8, 26, 8, 22, 20, 20, 19], P.wood[2]); q.rect(24, 5, 4, 4, P.wood[3]); });
-    p.set(26, 6, 0xd8a870);
-    // Deckel daneben
-    p.fig((q) => { q.ell(33, 31, 5, 2, 0x2a1c48); });
+    for (let y = 21; y < 34; y++) for (let x = 11; x < 30; x++) if ((x * 2 + y) % 9 === 0) p.set(x, y, 0x3a2a60);
+    p.rect(9, 14, 24, 1, 0x6a50a8); p.rect(8, 16, 24, 1, 0x241a3c); p.rect(8, 19, 24, 1, 0x120a24);
+    p.rect(11, 22, 2, 10, 0x8a6ad8); p.rect(11, 22, 1, 6, 0xe0d0ff); p.set(13, 33, 0x6a50a8);
+    p.rect(27, 22, 2, 11, 0x120a24);
+    p.disc(19, 11, 1, 0xd0b0ff);
+    // Salbenspatel mit dunkler Salbe
+    p.fig((q) => { q.poly([33, 20, 35, 20, 36, 33, 34, 33], P.wood[2]); q.ell(35, 18, 3, 3, 0x1a0e30); });
+    p.set(34, 17, 0xb090ff);
+    // Rand und Tropfen
+    p.rect(0, 35, 40, 5, P.slate[1]); p.rect(0, 35, 40, 1, P.slate[3]);
+    p.fig((q) => q.ell(20, 37, 8, 1.5, 0x120a24));
     p.sparkle(34, 12, 0xe0c8ff); p.sparkle(6, 8, 0xc8a0ff, true);
   },
 
@@ -347,22 +345,25 @@ export const SPRITES_ELIXIER_A: Record<string, Sprite> = {
   elixier_stern(p) {
     cosmos(p, [0x0a0a2c, 0x1a1450, 0x3a1a68], 33, { stars: 18, clouds: [[8, 30, 14, 10, 0x6a2ab0, 0.7]] });
     // Siegel
+    const wr = ramp(0xc02a68);
     p.fig((q) => {
-      q.ball(20, 27, 9, ramp(0xc02a68), 0.1);
-      for (const [x, y, r] of [[12, 30, 3], [28, 29, 3], [21, 36, 2], [14, 21, 3]] as [number, number, number][]) q.disc(x, y, r, ramp(0xc02a68)[2]);
+      q.ball(20, 29, 10, wr, 0.1);
+      for (const [x, y, r] of [[11, 33, 3], [30, 31, 3], [21, 39, 2], [12, 23, 3]] as [number, number, number][]) q.disc(x, y, r, wr[2]);
     });
-    p.poly(starPts(20, 27, 6, 2.6, 5), ramp(0xc02a68)[4]);
-    p.poly(starPts(20, 27.5, 4.3, 1.8, 5), ramp(0xc02a68)[2]);
-    p.set(13, 22, 0xffc0d8);
+    p.ring(20, 29, 8, wr[1]);
+    p.poly(starPts(20, 29, 7, 3, 5), wr[0]);
+    p.poly(starPts(20, 28.5, 6, 2.5, 5), wr[4]);
+    p.poly(starPts(20, 29, 4, 1.7, 5), wr[3]);
+    p.set(13, 23, 0xffc0d8); p.set(14, 22, 0xffc0d8);
     // Stempel (Messing) darüber
     p.fig((q) => {
-      q.rect(18, 3, 5, 10, P.wood[2]);
+      q.rect(18, 3, 5, 9, P.wood[2]);
       q.ball(20, 3, 4, P.wood, 0.1);
-      q.rect(14, 13, 13, 3, P.gold[2]);
-      q.rect(17, 16, 7, 3, P.gold[1]);
+      q.rect(14, 12, 13, 3, P.gold[2]);
+      q.rect(16, 15, 9, 2, P.gold[1]);
     });
-    p.rect(14, 13, 13, 1, P.gold[4]);
-    p.poly(starPts(20, 19, 2.3, 1, 5), 0xffe27a);
+    p.rect(14, 12, 13, 1, P.gold[4]);
+    p.poly(starPts(20, 17, 2, 0.9, 5), 0xffe27a);
     // Tropfende Funken
     p.sparkle(8, 10, 0xffffff, true); p.sparkle(33, 14, 0xffd0f0); p.sparkle(34, 33, 0xffe27a);
     dust(p, [[17, 21], [23, 21], [20, 22]], [0xffc0d8]);

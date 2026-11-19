@@ -46,6 +46,7 @@ import { haptics } from './haptics';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { playPackOpen, type FanTarget } from './packFx';
+import { OPEN_FX } from '../data/artFx';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { buildHome } from './HomeView';
@@ -2238,7 +2239,7 @@ export class Game {
       // Öffnung: der Beutel platzt, die Karten fächern sich auf (Bedienung erst danach)
       if (animate && fanTargets.length) {
         dyn.interactiveChildren = false;
-        void playPackOpen(dyn, def, W / 2, 200, fanTargets, {
+        void playPackOpen(dyn, def, W / 2, OPEN_FX.originY, fanTargets, {
           flash: (a, c) => this.fx.flash(a, c),
           shake: (a) => this.fx.shake(a),
         }).then(() => { if (!dyn.destroyed) dyn.interactiveChildren = true; });

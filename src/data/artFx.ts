@@ -32,6 +32,8 @@ export const POP_FX = {
 
 /** Öffnen eines Packs: Wackeln, Aufglühen, Partikel, Karten fächern sich auf */
 export const OPEN_FX = {
+  /** Höhe (im Pack Fenster), auf der der Beutel erscheint und aus der sich die Karten auffächern */
+  originY: 250,
   /** Wackeln des Beutels: Winkel (Bogenmaß), Anzahl Schläge, Dauer eines Schlags */
   wobbleAngle: 0.1,
   wobbleBeats: 4,

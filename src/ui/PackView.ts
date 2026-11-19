@@ -7,6 +7,9 @@ import { addShimmer, attachPop } from './artFx';
 import { packTexture } from './packArt';
 import { FONT_BODY } from './theme';
 
+/** Schriftgröße des Namens im Band je Größe */
+const NAME_SIZE = { normal: 12, jumbo: 13, mega: 14 };
+
 /** Maße eines Packs in logischen Punkten (Normal, Jumbo und Mega sind unterschiedlich groß). */
 export function packPixelSize(def: PackDef): { w: number; h: number } {
   const d = PACK_DIMS[def.size];
@@ -37,7 +40,7 @@ export class PackView extends Container {
     bag.scale.set(PACK_SCALE);
     const name = new Text({
       text: def.name,
-      style: { fontFamily: FONT_BODY, fontSize: 14, fontWeight: '800', fill: 0xfff3d1, align: 'center', wordWrap: true, wordWrapWidth: w - 40, lineHeight: 15 },
+      style: { fontFamily: FONT_BODY, fontSize: NAME_SIZE[def.size], fontWeight: '800', fill: 0xfff3d1, align: 'center', wordWrap: true, wordWrapWidth: w - 36, lineHeight: NAME_SIZE[def.size] + 1 },
     });
     name.anchor.set(0.5);
     name.y = -h / 2 + (d.bandY + d.bandH / 2) * PACK_SCALE;

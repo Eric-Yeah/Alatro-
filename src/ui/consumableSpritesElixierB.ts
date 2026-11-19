@@ -36,11 +36,11 @@ export const SPRITES_ELIXIER_B: Record<string, Sprite> = {
     p.rect(13, 27, 1, 2, 0xe0e0ff);
     // Feder
     p.fig((q) => {
-      q.poly([22, 24, 38, 4, 37, 14, 28, 26], 0xf4efe0);
-      q.line(22, 25, 37, 5, 0xc8c0a8);
+      q.poly([25, 30, 38, 14, 37, 22, 30, 32], 0xf4efe0);
+      q.line(25, 31, 37, 15, 0xc8c0a8);
     });
-    p.poly([29, 14, 36, 6, 36, 11, 31, 18], 0xe0d8c0);
-    p.set(37, 4, 0xffffff);
+    p.poly([30, 24, 36, 17, 36, 21, 32, 27], 0xe0d8c0);
+    p.set(37, 14, 0xffffff);
     p.rect(0, 37, 40, 3, 0x2a2a50); p.rect(0, 37, 40, 1, 0x7a7ac0);
   },
 

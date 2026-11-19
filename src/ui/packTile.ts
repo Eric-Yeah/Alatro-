@@ -69,8 +69,6 @@ export function packTilePix(kind: PackKind, size: PackSize): Pix {
         if (y === d.crimpTop - 1 || y === d.h - d.crimpBot) c = pal.deep;
       } else {
         c = pal.base;
-        let l = x - 1; while (l >= 0 && !inside(l, y, d)) l--; // linker Rand
-        void l;
         const dx = x - (y < d.crimpTop + 2 || y >= d.h - d.crimpBot - 2 ? 2 : 1);
         if (dx <= 1) c = pal.light;
         else if (x >= d.w - 3) c = pal.deep;
