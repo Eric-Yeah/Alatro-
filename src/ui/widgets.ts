@@ -1,5 +1,6 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 import { sfx } from './audio';
+import { haptics } from './haptics';
 import { C, FONT, FONT_BODY, STYLE, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
@@ -48,7 +49,7 @@ export class Button extends Container {
     this.on('pointerup', release);
     this.on('pointerupoutside', release);
     this.on('pointertap', () => {
-      if (this._enabled) { sfx.click(); onTap(); } else sfx.deny();
+      if (this._enabled) { sfx.click(); haptics.tap(); onTap(); } else { sfx.deny(); haptics.deny(); }
     });
   }
 

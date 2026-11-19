@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS, MOODS, QUALITY_PROFILE, SCALE_MAX_STEPS, SCORE_TIERS, SPEED_STEPS, XMULT_SHAKE_MAX } from './data/juice';
 import { clampVolume, getSettings, parseSettings, speedFactor, updateSettings } from './settings';
 import { FpsMeter } from './ui/perf';
-import { scaleFreq, scoreTier, xMultShake } from './ui/juiceMath';
+import { impactMs, scaleFreq, scoreTier, totalPattern, xMultShake } from './ui/juiceMath';
+import { haptics } from './ui/haptics';
+import { HAPTICS } from './data/juice';
 
 describe('M5 Einstellungen', () => {
   it('liefert Standardwerte bei leeren oder kaputten Daten', () => {
@@ -119,5 +121,49 @@ describe('M6 Optionen', () => {
     expect(m.fps).toBeLessThan(65);
     expect(m.worstMs).toBe(40);
     expect(m.text()).toContain('FPS');
+  });
+});
+
+describe('Vibration', () => {
+  it('Einstellung ist standardmäßig an und wird gelesen', () => {
+    expect(DEFAULT_SETTINGS.haptics).toBe(true);
+    expect(parseSettings({ haptics: false }).haptics).toBe(false);
+    expect(parseSettings({ haptics: 'ja' }).haptics).toBe(true);
+  });
+
+  it('Aufprall wächst mit der Shake Stärke und ist begrenzt', () => {
+    const ms = [0, 3, 6, 10, 16, 40].map(impactMs);
+    expect(ms).toEqual([...ms].sort((a, b) => a - b));
+    expect(ms[0]).toBe(HAPTICS.impact.minMs);
+    expect(ms[ms.length - 1]).toBe(HAPTICS.impact.maxMs);
+  });
+
+  it('Aufschlag der Gesamtpunkte: Nachschlag nur bei hohen Stufen', () => {
+    expect(totalPattern(0.25)).toHaveLength(1);
+    expect(totalPattern(1)).toHaveLength(3);
+    expect(totalPattern(1)[0]).toBeGreaterThan(totalPattern(0.25)[0]);
+    expect(totalPattern(9)[0]).toBe(HAPTICS.total.maxMs);
+  });
+
+  it('ohne Gerätefunktion bleibt alles still und wirft nicht', () => {
+    expect(() => { haptics.total(1); haptics.tap(); haptics.stop(); }).not.toThrow();
+  });
+
+  it('ruft navigator.vibrate nur bei eingeschalteter Option auf', () => {
+    const calls: unknown[] = [];
+    const nav = globalThis.navigator;
+    Object.defineProperty(globalThis, 'navigator', { value: { vibrate: (p: unknown) => { calls.push(p); return true; }, userAgent: 'x' }, configurable: true });
+    try {
+      expect(haptics.supported).toBe(true);
+      updateSettings({ haptics: true });
+      haptics.select(true);
+      expect(calls).toEqual([HAPTICS.select]);
+      updateSettings({ haptics: false });
+      haptics.select(true);
+      expect(calls).toHaveLength(1);
+    } finally {
+      updateSettings({ haptics: true });
+      Object.defineProperty(globalThis, 'navigator', { value: nav, configurable: true });
+    }
   });
 });

@@ -7,6 +7,7 @@ export interface Settings {
   speed: string;
   quality: Quality;
   fps: boolean;
+  haptics: boolean;
 }
 
 const KEY = 'alatro.settings.v2';
@@ -24,6 +25,7 @@ export function parseSettings(raw: unknown): Settings {
     speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
     quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
+    haptics: typeof o.haptics === 'boolean' ? o.haptics : DEFAULT_SETTINGS.haptics,
   };
 }
 

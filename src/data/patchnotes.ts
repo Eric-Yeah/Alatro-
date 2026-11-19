@@ -8,6 +8,15 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.5.1',
+    date: '19.11.2026',
+    title: 'Vibration',
+    items: [
+      'Neu: Vibration bei Berührungen, Zählschritten, X Mult, dem Aufschlag der Gesamtpunkte, Shop, Consumables, Sieg und Niederlage. Je höher der Treffer, desto kräftiger. In den Optionen abschaltbar.',
+      'Hinweis: Android Geräte vibrieren voll. Auf dem iPhone gibt es nur ein leichtes Tippen bei Berührungen, das iPad hat keinen Vibrationsmotor.',
+    ],
+  },
+  {
     version: '0.5.0',
     date: '19.11.2026',
     title: 'Erfolge, Einführung und Schwierigkeit',

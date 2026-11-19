@@ -39,6 +39,7 @@ import { getProfile, observeRun, saveProfile } from '../profile';
 import { ACH_H, ACH_W, buildAchievements } from './AchievementsView';
 import { Guide } from './Guide';
 import { sfx } from './audio';
+import { haptics } from './haptics';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
@@ -545,16 +546,19 @@ export class Game {
     if (this.tut && !this.tut.allowCard(cardKey(v.card), v.selected)) {
       juice(v, 0.5);
       sfx.deny();
+      haptics.deny();
       return;
     }
     this.closeTooltip();
     if (!v.selected && this.selected().length >= MAX_SELECT) {
       juice(v, 0.5);
       sfx.deny();
+      haptics.deny();
       return;
     }
     v.selected = !v.selected;
     sfx.select(v.selected);
+    haptics.select(v.selected);
     tween(v, { y: v.homeY - (v.selected ? 40 : 0) }, 160, easeOutBack);
     this.updatePreview();
     this.updateButtons();
@@ -775,6 +779,7 @@ export class Game {
     if (this.guardGuide()) return;
     if (this.busy || !sellJokerAction(run, uid)) return;
     sfx.sell();
+    haptics.sell();
     this.closeTooltip();
     this.syncJokers();
     juice(this.moneyText);
@@ -865,6 +870,7 @@ export class Game {
     const run = this.run!;
     if (this.busy || !sellConsumable(run, uid)) return;
     sfx.sell();
+    haptics.sell();
     this.closeTooltip();
     this.syncConsumables();
     juice(this.moneyText);
@@ -904,6 +910,7 @@ export class Game {
 
   /** Klang und Effekt je nach Typ des benutzten Consumables, Omen erschüttern leicht den Bildschirm. */
   private playConsumableFx(type?: ConsumableType) {
+    haptics.consumable(type === 'sternbild' || type === 'omen' ? type : 'elixir');
     if (type === 'sternbild') { sfx.starUse(); this.fx.flash(0.08, 0x9fd8ff); }
     else if (type === 'omen') { sfx.omenUse(); this.fx.shake(7); this.fx.flash(0.12, 0xa82fff); }
     else sfx.elixirUse();
@@ -946,6 +953,7 @@ export class Game {
 
     // Move played cards to the play area
     sfx.whoosh();
+    haptics.tap();
     sel.forEach((v, i) => {
       v.selected = false;
       this.playLayer.addChild(v);
@@ -977,6 +985,7 @@ export class Game {
     this.totalText.alpha = 1;
     this.totalText.scale.set(0.3);
     sfx.total(tier.boom);
+    haptics.total(tier.boom);
     this.fx.shake(tier.shake);
     this.fx.flash(tier.flash);
     await tween(this.totalText, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
@@ -1046,16 +1055,19 @@ export class Game {
 
   /** Klang pro Score Schritt, die Tonhöhe steigt mit der Schrittzahl. X Mult erschüttert den Bildschirm. */
   private playEventSound(ev: ScoreEvent, step: number) {
-    if (ev.phase === 'retrigger') sfx.retrigger(step);
+    if (ev.phase === 'retrigger') { sfx.retrigger(step); haptics.step(); }
     else if (ev.xMult) {
+      const shake = xMultShake(ev.xMult);
       sfx.xmult(step);
-      this.fx.shake(xMultShake(ev.xMult));
+      haptics.impact(shake);
+      this.fx.shake(shake);
     } else {
       if (ev.chips) sfx.chips(step);
       if (ev.mult) sfx.mult(step);
+      if (ev.chips || ev.mult) haptics.step();
       if (!ev.chips && !ev.mult && !ev.money && ev.message) sfx.message(step);
     }
-    if (ev.money) sfx.money();
+    if (ev.money) { sfx.money(); haptics.money(); }
   }
 
   private async countUp(set: (v: number) => void, from: number, to: number, ms: number) {
@@ -1088,6 +1100,7 @@ export class Game {
     this.notifyGuide('discarded');
     discardHand(run, sel.map((v) => v.card.id));
     sfx.discard();
+    haptics.tap();
     this.discardsText.text = String(run.round.discardsLeft);
     juice(this.discardsText);
     this.updateButtons();
@@ -1235,6 +1248,7 @@ export class Game {
   /** Banner oben am Bildschirm, bleibt unabhängig vom Animationstempo gut lesbar */
   private async showAchievementBanner(a: AchievementDef) {
     sfx.achievement();
+    haptics.achievement();
     const w = 640;
     const h = 104;
     const box = new Container();
@@ -1278,6 +1292,7 @@ export class Game {
   private guardGuide(): boolean {
     if (!this.tut) return false;
     sfx.deny();
+    haptics.deny();
     this.toast('Das probierst du im echten Run aus.', 0x4a3f6b);
     return true;
   }
@@ -1289,6 +1304,7 @@ export class Game {
   private guideTap() {
     if (!this.tut) return;
     sfx.select(true);
+    haptics.tap();
     this.tut.tap();
     if (this.tut.finished) this.showGuideDone();
     else this.updateGuide();
@@ -1416,6 +1432,7 @@ export class Game {
     this.guide.hide();
     this.busy = false;
     sfx.victory();
+    haptics.victory();
     this.fx.flash(0.25, 0xffd23f);
     const { box } = this.modal(700, 560, C.panelDark);
     const head = label('Einführung geschafft!', 44, C.money, { stroke: { color: C.mult, width: 6 } });
@@ -1680,7 +1697,7 @@ export class Game {
     const render = () => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
-      const gap = 90;
+      const gap = 78;
       const row = (i: number, name: string, desc: string) => {
         const y = 140 + i * gap;
         const n = label(name, 28, C.text);
@@ -1722,6 +1739,11 @@ export class Game {
       }, 22);
       quality.position.set(W - 150, qy);
       onOff(5, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
+      onOff(6, 'Vibration', haptics.supported ? 'Rückmeldung bei Berührung und Punkten' : 'Auf diesem Gerät nicht verfügbar (z. B. iPad)', st.haptics, () => {
+        updateSettings({ haptics: !st.haptics });
+        if (st.haptics) haptics.stop();
+        else haptics.victory();
+      });
       const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
       back.position.set(W / 2, 710);
       dyn.addChild(minus, plus, speed, quality, back);
@@ -1895,6 +1917,7 @@ export class Game {
     this.busy = true;
     this.syncConsumables();
     sfx.blindStart(BLIND_KINDS[Math.min(run.blindIndex, 2)]);
+    haptics.blindStart(BLIND_KINDS[Math.min(run.blindIndex, 2)]);
     this.refreshInfo();
     if (picked.money || picked.consumables.length) {
       const n = picked.consumables.length;
@@ -1917,6 +1940,7 @@ export class Game {
     }
     const e = computeEarnings(run);
     sfx.win();
+    haptics.win();
     this.fx.flash(0.18, 0xffd23f);
     const lines: [string, number][] = [
       ['Blind Belohnung', e.blindReward],
@@ -1990,6 +2014,7 @@ export class Game {
         }
         if (buyCard(run, i)) {
           sfx.buy();
+          haptics.buy();
           this.notifyGuide('bought');
           this.syncJokers();
           this.syncConsumables();
@@ -2004,6 +2029,7 @@ export class Game {
         const res = buyAndUse(run, i);
         if (res) {
           sfx.buy();
+          haptics.buy();
           this.afterConsumableUse(res, type);
         }
       },
@@ -2011,6 +2037,7 @@ export class Game {
         if (this.guardGuide()) return;
         if (buyPack(run, i)) {
           sfx.packOpen();
+          haptics.packOpen();
           this.persist();
           this.renderShop();
           this.showPack();
@@ -2020,6 +2047,7 @@ export class Game {
         if (this.guardGuide()) return;
         if (buyVoucher(run)) {
           sfx.buy();
+          haptics.buy();
           this.fx.flash(0.06, 0xffd23f);
           juice(this.moneyText);
           after();
@@ -2029,6 +2057,7 @@ export class Game {
         if (this.guardGuide()) return;
         if (reroll(run)) {
           sfx.reroll();
+          haptics.reroll();
           after();
         }
       },
@@ -2145,7 +2174,7 @@ export class Game {
     const res = pickFromPack(run, i, targets);
     if (!res) return;
     if (type) this.playConsumableFx(type);
-    else sfx.pick();
+    else { sfx.pick(); haptics.pick(); }
     this.syncJokers();
     this.syncConsumables();
     if (typeof res !== 'boolean') this.toast(res.message, C.accent);
@@ -2211,6 +2240,7 @@ export class Game {
     const run = this.run!;
     if (!this.tut) saveRun(null);
     sfx.lose();
+    haptics.lose();
     this.fx.shake(12);
     const W = 760;
     const sum = this.runSummary(run);
@@ -2247,6 +2277,7 @@ export class Game {
   private showRunWon() {
     const run = this.run!;
     sfx.victory();
+    haptics.victory();
     this.fx.flash(0.3, 0xffd23f);
     this.fx.shake(10);
     const W = 760;

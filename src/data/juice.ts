@@ -94,6 +94,32 @@ export const SPEED_STEPS: SpeedStep[] = [
   { id: 'turbo', name: '10x', factor: 10 },
 ];
 
+/** Vibration (Millisekunden, Listen wechseln zwischen Vibrieren und Pause). Reine Darstellung. */
+export const HAPTICS = {
+  tap: 8,
+  select: 12,
+  deselect: 7,
+  deny: [30, 40, 30],
+  /** Zählschritte (Chips, Mult, Retrigger): ganz leicht */
+  step: 9,
+  money: [12, 30, 12],
+  /** Aufprall nach Shake Stärke: Dauer wächst linear von minMs (Stärke 0) bis maxMs (Stärke fullShake), gedeckelt */
+  impact: { minMs: 18, maxMs: 90, fullShake: 16 },
+  /** Aufschlag der Gesamtpunkte: Dauer wächst mit der Stufe (boom 0 bis 1), ab echoFrom folgt ein Nachschlag */
+  total: { minMs: 25, maxMs: 100, echoFrom: 0.6, echoGap: 45, echoMs: 35 },
+  win: [40, 60, 40, 60, 90],
+  lose: [90, 60, 180],
+  victory: [40, 50, 40, 50, 40, 50, 140],
+  achievement: [20, 50, 20, 50, 60],
+  blind: { small: [20], big: [35], boss: [70, 50, 130] },
+  buy: [15, 40, 25],
+  sell: [25, 40, 12],
+  reroll: [10, 30, 10, 30, 10],
+  packOpen: [20, 40, 20, 40, 60],
+  pick: [15, 35, 30],
+  consumable: { sternbild: [12, 40, 12, 40, 25], elixir: [10, 25, 10, 25, 10, 25, 30], omen: [110, 70, 50] },
+} as const;
+
 /** Grafikstufe. "sparsam" für ältere Geräte: Bildrate und Auflösung gedeckelt, kein CRT, keine Edition Shader */
 export type Quality = 'voll' | 'sparsam';
 export const QUALITY_NAMES: Record<Quality, string> = { voll: 'Voll', sparsam: 'Sparsam' };
@@ -117,5 +143,7 @@ export const DEFAULT_SETTINGS = {
   quality: 'voll' as Quality,
   /** kleine FPS Anzeige oben rechts */
   fps: false,
+  /** Vibration bei Berührungen und Punkten (nur auf Geräten, die es können) */
+  haptics: true,
 };
 export const VOLUME_STEP = 0.1;

@@ -35,6 +35,12 @@ Einzelheiten und Entscheidungen: `AUDIT.md`, Abschnitt "Erfolge, Einführung und
 * **Neuen Erfolg anlegen:** Eintrag in `ACHIEVEMENTS` mit vorhandener Bedingungsart. Eine neue Bedingungsart braucht einen Zweig in `condProgress` und `condMet` in `src/achievements.ts`.
 * **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit und Tippgefühl von Hinweisfeld und Zeiger der Einführung, Schwierigkeit der Stufen 4 bis 12 im echten Spiel (Zahlen in `data/difficulty.ts`), Erfolgs Banner im laufenden Spiel. Ideen: Erfolge mit Belohnung (freischaltbare Decks), Tageslauf Rangliste lokal, weitere Tageswandlungen, Joker Katalog erweitern.
 
+## Version 0.5.1: Vibration
+
+`src/ui/haptics.ts` (`haptics.tap()`, `select`, `total(boom)`, `impact(shake)` usw.), Muster in `HAPTICS` in `src/data/juice.ts`, Rechnung in `juiceMath.ts` (`impactMs`, `totalPattern`), Option "Vibration" in den Optionen. Aufrufe stehen neben den `sfx` Aufrufen in `Game.ts`, `widgets.ts` (Button) und `ShopView.ts`. Einzelheiten und Grenzen auf iOS: `AUDIT.md` O79.
+
+* **Als Nächstes:** Auf einem Android Handy und einem iPhone spüren, ob Stärke und Dauer der Muster passen (Zahlen in `HAPTICS`), vor allem die leichten Zählschritte.
+
 ## Review 0.4.0: was neu ist und wie man testet
 
 * **Zufallslauf Test:** `src/core/fuzz.test.ts` spielt Runs mit allen Decks per Bot (beste Hand per Engine Vorschau, Shop, Packs, Consumables), prüft Invarianten und wiederholt jeden Run mit Speichern und Laden in jedem Schritt. Läuft in `npm test` (etwa 5 Sekunden). Neue Mechaniken, die Zustand verändern, sollten hier keine Invariante brechen.
