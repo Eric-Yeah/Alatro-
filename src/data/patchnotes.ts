@@ -8,6 +8,16 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.7.0',
+    date: '19.11.2026',
+    title: 'Hintergrundmusik',
+    items: [
+      'Neu: Ruhige, mystische Hintergrundmusik ohne Beat und ohne Bass. Weiche Flächen, vereinzelte Glockenklänge und ein leiser Hauch, alles live im Spiel erzeugt und endlos.',
+      'Drei Stücke zur Wahl in den Optionen: Sternenglas (hell, Glasklänge), Mondlabor (dunkel, ferne Spieluhr) und Sphärenklang (tief, Klangschalen). Die Musik hat eine eigene Lautstärke und lässt sich ausschalten.',
+      'Die Musik pausiert, wenn die App im Hintergrund ist.',
+    ],
+  },
+  {
     version: '0.6.2',
     date: '19.11.2026',
     title: 'Neuer Titel',

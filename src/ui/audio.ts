@@ -1,6 +1,8 @@
 import { getSettings, onSettings } from '../settings';
 import { BLIND_FANFARE } from '../data/report';
+import { MUSIC, MUSIC_OFF, getTrack } from '../data/music';
 import { scaleFreq } from './juiceMath';
+import { MusicPlayer } from './music';
 
 // Eigene Klänge per WebAudio Synthese, keine Audiodateien.
 // Der AudioContext startet erst nach der ersten Berührung (iPad Regel).
@@ -11,9 +13,32 @@ class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
+  private music: MusicPlayer | null = null;
+  private musicOut: GainNode | null = null;
 
   constructor() {
-    onSettings((s) => { if (this.master) this.master.gain.value = s.volume; });
+    onSettings((s) => {
+      if (this.master) this.master.gain.value = s.volume;
+      this.syncMusic();
+    });
+    // Im Hintergrund pausiert die Musik (spart Akku), beim Zurückkehren geht es weiter
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!this.ctx || !this.music?.playing) return;
+        if (document.hidden) void this.ctx.suspend().catch(() => {});
+        else void this.ctx.resume().catch(() => {});
+      });
+    }
+  }
+
+  /** Startet, wechselt oder beendet die Hintergrundmusik passend zu den Optionen */
+  private syncMusic() {
+    if (!this.ctx || !this.music || !this.musicOut) return;
+    const s = getSettings();
+    const track = s.music === MUSIC_OFF || s.volume <= 0 || s.musicVolume <= 0 ? undefined : getTrack(s.music);
+    this.musicOut.gain.setTargetAtTime(s.musicVolume * MUSIC.gainScale, this.ctx.currentTime, 0.05);
+    if (track) this.music.play(track);
+    else this.music.stop();
   }
 
   /** Muss aus einer Benutzergeste aufgerufen werden, ist danach unschädlich. */
@@ -28,6 +53,11 @@ class Sfx {
         const comp = this.ctx.createDynamicsCompressor();
         this.master.connect(comp);
         comp.connect(this.ctx.destination);
+        this.musicOut = this.ctx.createGain();
+        this.musicOut.gain.value = getSettings().musicVolume * MUSIC.gainScale;
+        this.musicOut.connect(this.master);
+        this.music = new MusicPlayer(this.ctx, this.musicOut);
+        this.syncMusic();
       }
       // iOS meldet nach einer Unterbrechung (Appwechsel, Anruf) den Zustand "interrupted", nicht nur "suspended"
       if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});

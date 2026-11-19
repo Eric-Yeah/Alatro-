@@ -139,6 +139,10 @@ export const DEFAULT_SETTINGS = {
   shake: true,
   /** Lautstärke 0 bis 1 */
   volume: 0.6,
+  /** Hintergrundmusik: ID eines Stücks aus data/music.ts oder 'aus' */
+  music: 'sternenglas',
+  /** Lautstärke der Musik 0 bis 1, relativ zur Lautstärke */
+  musicVolume: 0.5,
   /** ID aus SPEED_STEPS */
   speed: 'normal',
   quality: 'voll' as Quality,
