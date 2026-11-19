@@ -1,52 +1,71 @@
 import type { Rank, Suit } from '../../core/types';
 
-// Pixel Raster der Karten: Maße, Index Schrift, Farbsymbole und Anordnung der Pips.
-// Eine Karte ist 41 mal 57 Pixel groß und wird in der UI dreifach vergrößert (123 mal 171).
+// Pixel Raster der Karten: Maße, Index Schrift und Anordnung der Pips.
+// Eine Karte ist 82 mal 114 Pixel groß und wird in der UI mit 1,5 vergrößert (123 mal 171 Punkte).
+// Auf einem Retina Bildschirm (Faktor 2) sind das genau 3 Gerätepixel pro Kartenpixel.
 
-export const CARD_PX_W = 41;
-export const CARD_PX_H = 57;
-/** Vergrößerung der Karten Textur auf dem Bildschirm (ganzzahlig, damit die Pixel gleich groß bleiben) */
-export const CARD_PX_SCALE = 3;
+export const CARD_PX_W = 82;
+export const CARD_PX_H = 114;
+/** Vergrößerung der Karten Textur auf dem Bildschirm (Karte bleibt 123 mal 171 Punkte groß) */
+export const CARD_PX_SCALE = 1.5;
 
-/** Index Schrift 3 mal 5. Die 1 der Zehn ist nur 2 Pixel breit, damit "10" in den Rand passt. */
+/** Rundung der Kartenecken und Breite des weißen Randes in Pixeln */
+export const CARD_SHAPE = { radius: 6, border: 2 };
+
+/** Index Schrift 5 mal 7. Die 1 der Zehn ist nur 3 Pixel breit, damit "10" in den Rand passt. */
 export const INDEX_FONT: Record<string, readonly string[]> = {
-  '0': ['###', '#.#', '#.#', '#.#', '###'],
-  '1': ['.#.', '##.', '.#.', '.#.', '###'],
-  '1t': ['.#', '##', '.#', '.#', '.#'],
-  '2': ['###', '..#', '###', '#..', '###'],
-  '3': ['###', '..#', '###', '..#', '###'],
-  '4': ['#.#', '#.#', '###', '..#', '..#'],
-  '5': ['###', '#..', '###', '..#', '###'],
-  '6': ['###', '#..', '###', '#.#', '###'],
-  '7': ['###', '..#', '.#.', '.#.', '.#.'],
-  '8': ['###', '#.#', '###', '#.#', '###'],
-  '9': ['###', '#.#', '###', '..#', '###'],
-  A: ['.#.', '#.#', '###', '#.#', '#.#'],
-  J: ['..#', '..#', '..#', '#.#', '.#.'],
-  Q: ['###', '#.#', '#.#', '###', '..#'],
-  K: ['#.#', '#.#', '##.', '#.#', '#.#'],
+  '0': ['.###.', '#...#', '#..##', '#.#.#', '##..#', '#...#', '.###.'],
+  '1': ['..#..', '.##..', '..#..', '..#..', '..#..', '..#..', '.###.'],
+  '1t': ['.#.', '##.', '.#.', '.#.', '.#.', '.#.', '###'],
+  '2': ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'],
+  '3': ['.###.', '#...#', '....#', '..##.', '....#', '#...#', '.###.'],
+  '4': ['...#.', '..##.', '.#.#.', '#..#.', '#####', '...#.', '...#.'],
+  '5': ['#####', '#....', '####.', '....#', '....#', '#...#', '.###.'],
+  '6': ['.###.', '#...#', '#....', '####.', '#...#', '#...#', '.###.'],
+  '7': ['#####', '....#', '...#.', '..#..', '..#..', '..#..', '..#..'],
+  '8': ['.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'],
+  '9': ['.###.', '#...#', '#...#', '.####', '....#', '#...#', '.###.'],
+  A: ['..#..', '.#.#.', '#...#', '#...#', '#####', '#...#', '#...#'],
+  J: ['..###', '...#.', '...#.', '...#.', '...#.', '#..#.', '.##..'],
+  Q: ['.###.', '#...#', '#...#', '#...#', '#.#.#', '#..#.', '.##.#'],
+  K: ['#...#', '#..#.', '#.#..', '##...', '#.#..', '#..#.', '#...#'],
 };
 
-/** Farbsymbole für den Index (5 mal 5) */
+/** Farbsymbole für Index und Brustzeichen (9 mal 9), halbe Zeilen mit 5 Zeichen (Mitte rechts), werden ungerade gespiegelt */
 export const SUIT_SMALL: Record<Suit, readonly string[]> = {
-  S: ['..#..', '.###.', '#####', '#####', '..#..', '.###.'],
-  H: ['.#.#.', '#####', '#####', '.###.', '..#..'],
-  D: ['..#..', '.###.', '#####', '.###.', '..#..'],
-  C: ['.###.', '.###.', '#####', '##.##', '..#..', '.###.'],
+  S: ['....#', '...##', '..###', '.####', '#####', '#####', '.##.#', '....#', '...##'],
+  H: ['.##..', '#####', '#####', '#####', '.####', '..###', '...##', '....#', '.....'],
+  D: ['....#', '...##', '..###', '.####', '#####', '.####', '..###', '...##', '....#'],
+  C: ['...##', '..###', '..###', '.####', '#####', '#####', '.##.#', '....#', '...##'],
 };
 
-/** Farbsymbole für die Pips (9 mal 9) */
+/** Farbsymbole für die Pips (16 mal 16), halbe Zeilen mit 8 Zeichen, werden gerade gespiegelt */
 export const SUIT_PIP: Record<Suit, readonly string[]> = {
-  S: ['....#....', '...###...', '..#####..', '.#######.', '#########', '#########', '.##.#.##.', '....#....', '...###...'],
-  H: ['.##...##.', '#########', '#########', '#########', '#########', '.#######.', '..#####..', '...###...', '....#....'],
-  D: ['....#....', '...###...', '..#####..', '.#######.', '#########', '.#######.', '..#####..', '...###...', '....#....'],
-  C: ['...###...', '..#####..', '..#####..', '.#######.', '#########', '#########', '.##.#.##.', '....#....', '...###...'],
+  S: [
+    '.......#', '......##', '.....###', '....####', '...#####', '..######', '.#######', '########',
+    '########', '########', '########', '.#######', '..###.##', '......##', '.....###', '....####',
+  ],
+  H: [
+    '........', '..#####.', '.######.', '########', '########', '########', '########', '.#######',
+    '..######', '...#####', '....####', '.....###', '......##', '.......#', '........', '........',
+  ],
+  D: [
+    '.......#', '......##', '.....###', '....####', '...#####', '..######', '.#######', '########',
+    '########', '.#######', '..######', '...#####', '....####', '.....###', '......##', '.......#',
+  ],
+  C: [
+    '.....###', '....####', '....####', '....####', '..######', '.#######', '########', '########',
+    '########', '.#######', '..###.##', '......##', '......##', '.....###', '....####', '...#####',
+  ],
 };
 
-/** Spaltenmitten und Zeilenmitten der Pips (Pixel der Karte), Pips sind 9 mal 9 */
-export const PIP_SIZE = 9;
-export const PIP_COL = { L: 13, C: 20, R: 27 };
-export const PIP_ROW = { top: 10, a: 16, b: 19, mid: 28, c: 21, d: 35, e: 37, f: 40, bottom: 46 };
+/** Lage des Index oben links: Rang (mittig über dem Farbsymbol, Zehn linksbündig), Farbsymbol 9 mal 9 */
+export const INDEX_POS = { rankX: 7, rankX10: 5, rankY: 5, suitX: 5, suitY: 14, suitSize: 9 };
+
+/** Pips sind 16 mal 16 Pixel groß. Spalten und Zeilen sind linke und obere Kante in Kartenpixeln. */
+export const PIP_SIZE = 16;
+export const PIP_COL = { L: 15, C: 33, R: 51 };
+export const PIP_ROW = { top: 12, a: 24, b: 30, mid: 49, c: 36, d: 62, e: 68, f: 74, bottom: 86 };
 
 export type PipSpot = readonly [col: 'L' | 'C' | 'R', row: number];
 
@@ -65,39 +84,23 @@ export const PIP_LAYOUT: Partial<Record<Rank, readonly PipSpot[]>> = {
   10: [...both(PIP_ROW.top), ['C', PIP_ROW.a], ...both(PIP_ROW.c), ...both(PIP_ROW.d), ['C', PIP_ROW.f], ...both(PIP_ROW.bottom)],
 };
 
-/**
- * Große Farbsymbole für das Ass als halbe Zeilen (10 Zeichen, werden gespiegelt, 19 Pixel breit).
- * Nur die Form: Licht und Schatten, Glanz und Kontur kommen im Renderer dazu.
- */
-export const ACE_SHAPES: Record<Suit, readonly string[]> = {
-  S: [
-    '.........#', '........##', '.......###', '......####', '.....#####', '....######', '...#######', '..########',
-    '.#########', '.#########', '##########', '##########', '##########', '##########', '.#########', '..#####.##',
-    '........##', '........##', '.......###', '......####', '.....#####',
-  ],
-  H: [
-    '..#####...', '.#######..', '.#########', '##########', '##########', '##########', '##########', '.#########',
-    '..########', '...#######', '....######', '.....#####', '......####', '.......###', '........##', '.........#',
-  ],
-  D: [
-    '.........#', '........##', '.......###', '......####', '.....#####', '....######', '...#######', '..########',
-    '.#########', '##########', '.#########', '..########', '...#######', '....######', '.....#####', '......####',
-    '.......###', '........##', '.........#',
-  ],
-  C: [
-    '.......###', '......####', '.....#####', '.....#####', '.....#####', '..########', '.#########', '##########',
-    '##########', '##########', '##########', '.#########', '..###.####', '........##', '........##', '.......###',
-    '......####', '.....#####',
-  ],
+/** Ass: Größe des Symbols, Glanzpunkt (Bruchteil von Breite und Höhe) und Verzierung rund um das Symbol */
+export const ACE = {
+  w: 35,
+  h: 37,
+  glint: { S: [0.34, 0.3], H: [0.27, 0.22], D: [0.36, 0.3], C: [0.4, 0.2] } as Record<Suit, readonly [number, number]>,
+  /** Radius der Scheibe, des Punktrings und Abstand der vier Funken vom Mittelpunkt */
+  discRadius: 29,
+  ringRadius: 33,
+  sparkleDist: 47,
 };
 
-/** Glanzpunkt im Ass (Spalte, Zeile in der Form) pro Farbe */
-export const ACE_GLINT: Record<Suit, readonly [number, number]> = { S: [7, 6], H: [4, 3], D: [6, 5], C: [7, 3] };
-
-/** Verzierung rund um das Ass: Radius des Punktrings und Abstand der vier Funken vom Mittelpunkt */
-export const ACE_ORNAMENT = { ringRadius: 14, sparkleDist: 22 };
-
 /** Layout der Bildkarten: Rahmen der Figuren in Kartenpixeln (Rand eingeschlossen) */
-export const COURT_PANEL = { x: 9, y: 3, w: 23, h: 51 };
-/** Größe einer Figurenhälfte mit Rand, die obere Hälfte liegt bei (10, 4) */
-export const COURT_HALF = { x: 10, y: 4, w: 21, h: 24 };
+export const COURT_PANEL = { x: 18, y: 6, w: 46, h: 102 };
+/** Obere Hälfte im Rahmen (ohne Rand), die untere ist ihre Drehung um 180 Grad und liegt bei y + h + 2 */
+export const COURT_HALF = { x: 19, y: 7, w: 44, h: 49 };
+/** Lage der Figur in der Hälfte (Figur 40 mal 47 mit Kontur) */
+export const COURT_FIGURE_OFFSET = { x: 2, y: 2 };
+
+/** Kartenrücken: Rand um das Muster, Abstand der Rauten des Gitters, Größe des Medaillons */
+export const BACK = { inset: 7, lattice: 8, medallion: 20 };

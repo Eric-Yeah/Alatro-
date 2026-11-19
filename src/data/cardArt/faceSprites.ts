@@ -1,0 +1,161 @@
+// Gesichter der Bildkarten in feiner Auflösung: 16 Zeilen, halbe Zeilen mit 15 Zeichen
+// (Spalte 14 liegt neben der Gesichtsmitte), werden zu 30 Pixeln breiten Köpfen gespiegelt.
+// Zeichen: s Haut, S Hautschatten, p Hautlicht, w Augenweiß und Bart, W grauer Bart, k Pupille und Wimper,
+// m Lippe, M dunkle Lippe, h H Haar (mittel, dunkel), a A b Kapuze. Ein Punkt in einer Überlage lässt die Grundfläche stehen.
+
+export type FaceKind = 'boy' | 'girl' | 'kingLong' | 'kingRound' | 'kingMust' | 'kingMutton' | 'hood';
+
+export const FACE_ROWS = 16;
+export const FACE_HALF_W = 15;
+
+/** Grundgesicht mit Stirn, Augen, Nase, Mund und Kinn */
+export const FACE_BASE: readonly string[] = [
+  '......ssssssppp',
+  '......ssssspppp',
+  '......sssssssss',
+  '......sswkkwsss',
+  '......ssSSSSsss',
+  '......ssssssssS',
+  '......sssssssSS',
+  '......ssssssssp',
+  '......sssssssss',
+  '......sssssmmmm',
+  '......ssssssMMM',
+  '.......ssssssss',
+  '........sssssss',
+  '.........sSSSSS',
+  '..........ssSSS',
+  '..........SSSSS',
+];
+
+const NONE = '...............';
+
+/** Überlagen pro Gesichtsart, Zeichen ersetzen das Grundgesicht */
+export const FACE_OVERLAY: Record<FaceKind, readonly string[]> = {
+  boy: [
+    '....hhhhhhhhhhh',
+    '....hhhhhhhhhh.',
+    '....hh.HHHH....',
+    '....hh.........',
+    '....hh.........',
+    '....hh.........',
+    '....hh.........',
+    '....hh.........',
+    '.....h.........',
+    NONE, NONE, NONE, NONE, NONE, NONE, NONE,
+  ],
+  girl: [
+    '...hhhhhhhhhhhh',
+    '...hhhhhhhhhhhh',
+    '...hhh.HHHH....',
+    '..hhhh.k....k..',
+    '.Hhhhh.........',
+    '.Hhhhh.........',
+    '.Hhhhh.........',
+    '.Hhhhh.........',
+    '.Hhhhh.........',
+    '.Hhhhhh........',
+    '.Hhhhhh........',
+    '.Hhhhhh........',
+    '.Hhhhhh........',
+    '.Hhhhhh........',
+    '.Hhhhhhhh......',
+    '.Hhhhhhhh......',
+  ],
+  kingLong: [
+    NONE,
+    NONE,
+    '....ww.WWWW....',
+    '...www.........',
+    '...www.........',
+    '...www.........',
+    '...www.........',
+    '...wwwwwwwwwwWW',
+    '...wwwwwwwwwwww',
+    '...wwwwww......',
+    '...wwwwwwwwwwww',
+    '...wwwwwwwwwwww',
+    '....wwwwwwwwwww',
+    '.....wwwwwwwwww',
+    '......wwwwwwwWW',
+    '.......WWWWWWWW',
+  ],
+  kingRound: [
+    NONE,
+    NONE,
+    '....hh.HHHH....',
+    '...hhh.........',
+    '...hhh.........',
+    '...hhh.........',
+    '...hhh.........',
+    '...hhhhhhhhhhHH',
+    '...hhhhhhhhhhhh',
+    '...hhhhhh......',
+    '...hhhhhhhhhhhh',
+    '...hhhhhhhhhhhh',
+    '....hhhhhhhhhhh',
+    '.....hhhhhhhhhH',
+    NONE,
+    NONE,
+  ],
+  kingMust: [
+    NONE,
+    NONE,
+    '.......HHHH....',
+    NONE,
+    NONE,
+    NONE,
+    NONE,
+    '...hhhhhhhhhhhH',
+    '...hh.hhhhhhhhh',
+    NONE,
+    NONE,
+    NONE,
+    '..........hhhhh',
+    '...........hhhh',
+    '............HHH',
+    NONE,
+  ],
+  kingMutton: [
+    NONE,
+    NONE,
+    '....hh.HHHH....',
+    '..hhhh.........',
+    '..hhhh.........',
+    '..hhhh.........',
+    '..hhhh.........',
+    '..hhhhhhhhhhhhH',
+    '..hhhhhhhhhhhhh',
+    '..hhhh.........',
+    '..hhhhhhhhhhhhh',
+    '..hhhhhhhhhhhhh',
+    '...hhhhhhhhhhhh',
+    '.....hhhhhhhhhH',
+    '.......hhhhhhHH',
+    '.........HHHHHH',
+  ],
+  hood: [
+    '..aaaaaaaaaaaaa',
+    '..aaaaaaaaaaaaa',
+    '..aaab.HHHH....',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaab.........',
+    '..aaaabb.......',
+    '..aaaaab.......',
+    '..aaaaaab......',
+    '..aaaaaaaa.....',
+    '..aaaaaaaa.....',
+  ],
+};
+
+/** Gesicht als halbe Zeilen: Grundgesicht mit der Überlage der Art */
+export function faceHalfRows(kind: FaceKind): string[] {
+  const over = FACE_OVERLAY[kind];
+  return FACE_BASE.map((base, y) => [...base].map((c, x) => (over[y][x] !== '.' ? over[y][x] : c)).join(''));
+}
