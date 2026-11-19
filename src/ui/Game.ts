@@ -52,6 +52,7 @@ import { OPEN_FX } from '../data/artFx';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { buildHome } from './HomeView';
+import { ScreenTransition } from './ScreenTransition';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildShop, buildShopSign } from './ShopView';
@@ -105,6 +106,8 @@ export class Game {
   private flashLayer = new Container();
   private achLayer = new Container();
   private screenLayer = new Container();
+  /** Kuppelblende zwischen den großen Screens, liegt über allem */
+  private trans = new ScreenTransition();
   private handControls = new Container();
   private deckPile = new Container();
   private shopView: Container | null = null;
@@ -177,14 +180,16 @@ export class Game {
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => { if (this.busy) tapBoost(); }, { passive: true });
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
-    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer, this.flashLayer, this.achLayer);
+    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer, this.flashLayer, this.achLayer, this.trans.root);
     this.guide = new Guide(() => this.exitGuide(false));
     this.guideLayer.addChild(this.guide.root);
     Ticker.shared.add((t) => this.guide.update(t.deltaMS));
     this.fx = new StageFx(this.root, this.flashLayer);
     this.buildTable();
-    this.showMainMenu();
-    this.firstLaunch();
+    // Beim Öffnen ist die Kuppel zu und öffnet sich über dem Home Bildschirm, danach erst Angebote und Patch Notes
+    this.trans.cover();
+    this.openHome();
+    void this.trans.intro().then(() => this.firstLaunch());
   }
 
   /**
@@ -1173,6 +1178,19 @@ export class Game {
     this.shopView = null;
   }
 
+  /**
+   * Wechselt zwischen großen Screens (Home und Spiel) mit der Kuppelblende. `swap` baut den neuen Screen
+   * bei geschlossener Kuppel. Läuft schon eine Blende, wird sofort getauscht.
+   */
+  private transit(swap: () => void) {
+    if (this.trans.active) swap();
+    else void this.trans.run(swap);
+  }
+
+  private homeVisible(): boolean {
+    return this.homeLayer.children.length > 0;
+  }
+
   private modal(w: number, h: number, color = C.panel): { o: Container; box: Container } {
     this.clearOverlay();
     this.closeTooltip();
@@ -1212,6 +1230,12 @@ export class Game {
   }
 
   private beginNewRun(deckId: string, opts: { stakeId?: string; level?: number; seed?: string; daily?: { date: string; twistId: string } }) {
+    // Vom Home Bildschirm aus mit Blende, "Nochmal" nach einem Run bleibt sofort
+    if (this.homeVisible()) this.transit(() => this.startRun(deckId, opts));
+    else this.startRun(deckId, opts);
+  }
+
+  private startRun(deckId: string, opts: { stakeId?: string; level?: number; seed?: string; daily?: { date: string; twistId: string } }) {
     this.hideHome();
     this.clearCardViews();
     this.clearScreen();
@@ -1227,6 +1251,11 @@ export class Game {
   }
 
   private resume(run: RunState) {
+    if (this.homeVisible()) this.transit(() => this.resumeNow(run));
+    else this.resumeNow(run);
+  }
+
+  private resumeNow(run: RunState) {
     this.hideHome();
     this.clearCardViews();
     this.clearScreen();
@@ -1418,6 +1447,11 @@ export class Game {
 
   /** Startet die geführte Einführungsrunde mit einem festen Szenario. Es wird nichts gespeichert. */
   private startGuide() {
+    if (this.homeVisible()) this.transit(() => this.startGuideNow());
+    else this.startGuideNow();
+  }
+
+  private startGuideNow() {
     this.hideHome();
     this.clearOverlay();
     this.clearCardViews();
@@ -1437,20 +1471,23 @@ export class Game {
     this.tut = null;
     this.guide.hide();
     this.busy = false;
-    this.clearOverlay();
-    this.clearScreen();
-    this.clearCardViews();
-    this.run = null;
-    this.syncJokers();
-    this.syncConsumables();
     const p = getProfile();
     p.tutorialOffered = true;
     if (complete) p.tutorialDone = true;
     const fresh = evaluateAchievements(p, null, { collection: collectionProgress().fraction });
     saveProfile();
     for (const a of fresh) this.queueAchievement(a);
-    this.showMainMenu();
-    if (then === 'setup') this.showRunSetup();
+    // Zurück zum Home Bildschirm mit Blende, der Spieltisch wird erst bei geschlossener Kuppel abgebaut
+    this.transit(() => {
+      this.clearOverlay();
+      this.clearScreen();
+      this.clearCardViews();
+      this.run = null;
+      this.syncJokers();
+      this.syncConsumables();
+      this.openHome();
+      if (then === 'setup') this.showRunSetup();
+    });
   }
 
   /** Angebot der Einführungsrunde beim allerersten Start */
@@ -1685,6 +1722,12 @@ export class Game {
 
   /** Home Bildschirm (Vollbild). Nebenmenüs öffnen als Fenster darüber und führen per Zurück hierher. */
   private showMainMenu() {
+    // Kommt man aus einem Nebenmenü zurück, ist der Home Bildschirm schon da. Aus dem Spiel geht es mit Blende.
+    if (this.homeVisible()) this.openHome();
+    else this.transit(() => this.openHome());
+  }
+
+  private openHome() {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
     this.hooks.setMood('menu');

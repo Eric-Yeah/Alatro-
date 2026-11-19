@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.8.1',
+    date: '19.11.2026',
+    title: 'Kuppelblende',
+    items: [
+      'Neu: Übergangsanimation zwischen den großen Screens. Beim Öffnen der App und beim Wechsel zwischen Home Bildschirm und Spiel (neuer Run, Fortsetzen, Einführung, Menü) schließen sich zwei Hälften der Sternwarten Kuppel und öffnen sich wieder. Während der Blende sind Berührungen gesperrt. Das Animationstempo aus den Optionen gilt auch hier.',
+    ],
+  },
+  {
     version: '0.8.0',
     date: '19.11.2026',
     title: 'Pixel Art für alles',
