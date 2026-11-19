@@ -20,8 +20,9 @@ export interface ApplyResult {
 
 /** Läuft ein Konflikt, kann der Aufrufer vorab mit `previewRun` fragen und die Wahl hier übergeben */
 export function previewRun(remote: SyncBundle): RunPick {
+  // Manueller Import: ein Paket ohne Run löscht nie den lokalen Run (Zeitpunkt 0)
   const local = loadRun();
-  return pickRun({ run: local, at: loadRunAt(), version: local ? SAVE_VERSION : 0 }, { run: remote.run, at: remote.runAt, version: remote.runVersion });
+  return pickRun({ run: local, at: loadRunAt(), version: local ? SAVE_VERSION : 0 }, { run: remote.run, at: remote.run ? remote.runAt : 0, version: remote.runVersion });
 }
 
 /**

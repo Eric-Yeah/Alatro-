@@ -2,6 +2,7 @@ import { recordRun } from './collection';
 import { SAVE_VERSION, defaultRules, isRoundWon, newRunStats, type RunState } from './core/run';
 import { enterAnte } from './core/game';
 import { RngStreams } from './core/rng';
+import { notifyChange } from './syncHooks';
 
 const KEY = 'alatro.run.v1';
 /** Zeitpunkt der letzten Speicherung des Runs (ms), für den Abgleich zwischen Geräten */
@@ -13,9 +14,12 @@ export function saveRun(run: RunState | null) {
       localStorage.setItem(KEY, JSON.stringify(run));
       localStorage.setItem(AT_KEY, String(Date.now()));
       recordRun(run);
+      notifyChange('run');
     } else {
       localStorage.removeItem(KEY);
-      localStorage.removeItem(AT_KEY);
+      // Zeitpunkt des Beendens bleibt, damit der Sync einen beendeten Run nicht wieder herstellt
+      localStorage.setItem(AT_KEY, String(Date.now()));
+      notifyChange('run');
     }
   } catch {
     /* Speicher nicht verfügbar */

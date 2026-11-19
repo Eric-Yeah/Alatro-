@@ -8,6 +8,7 @@ import { DAILY_HISTORY } from './data/daily';
 import type { ProfileNumStat } from './data/achievements';
 import { STAKES } from './data/stakes';
 import type { RunState } from './core/run';
+import { notifyChange } from './syncHooks';
 
 const KEY = 'alatro.profile.v1';
 
@@ -245,7 +246,10 @@ export function getProfile(): Profile {
 
 export function saveProfile() {
   try {
-    if (current) localStorage.setItem(KEY, JSON.stringify(current));
+    if (current) {
+      localStorage.setItem(KEY, JSON.stringify(current));
+      notifyChange('profile');
+    }
   } catch {
     /* Speicher nicht verfügbar */
   }

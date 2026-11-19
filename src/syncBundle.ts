@@ -150,13 +150,14 @@ function runId(run: unknown): string | null {
 }
 
 /**
- * Welcher Run gilt? Nur eine Seite hat einen: dieser. Derselbe Run auf beiden: der neuere. Verschiedene
+ * Welcher Run gilt? Nur eine Seite hat einen: dieser, außer die andere hat ihn später beendet. Derselbe Run auf beiden: der neuere. Verschiedene
  * Runs: Konflikt. Ein Run aus einer neueren Spielversion wird nie von einem älteren überschrieben.
  */
 export function pickRun(local: RunSide, remote: RunSide): RunPick {
   if (!local.run && !remote.run) return { kind: 'none' };
-  if (!remote.run) return { kind: 'local' };
-  if (!local.run) return { kind: 'remote' };
+  // Fehlt ein Run, gilt das als "Run beendet" ab `at`: wer später beendet hat, gewinnt
+  if (!remote.run) return { kind: remote.at > local.at ? 'remote' : 'local' };
+  if (!local.run) return { kind: local.at > remote.at ? 'local' : 'remote' };
   if (remote.version > SAVE_VERSION) return { kind: 'local' };
   if (local.version > remote.version) return { kind: 'local' };
   if (runId(local.run) !== null && runId(local.run) === runId(remote.run)) return { kind: remote.at > local.at ? 'remote' : 'local' };

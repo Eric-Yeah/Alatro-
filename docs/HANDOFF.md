@@ -2,12 +2,12 @@
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
-## Geräte Sync (in Arbeit)
+## Geräte Sync
 
-Plan: Kopplungscode ohne Konto, Supabase als Speicher, Daten Ende zu Ende verschlüsselt. Fertig sind S1 (Export und Import in den Optionen) und S2 (Kern ohne Netz: `src/syncBundle.ts`, `src/syncCrypto.ts`, `src/syncStorage.ts`, Zahlen `src/data/sync.ts`, Tests `src/sync.test.ts`). Offene Entscheidungen: `AUDIT.md` O95 bis O98.
+Kopplungscode ohne Konto, Supabase als Speicher, Daten Ende zu Ende verschlüsselt. Fertig: S1 bis S4. Optionen, Zeile "Geräte koppeln" (`src/ui/SyncView.ts`) und Zeile "Spielstand" (Export, Import). Kern ohne Netz: `src/syncBundle.ts`, `src/syncCrypto.ts`, `src/syncStorage.ts`. Cloud: `src/syncCloud.ts` (Abgleich), `src/ui/syncManager.ts` (Hintergrund, Status), Meldekanal `src/syncHooks.ts`. Zahlen und Supabase Adresse: `src/data/sync.ts`. SQL: `docs/sync.sql` (ist im Projekt `Alatro` eingespielt). Tests: `src/sync.test.ts`, `src/syncCloud.test.ts`. Entscheidungen und Grenzen: `AUDIT.md` O95 bis O100.
 
-* **Als Nächstes:** S3 Supabase (neues, eigenes Projekt anlegen, SQL mit Tabelle `saves` und den Funktionen `sync_pull` und `sync_push`, Client mit `fetch`), S4 Oberfläche "Geräte koppeln" mit Statusanzeige und Konfliktdialog, S5 Test auf dem iPad.
-* **Wichtig:** Das bestehende Supabase Projekt des Eigentümers nicht anfassen, alles in ein zweites Projekt.
+* **Als Nächstes (S5):** Auf zwei echten Geräten prüfen: Code erzeugen, am anderen eingeben, Run mitnehmen, App im Hintergrund lassen. Dann Version hochsetzen und Patch Notes ergänzen (`src/data/patchnotes.ts`, Test prüft Gleichheit mit `package.json`).
+* **Wichtig:** Das alte Supabase Projekt des Eigentümers (Manhunt) nicht anfassen. Den `service_role` Key nie ins Repo.
 
 ## Wo wir stehen
 

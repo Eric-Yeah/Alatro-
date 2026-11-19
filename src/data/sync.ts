@@ -20,6 +20,19 @@ export const SYNC = {
   exportPrefix: 'ALATRO1.',
   /** Dateiname beim Export */
   exportFileName: 'alatro-spielstand.json',
+  /**
+   * Eigenes Supabase Projekt "Alatro" (Tabelle `saves`, Funktionen `sync_pull` und `sync_push`, siehe docs/sync.sql).
+   * Der publishable Key ist öffentlich gedacht und kein Geheimnis: Zugriff gibt es nur über die zwei Funktionen,
+   * und die Daten sind mit dem Kopplungscode verschlüsselt.
+   */
+  cloudUrl: 'https://firyukeekjcbtwxwyniu.supabase.co',
+  cloudKey: 'sb_publishable_k0582FbXy0Fg0Qnpd9f-iQ_0By45y7V',
+  /** Zeitlimit je Anfrage (ms) */
+  requestTimeoutMs: 12000,
+  /** Wartezeit nach einer lokalen Änderung, bevor hochgeladen wird (ms) */
+  pushDebounceMs: 8000,
+  /** Versuche, wenn zwischen Lesen und Schreiben ein anderes Gerät dazwischenfunkt */
+  conflictRetries: 3,
   /** Obergrenze für einen eingelesenen Text, schützt vor versehentlich riesigen Einfügungen (Zeichen) */
   importMaxChars: 4_000_000,
 } as const;
