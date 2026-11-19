@@ -45,6 +45,7 @@ import { sfx } from './audio';
 import { haptics } from './haptics';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
+import { playPackOpen, type FanTarget } from './packFx';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { buildHome } from './HomeView';
@@ -121,6 +122,8 @@ export class Game {
   private cardViews = new Map<number, CardView>();
   private jokerViews = new Map<number, JokerView>();
   private consumableViews = new Map<number, ConsumableView>();
+  /** Pack, für den die Öffnungsanimation schon lief (nach jeder Wahl wird die Ansicht neu gebaut) */
+  private packAnimated: object | null = null;
   /** Seed für den nächsten Run, leer = zufällig */
   private setupSeed = '';
   private tooltip: Container | null = null;
@@ -2160,8 +2163,9 @@ export class Game {
     /** gewählte Ziel Karten der Pack Hand (Reihenfolge der Wahl) */
     const targets: number[] = [];
 
-    const render = () => {
+    const render = (animate = false) => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
+      const fanTargets: FanTarget[] = [];
       const sub = label(`Wähle noch ${p.picksLeft}`, 20, C.textDim);
       sub.position.set(W / 2, 92);
       dyn.addChild(sub);
@@ -2197,6 +2201,7 @@ export class Game {
         pick.position.set(x, withHand ? 460 : 470);
         pick.enabled = canPick(run, i, targets);
         dyn.addChild(view, t, pick);
+        fanTargets.push({ view, x, y: 200, extras: [t, pick] });
       });
 
       if (p.handIds) {
@@ -2229,8 +2234,19 @@ export class Game {
       }, 22);
       skip.position.set(W / 2, H - 52);
       dyn.addChild(skip);
+
+      // Öffnung: der Beutel platzt, die Karten fächern sich auf (Bedienung erst danach)
+      if (animate && fanTargets.length) {
+        dyn.interactiveChildren = false;
+        void playPackOpen(dyn, def, W / 2, 200, fanTargets, {
+          flash: (a, c) => this.fx.flash(a, c),
+          shake: (a) => this.fx.shake(a),
+        }).then(() => { if (!dyn.destroyed) dyn.interactiveChildren = true; });
+      }
     };
-    render();
+    const first = this.packAnimated !== p;
+    this.packAnimated = p;
+    render(first);
   }
 
   private pickPackOption(i: number, targets: number[] = []) {
