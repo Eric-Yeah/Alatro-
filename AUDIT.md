@@ -219,7 +219,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
 * **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
 
-### Neuer Shop (Version 0.3.1)
+### Neuer Shop (Version 0.3.2)
 
 * **Layout** in `src/ui/ShopView.ts` (Zahlen oben in `L`): links Next Round und Reroll, oben Ablage mit den Karten Slots, unten Voucher Fach (senkrechte Aufschrift "Ante N Voucher") und Pack Fach. Preise hängen als Fahne über dem Artikel.
 * **Bedienung:** Ein Tipp auf einen Artikel hebt ihn an und öffnet eine Detail Karte mit Name, Beschreibung und Aktionen (Kaufen, Nutzen, Einlösen, Öffnen). Der Grund für ein gesperrtes Kaufen steht als Hinweis dabei (Zu wenig Geld, Kein freier Platz). Die Beschreibungen stehen nicht mehr dauerhaft unter den Karten.
@@ -235,6 +235,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Pixel Schrift wie bei Pixel Spielen:** helle Labels bekommen einen harten dunklen Schatten von einem Schriftpixel (`hardShadow` in `ui/widgets.ts`). Die Originalschrift eines anderen Spiels wird nicht nachgebaut (CLAUDE.md), `Alatro Pixel` ist ein Eigenentwurf in diesem Stil.
 * **Schrift:** Pixel Schrift für Titel, Zahlen, Knöpfe und Namen. Längere Beschreibungen (Wortumbruch) nutzen `FONT_BODY` (Systemschrift), weil 1 Pixel Striche bei langen Texten schwer lesbar sind.
 * **Geprüft:** Menü, Run Setup, Blind Auswahl, Tisch mit Handkarten im Browser (Chromium, iPad Seitenverhältnis). Shop, Packs, Boss Stimmungen und Edition Shader nur im Code angepasst, nicht Bild für Bild geprüft.
+* **Weiche Schrift (0.3.1):** `tools/pixelfont.py` zeichnet die Pixelraster beim Erzeugen weich (Diagonalen verbunden, Ecken gerundet und abgeschrägt, Striche etwas dicker, Buchstaben auf 86 Prozent Breite, festes Zittern der Eckpunkte von höchstens 4 Einheiten). Parameter oben in der Datei (`FILL_R`, `ROUND_R`, `JITTER`, `BOLD`, `XS`). Benötigt zusätzlich `pip install shapely`. Zu starkes Verdicken (ab etwa 16) lässt a, e und s zulaufen.
 * **Pixel Schrift (O55):** Skalierung ist nicht ganzzahlig, die Pixel der Schrift sind deshalb auf dem Bildschirm leicht unterschiedlich breit. Wenn das stört, wäre der nächste Schritt, Schriftgrößen auf ganze Vielfache zu runden.
 * **Stilvorbild:** Nur die Anmutung (klare Flächen, harte Konturen). Farben, Formen und Inhalte sind eigene Entwürfe.
 

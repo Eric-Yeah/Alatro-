@@ -1,4 +1,4 @@
-# Übergabe: Stand nach M5, M6 teilweise, klarer Pixel Stil (Version 0.3.1)
+# Übergabe: Stand nach M5, M6 teilweise, klarer Pixel Stil (Version 0.3.2)
 
 Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 
@@ -66,7 +66,7 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 
 ## Klarer Grafikstil
 
-Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. Der Look ist eine Mischung aus flach und scharf, weichem Leuchten im Hintergrund und dezentem Hologramm (CRT Shader ohne Wölbung, `data/juice.ts` `CRT`). Beschreibungstexte mit Wortumbruch nutzen `FONT_BODY`. Die Schrift ist eine eigene Pixel Schrift (`tools/pixelfont.py` erzeugt `src/assets/alatro-pixel.ttf`, geladen in `main.ts` vor dem ersten Text, `FONT` in `ui/theme.ts`). Neue Sonderzeichen in der UI zuerst in `tools/pixelfont.py` als Glyphe zeichnen (`pip install fonttools`, `python3 tools/pixelfont.py`). **Neuer Shop (0.3.1):** `ShopView.ts` mit Fächern, Preisfahnen, Detail Karte beim Antippen und Leuchtschild `buildShopSign` (Einzelheiten in `AUDIT.md`). **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen.
+Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. Der Look ist eine Mischung aus flach und scharf, weichem Leuchten im Hintergrund und dezentem Hologramm (CRT Shader ohne Wölbung, `data/juice.ts` `CRT`). Beschreibungstexte mit Wortumbruch nutzen `FONT_BODY`. Die Schrift ist eine eigene Pixel Schrift (`tools/pixelfont.py` erzeugt `src/assets/alatro-pixel.ttf`, geladen in `main.ts` vor dem ersten Text, `FONT` in `ui/theme.ts`). Neue Sonderzeichen in der UI zuerst in `tools/pixelfont.py` als Glyphe zeichnen (`pip install fonttools shapely`, `python3 tools/pixelfont.py`). Die Raster werden beim Erzeugen weich gezeichnet (siehe AUDIT.md, Weiche Schrift). **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen. **Neuer Shop (0.3.2):** `ShopView.ts` mit Fächern, Preisfahnen, Detail Karte beim Antippen und Leuchtschild `buildShopSign` (Einzelheiten in `AUDIT.md`).
 
 ## Hinweise für M6 (Rest)
 
