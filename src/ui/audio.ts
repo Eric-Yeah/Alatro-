@@ -28,7 +28,8 @@ class Sfx {
         this.master.connect(comp);
         comp.connect(this.ctx.destination);
       }
-      if (this.ctx.state === 'suspended') void this.ctx.resume();
+      // iOS meldet nach einer Unterbrechung (Appwechsel, Anruf) den Zustand "interrupted", nicht nur "suspended"
+      if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});
     } catch {
       this.ctx = null;
     }
