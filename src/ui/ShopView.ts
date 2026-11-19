@@ -9,7 +9,7 @@ import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import type { PackDef } from '../data/packs';
 import { sfx } from './audio';
 import { haptics } from './haptics';
-import { CardView } from './CardView';
+import { CARD_H, CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, shade } from './theme';
@@ -452,7 +452,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       });
     } else {
       const view = new CardView(item.card);
-      const k = (L.itemH / 156) * unit;
+      const k = (L.itemH / CARD_H) * unit;
       view.scale.set(k);
       const parts: string[] = [];
       if (item.card.enhancement) parts.push(`${ENHANCEMENTS[item.card.enhancement].name}: ${ENHANCEMENTS[item.card.enhancement].description}`);
