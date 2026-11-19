@@ -261,7 +261,7 @@ function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; 
   const hint = d.hint ? wrapText(d.hint, w - 36, 15, 0xa8324a) : null;
   desc.position.set(0, 82);
   if (hint) hint.position.set(0, 82 + desc.height + 8);
-  const h = 82 + desc.height + (hint ? hint.height + 16 : 8) + 66;
+  const h = 82 + desc.height + (hint ? hint.height + 16 : 8) + 78;
   const bg = new Graphics()
     .poly(up ? [tailX - 14, h, tailX, h + 14, tailX + 14, h] : [tailX - 14, 0, tailX, -14, tailX + 14, 0]).fill(C.text).stroke({ width: 3, color: C.cardEdge })
     .roundRect(-w / 2, 5, w, h, 14).fill({ color: 0x000000, alpha: 0.4 })
@@ -280,8 +280,9 @@ function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; 
   const gap = 8;
   const bwid = (w - 30 - gap * (n - 1)) / n;
   d.actions.forEach((a, i) => {
-    const b = new Button(a.text, bwid, 46, a.color, a.run, n > 1 ? 18 : 20);
-    b.position.set(-w / 2 + 15 + bwid / 2 + i * (bwid + gap), h - 38);
+    // Tippfläche etwa 44 pt auf dem iPad (Höhe 56 bei Skalierung 0,8)
+    const b = new Button(a.text, bwid, 56, a.color, a.run, n > 1 ? 18 : 20);
+    b.position.set(-w / 2 + 15 + bwid / 2 + i * (bwid + gap), h - 44);
     b.enabled = a.enabled;
     box.addChild(b);
   });

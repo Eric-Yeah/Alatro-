@@ -102,3 +102,25 @@ export function savePatchSeen(version: string) {
     /* Speicher nicht verfügbar */
   }
 }
+
+const HINT_KEY = 'alatro.hints.v1';
+
+/** Wurde der Hinweis mit dieser ID schon einmal gezeigt und erledigt? (Einführung für neue Spieler) */
+export function hintSeen(id: string): boolean {
+  try {
+    const o = JSON.parse(localStorage.getItem(HINT_KEY) ?? '{}');
+    return !!o && o[id] === true;
+  } catch {
+    return false;
+  }
+}
+
+export function markHintSeen(id: string) {
+  try {
+    const o = JSON.parse(localStorage.getItem(HINT_KEY) ?? '{}') ?? {};
+    o[id] = true;
+    localStorage.setItem(HINT_KEY, JSON.stringify(o));
+  } catch {
+    /* Speicher nicht verfügbar */
+  }
+}
