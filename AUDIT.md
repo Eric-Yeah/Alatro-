@@ -228,6 +228,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Pixel Schrift wie bei Pixel Spielen:** helle Labels bekommen einen harten dunklen Schatten von einem Schriftpixel (`hardShadow` in `ui/widgets.ts`). Die Originalschrift eines anderen Spiels wird nicht nachgebaut (CLAUDE.md), `Alatro Pixel` ist ein Eigenentwurf in diesem Stil.
 * **Schrift:** Pixel Schrift für Titel, Zahlen, Knöpfe und Namen. Längere Beschreibungen (Wortumbruch) nutzen `FONT_BODY` (Systemschrift), weil 1 Pixel Striche bei langen Texten schwer lesbar sind.
 * **Geprüft:** Menü, Run Setup, Blind Auswahl, Tisch mit Handkarten im Browser (Chromium, iPad Seitenverhältnis). Shop, Packs, Boss Stimmungen und Edition Shader nur im Code angepasst, nicht Bild für Bild geprüft.
+* **Weiche Schrift (0.3.1):** `tools/pixelfont.py` zeichnet die Pixelraster beim Erzeugen weich (Diagonalen verbunden, Ecken gerundet und abgeschrägt, Striche etwas dicker, Buchstaben auf 86 Prozent Breite, festes Zittern der Eckpunkte von höchstens 4 Einheiten). Parameter oben in der Datei (`FILL_R`, `ROUND_R`, `JITTER`, `BOLD`, `XS`). Benötigt zusätzlich `pip install shapely`. Zu starkes Verdicken (ab etwa 16) lässt a, e und s zulaufen.
 * **Pixel Schrift (O55):** Skalierung ist nicht ganzzahlig, die Pixel der Schrift sind deshalb auf dem Bildschirm leicht unterschiedlich breit. Wenn das stört, wäre der nächste Schritt, Schriftgrößen auf ganze Vielfache zu runden.
 * **Stilvorbild:** Nur die Anmutung (klare Flächen, harte Konturen). Farben, Formen und Inhalte sind eigene Entwürfe.
 

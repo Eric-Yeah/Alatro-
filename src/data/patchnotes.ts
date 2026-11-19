@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.3.1',
+    date: '19.11.2026',
+    title: 'Weichere Schrift',
+    items: [
+      'Geändert: Die Schrift ist kräftiger, schmaler und hat abgerundete Ecken. Sie wirkt nicht mehr stufig gepixelt, aber auch nicht glatt und perfekt, sondern leicht handgemacht.',
+    ],
+  },
+  {
     version: '0.3.0',
     date: '18.11.2026',
     title: 'Pixel Schrift und Hologramm Look',
