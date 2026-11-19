@@ -219,6 +219,13 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
 * **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
 
+### Neuer Shop (Version 0.3.1)
+
+* **Layout** in `src/ui/ShopView.ts` (Zahlen oben in `L`): links Next Round und Reroll, oben Ablage mit den Karten Slots, unten Voucher Fach (senkrechte Aufschrift "Ante N Voucher") und Pack Fach. Preise hängen als Fahne über dem Artikel.
+* **Bedienung:** Ein Tipp auf einen Artikel hebt ihn an und öffnet eine Detail Karte mit Name, Beschreibung und Aktionen (Kaufen, Nutzen, Einlösen, Öffnen). Der Grund für ein gesperrtes Kaufen steht als Hinweis dabei (Zu wenig Geld, Kein freier Platz). Die Beschreibungen stehen nicht mehr dauerhaft unter den Karten.
+* **Grafik:** Packs als Folienbeutel (`packArt`, Farbe je Typ), Voucher als Eintrittskarte (`voucherArt`), Leuchtschild `buildShopSign` in der Seitenleiste ersetzt im Shop und in Packs die Blind Anzeige.
+* **Geprüft:** Browser (Chromium, 1440 mal 1000) mit 2 und 5 Karten Slots, Auswahl von Karte, Voucher und Pack, Kaufen eines Consumables. Keine Konsolenfehler. Auf dem iPad noch nicht angesehen.
+
 ### Klarer Grafikstil (nach M6)
 
 * **Anlass:** Das Bild wirkte unscharf. Ursachen: CRT Filter (Wölbung, Scanlines, Rauschen, Farbversatz, schwarzer Rand), verlaufender Shader Hintergrund mit Randabdunklung, halbtransparente Panels mit weichen Schatten, Text wird mit Renderer Auflösung gerendert, das Spielfeld aber auf das Fenster herunterskaliert.
