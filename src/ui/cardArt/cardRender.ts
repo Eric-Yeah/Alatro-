@@ -175,22 +175,22 @@ function drawIndex(rank: Rank, suit: Suit, s: SuitColors): PixelBuffer {
   const label = indexLabel(rank);
   if (label === '10') {
     b.blit(INDEX_FONT['1t'], INDEX_POS.rankX10, INDEX_POS.rankY, m);
-    b.blit(INDEX_FONT['0'], INDEX_POS.rankX10 + 4, INDEX_POS.rankY, m);
+    b.blit(INDEX_FONT['0'], INDEX_POS.rankX10 + 5, INDEX_POS.rankY, m);
   } else {
     b.blit(INDEX_FONT[label], INDEX_POS.rankX, INDEX_POS.rankY, m);
   }
   const t = suitTones(s);
-  b.blitBuffer(shadedShape(gridMask(mirrorRows(SUIT_SMALL[suit])), t.main, t.light, t.dark), INDEX_POS.suitX, INDEX_POS.suitY);
+  b.blitBuffer(shadedShape(gridMask(mirrorRows(SUIT_SMALL[suit])), t.main, t.light, t.dark, { thick: true }), INDEX_POS.suitX, INDEX_POS.suitY);
   return b;
 }
 
 function drawPips(buf: PixelBuffer, rank: Rank, suit: Suit, s: SuitColors) {
   const t = suitTones(s);
   const mask = gridMask(mirrorEven(SUIT_PIP[suit]));
-  const up = shadedShape(mask, t.main, t.light, t.dark, { glint: [0.3, 0.3] });
+  const up = shadedShape(mask, t.main, t.light, t.dark, { glint: [0.3, 0.3], outline: t.dark });
   const down = up.rotated180();
   for (const [col, row] of PIP_LAYOUT[rank] ?? []) {
-    buf.blitBuffer(row > PIP_ROW.mid ? down : up, PIP_COL[col], row);
+    buf.blitBuffer(row > PIP_ROW.mid ? down : up, PIP_COL[col] - 1, row - 1);
   }
 }
 

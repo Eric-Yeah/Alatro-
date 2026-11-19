@@ -8,12 +8,21 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
-    version: '0.8.2',
+    version: '0.8.3',
     date: '19.11.2026',
     title: 'Ladekarte',
     items: [
       'Neu: Der Übergang zwischen den Screens ist jetzt eine Ladekarte. Der Bildschirm blendet ins Nachtblau, in der Mitte fällt eine Karte ein und lädt mit einem goldenen Balken, dann dreht sie sich um und die Blende löst sich auf. Das gilt beim Öffnen der App und beim Wechsel zwischen Home Bildschirm und Spiel. Die Kuppelblende aus 0.8.1 ist entfernt.',
       'Besser: Der Übergang läuft ruhiger, ein Wechsel dauert etwa zweieinhalb Sekunden. Berührungen sind währenddessen gesperrt, das Animationstempo aus den Optionen gilt auch hier.',
+    ],
+  },
+  {
+    version: '0.8.2',
+    date: '19.11.2026',
+    title: 'Kräftigere Zahlen und Symbole',
+    items: [
+      'Besser: Zahlen und Buchstaben in den Ecken der Karten sind größer und haben dickere Striche, damit man Rang und Farbe auf einen Blick erkennt.',
+      'Besser: Die Symbole in der Mitte der Zahlenkarten haben eine dunkle Kontur und heben sich klarer ab.',
     ],
   },
   {
