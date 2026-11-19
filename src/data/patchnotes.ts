@@ -8,6 +8,20 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.5.0',
+    date: '19.11.2026',
+    title: 'Erfolge, Einführung und Schwierigkeit',
+    items: [
+      'Neu: Erfolge mit Sternen und Rang. Über 60 Erfolge in acht Kategorien, mit Fortschrittsbalken und einer Statistik über alle Runs. Beim Freischalten erscheint oben ein Banner.',
+      'Neu: Geführte Einführungsrunde. Beim ersten Start bietet Astra eine kurze Runde an, in der du Pair, Discard, Flush, Shop und Joker echt spielst. Wiederholbar über das Hauptmenü.',
+      'Neu: Skalierende Schwierigkeit mit 20 Stufen. Das Blind Ziel wächst fein, ab bestimmten Stufen kommen Regeln dazu. Die feste Leiter der Stakes bleibt wählbar.',
+      'Neu: Die Stufe Morgenrot ist etwas leichter als das Grundspiel (Ziele 25% niedriger, 1 Discard mehr) und die Vorbelegung für neue Spieler.',
+      'Neu: Tageslauf mit festem Seed, Deck, Stufe und einer Tageswandlung. Dein bestes Ante pro Tag wird gemerkt.',
+      'Neu: Rückschau nach jedem Run mit Rekorden, Erfolgen und einem Tipp. Nach einem Sieg gibt es einen Knopf für die nächsthärtere Stufe, nach einer Niederlage den Neustart mit gleichem Seed. Ein neuer Bestwert pro Hand wird sofort gemeldet.',
+      'Geändert: Ziel Faktoren verschiedener Quellen (Stufe, Deck, Wandlung) multiplizieren sich. Spielstände werden automatisch auf Version 5 übernommen.',
+    ],
+  },
+  {
     version: '0.4.0',
     date: '19.11.2026',
     title: 'Durchgesehen und aufgeräumt',

@@ -128,3 +128,11 @@ export function recordRun(run: RunState) {
   const after = mergeDiscovered(before, discoveredKeys(run));
   if (after !== before) saveDiscovered(after);
 }
+
+/** Anteil der entdeckten Einträge über alle Reiter (für Erfolge und Anzeige) */
+export function collectionProgress(discovered: string[] = loadDiscovered()): { found: number; total: number; fraction: number } {
+  const all = COLLECTION_TABS.flatMap((t) => collectionEntries(t.id).map((e) => e.key));
+  const set = new Set(discovered);
+  const found = all.filter((k) => set.has(k)).length;
+  return { found, total: all.length, fraction: all.length ? found / all.length : 0 };
+}

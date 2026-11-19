@@ -1,5 +1,5 @@
 import { recordRun } from './collection';
-import { SAVE_VERSION, defaultRules, isRoundWon, type RunState } from './core/run';
+import { SAVE_VERSION, defaultRules, isRoundWon, newRunStats, type RunState } from './core/run';
 import { enterAnte } from './core/game';
 import { RngStreams } from './core/rng';
 
@@ -20,6 +20,7 @@ export function saveRun(run: RunState | null) {
  * Migration älterer Spielstände.
  * Version 1: ein globaler Zufallszustand (rngState), keine Regeln, keine Hand Statistik.
  * Version 3: Spielstand vor den Consumables (M4).
+ * Version 4: Spielstand vor Schwierigkeitsstufen, Tageslauf und Run Zählern (Version 5).
  */
 export function migrateRun(raw: any): RunState | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -63,6 +64,15 @@ export function migrateRun(raw: any): RunState | null {
     raw.consumables = [];
     raw.rules = { ...defaultRules(), ...raw.rules };
     raw.version = 4;
+  }
+  if (raw.version === 4) {
+    // Version 4: keine skalierende Schwierigkeit, kein Tageslauf, keine Run Zähler
+    raw.runId = `${raw.seed}-alt`;
+    raw.difficulty = null;
+    raw.daily = null;
+    raw.twistId = null;
+    raw.stats = newRunStats();
+    raw.version = 5;
   }
   if (raw.version !== SAVE_VERSION) return null;
   return raw as RunState;

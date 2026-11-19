@@ -5,8 +5,9 @@ import { STAKES } from '../data/stakes';
 import { CONSUMABLE_BY_ID } from '../data/consumables';
 import {
   afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canBuyAndUse, canBuyCard, canPick, cashOut, closePack, createRun, discardHand, leaveShop,
-  pickFromPack, playHand, reroll, selectBlind, sellJoker, skipBlind, useConsumable, canUseConsumable,
+  pickFromPack, playHand, reroll, selectBlind, sellJoker, skipBlind, useConsumable, canUseConsumable, type RunSetup,
 } from './game';
+import { TWISTS } from '../data/daily';
 import { jokerCapacity, type RunState } from './run';
 import { migrateRun } from '../save';
 import { consumableCapacity, poolCards } from './consumables';
@@ -54,8 +55,8 @@ function bestPlay(run: RunState) {
   return { ids: best, score: bestScore };
 }
 
-function playRun(seed: string, deckId: string, stakeId: string, log: string[], roundtrip = false) {
-  let run = createRun({ seed, deckId, stakeId });
+function playRun(seed: string, deckId: string, stakeId: string, log: string[], roundtrip = false, extra: Partial<RunSetup> = {}) {
+  let run = createRun({ seed, deckId, stakeId, ...extra });
   const rng = RngStreams.create('bot' + seed);
   let steps = 0;
   while (run.phase !== 'gameOver' && steps++ < 3000) {
@@ -149,6 +150,41 @@ describe('Zufallsläufe mit Bot', () => {
         .toBe(JSON.stringify([a.ante, a.blindIndex, a.money, a.jokers.map((j) => j.defId), a.rng]));
     });
     expect(log.length).toBe(DECKS.length * 2);
+  }, 120000);
+});
+
+describe('Zufallsläufe mit Schwierigkeit und Tageslauf', () => {
+  it('skalierende Stufen und Tageswandlungen laufen ohne Fehler und bleiben speicherbar', () => {
+    const log: string[] = [];
+    for (const level of [1, 4, 10, 20]) {
+      const run = createRun({ seed: `LV${level}`, deckId: DECKS[level % DECKS.length].id, level });
+      expect(run.difficulty).toBe(level);
+      const back = migrateRun(JSON.parse(JSON.stringify(run)))!;
+      expect(back.rules).toEqual(run.rules);
+      expect(back.stats).toEqual(run.stats);
+    }
+    for (const twist of TWISTS) {
+      const run = createRun({ seed: `TW${twist.id}`.slice(0, 8).toUpperCase(), level: 5, daily: { date: '2026-11-19', twistId: twist.id } });
+      expect(run.twistId).toBe(twist.id);
+      expect(run.daily).toBe('2026-11-19');
+      expect(run.hands).toBeGreaterThanOrEqual(1);
+      expect(run.handSize).toBeGreaterThanOrEqual(1);
+      log.push(twist.id);
+    }
+    expect(log.length).toBe(TWISTS.length);
+  });
+
+  it('Bot spielt komplette Runs mit Stufe und Tageswandlung, auch mit Speichern und Laden', () => {
+    const log: string[] = [];
+    const cases: [string, number, string][] = [['SK1', 3, 'wunderladen'], ['SK2', 12, 'raritaeten'], ['SK3', 1, 'luftig'], ['SK4', 8, 'sparflamme']];
+    for (const [seed, level, twistId] of cases) {
+      const extra = { level, daily: { date: '2026-11-19', twistId } };
+      const a = playRun(seed, 'nachthimmel', 'daemmerung', log, false, extra);
+      const b = playRun(seed, 'nachthimmel', 'daemmerung', log, true, extra);
+      expect(JSON.stringify([b.ante, b.blindIndex, b.money, b.stats, b.rng])).toBe(JSON.stringify([a.ante, a.blindIndex, a.money, a.stats, a.rng]));
+      expect(a.stats.bestHand).toBeGreaterThan(0);
+    }
+    expect(log.length).toBe(cases.length * 2);
   }, 120000);
 });
 

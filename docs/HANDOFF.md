@@ -1,6 +1,6 @@
-# Übergabe: Stand nach Review und Playtest (Version 0.4.0)
+# Übergabe: Stand nach Erfolgen, Einführung und Schwierigkeit (Version 0.5.0)
 
-Stand: 19.11.2026. Branch `claude/eager-brown-4vjfbc`. Befunde und Änderungen des Reviews: `docs/PLAYTEST.md`.
+Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
 ## Wo wir stehen
 
@@ -14,9 +14,26 @@ Stand: 19.11.2026. Branch `claude/eager-brown-4vjfbc`. Befunde und Änderungen d
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
 | M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
 
-Teststand: `npm test` 266 von 266 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Version 0.5.0: Erfolge, Einführung, Schwierigkeit
+
+Einzelheiten und Entscheidungen: `AUDIT.md`, Abschnitt "Erfolge, Einführung und Schwierigkeit" und O71 bis O78.
+
+| Thema | Wo |
+|---|---|
+| Erfolge (Daten, 61 Stück) | `src/data/achievements.ts`, Auswertung `src/achievements.ts`, Ansicht `src/ui/AchievementsView.ts` |
+| Profil und Statistik über Runs | `src/profile.ts` (`observeRun` idempotent, Speicherort `alatro.profile.v1`), Anbindung in `Game.persist` und `Game.trackProgress` |
+| Einführungsrunde | Szenario `src/data/tutorialRun.ts` und `src/core/tutorialRun.ts`, Schritte `src/data/guide.ts`, Zustandsautomat `src/core/tutorialFlow.ts`, Oberfläche `src/ui/Guide.ts`, Einbau in `Game.ts` (`startGuide`, `exitGuide`, `updateGuide`, `guardGuide`) |
+| Schwierigkeit | `src/data/stakes.ts` (Morgenrot, `stakeChain`), `src/data/difficulty.ts` (20 Stufen), `createRun({ level })` in `src/core/game.ts`, Run Setup in `Game.showRunSetup` |
+| Tageslauf | `src/data/daily.ts`, Ansicht `Game.showDaily`, Verlauf im Profil |
+| Spielstand | `SAVE_VERSION` 5, Migration in `src/save.ts` |
+
+* **Neue Schritte der Einführung anlegen:** Eintrag in `GUIDE_STEPS` (Text, Ereignis auf das gewartet wird, Ziel für den Zeiger), das Ziel in `Game.guideTargets` einem Objekt zuordnen, Ereignisse mit `notifyGuide` melden. Der Test `src/tutorial.test.ts` läuft alle Schritte durch.
+* **Neuen Erfolg anlegen:** Eintrag in `ACHIEVEMENTS` mit vorhandener Bedingungsart. Eine neue Bedingungsart braucht einen Zweig in `condProgress` und `condMet` in `src/achievements.ts`.
+* **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit und Tippgefühl von Hinweisfeld und Zeiger der Einführung, Schwierigkeit der Stufen 4 bis 12 im echten Spiel (Zahlen in `data/difficulty.ts`), Erfolgs Banner im laufenden Spiel. Ideen: Erfolge mit Belohnung (freischaltbare Decks), Tageslauf Rangliste lokal, weitere Tageswandlungen, Joker Katalog erweitern.
 
 ## Review 0.4.0: was neu ist und wie man testet
 

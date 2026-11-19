@@ -1,5 +1,5 @@
-import { Container, Graphics, Text, type FederatedPointerEvent } from 'pixi.js';
-import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, type BlindKind } from '../core/blinds';
+import { Container, Graphics, Text, Ticker, type FederatedPointerEvent } from 'pixi.js';
+import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, blindTarget, type BlindKind } from '../core/blinds';
 import { SUIT_NAMES, sortByRank, sortBySuit, type Card } from '../core/cards';
 import {
   TAG_BY_ID, PACK_BY_ID, afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canPick, canUseConsumable, cashOut, closePack, createRun,
@@ -13,7 +13,8 @@ import type { HandType } from '../core/types';
 import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
 import { effectTags, triggerLabel } from './jokerInfo';
 import { richText } from './richText';
-import { normalizeSeed, randomSeed, SEED_LENGTH } from '../core/rng';
+import { hashString, normalizeSeed, randomSeed, SEED_LENGTH } from '../core/rng';
+import { TIPS } from '../data/tips';
 import {
   BOSS_BY_ID, MAX_SELECT, activeBoss, computeEarnings, currentTarget, isCardDebuffed, jokerCapacity, jokerPassive, jokerSellValue, type RunState,
 } from '../core/run';
@@ -22,10 +23,21 @@ import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES, type ConsumableType } from '..
 import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
-import { STAKES } from '../data/stakes';
+import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
 import { clampVolume, cycleSpeed, getSettings, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
 import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
+import { collectionProgress, loadDiscovered } from '../collection';
+import { evaluateAchievements, rankOf, unlockedCount } from '../achievements';
+import { ACHIEVEMENTS, type AchievementDef } from '../data/achievements';
+import { dailySetup, dateKey, TWIST_BY_ID } from '../data/daily';
+import { SCALE, clampScale, scaleBand, scaleName, scaleSummary } from '../data/difficulty';
+import type { GuideTarget } from '../data/guide';
+import { TutorialFlow } from '../core/tutorialFlow';
+import { cardKey, createTutorialRun, rigTutorialShop, startTutorialRound } from '../core/tutorialRun';
+import { getProfile, observeRun, saveProfile } from '../profile';
+import { ACH_H, ACH_W, buildAchievements } from './AchievementsView';
+import { Guide } from './Guide';
 import { sfx } from './audio';
 import { CARD_H, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
@@ -81,11 +93,23 @@ export class Game {
   private fxLayer = new Container();
   private homeLayer = new Container();
   private overlayLayer = new Container();
+  private guideLayer = new Container();
   private flashLayer = new Container();
+  private achLayer = new Container();
   private screenLayer = new Container();
   private handControls = new Container();
   private deckPile = new Container();
   private shopView: Container | null = null;
+
+  /** Einführungsrunde: Ablauf (null außerhalb der Einführung), Hinweisfeld und Zeiger Ziele */
+  private tut: TutorialFlow | null = null;
+  private guide: Guide;
+  private refs: Record<string, Container | undefined> = {};
+  private jokerTray: Container | null = null;
+  /** Erfolge: Warteschlange der Banner und Freischaltungen des laufenden Runs */
+  private achQueue: AchievementDef[] = [];
+  private achShowing = false;
+  private runUnlocked: string[] = [];
 
   private cardViews = new Map<number, CardView>();
   private jokerViews = new Map<number, JokerView>();
@@ -138,10 +162,33 @@ export class Game {
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
-    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.flashLayer);
+    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer, this.flashLayer, this.achLayer);
+    this.guide = new Guide(() => this.exitGuide(false));
+    this.guideLayer.addChild(this.guide.root);
+    Ticker.shared.add((t) => this.guide.update(t.deltaMS));
     this.fx = new StageFx(this.root, this.flashLayer);
     this.buildTable();
     this.showMainMenu();
+    this.firstLaunch();
+  }
+
+  /**
+   * Erster Start: neue Spieler bekommen das Angebot der Einführungsrunde (ohne Patch Notes davor).
+   * Wer schon Spielstand, Sammlung oder gesehene Patch Notes hat, kennt das Spiel: dann nur die Neuigkeiten.
+   */
+  private firstLaunch() {
+    const p = getProfile();
+    if (!p.tutorialOffered) {
+      const known = loadPatchSeen() !== null || loadRun() !== null || loadDiscovered().length > 0;
+      if (known) {
+        p.tutorialOffered = true;
+        saveProfile();
+      } else {
+        savePatchSeen(APP_VERSION);
+        this.showGuideOffer();
+        return;
+      }
+    }
     if (loadPatchSeen() !== APP_VERSION) this.showPatchNotes();
   }
 
@@ -259,9 +306,9 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button('Menü', 160, 60, 0x3b5068, () => { if (!this.busy) this.showMainMenu(); }, 24);
+    const menuBtn = new Button('Menü', 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
     menuBtn.position.set(100, 800);
-    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
     t.addChild(menuBtn, infoBtn);
     this.speedBtn = new Button('', 330, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
@@ -289,6 +336,7 @@ export class Game {
     this.consLabel = label('Consumables 0/2', 18, C.textDim);
     this.consLabel.anchor.set(1, 0.5);
     this.consLabel.position.set(1408, 220);
+    this.jokerTray = jt;
     t.addChild(jt, ct, this.jokerCount, this.consLabel);
 
     // Deck pile
@@ -379,7 +427,7 @@ export class Game {
   /** Hinweis für neue Spieler: sichtbar in der ersten Runde, solange noch keine Karte gewählt ist */
   private updateHint() {
     const r = this.run?.round;
-    this.hintText.visible = !!r && this.run!.phase === 'round' && !this.busy && this.selected().length === 0 && !hintSeen('play');
+    this.hintText.visible = !!r && !this.tut && this.run!.phase === 'round' && !this.busy && this.selected().length === 0 && !hintSeen('play');
   }
 
   // ────────────────────────────────────────────────────────────── info refresh
@@ -428,6 +476,7 @@ export class Game {
     if (!this.busy) this.updatePreview();
     this.updateHint();
     this.updateMood(blind, boss?.color);
+    this.updateGuide();
   }
 
   /** Farbstimmung: Small ruhig, Big kräftig, Boss dramatisch, Shop und Packs gedämpft. */
@@ -493,6 +542,11 @@ export class Game {
 
   private toggleCard(v: CardView) {
     if (this.busy || !this.run?.round) return;
+    if (this.tut && !this.tut.allowCard(cardKey(v.card), v.selected)) {
+      juice(v, 0.5);
+      sfx.deny();
+      return;
+    }
     this.closeTooltip();
     if (!v.selected && this.selected().length >= MAX_SELECT) {
       juice(v, 0.5);
@@ -505,6 +559,7 @@ export class Game {
     this.updatePreview();
     this.updateButtons();
     this.updateHint();
+    this.notifyGuide('selection', this.selected().map((x) => cardKey(x.card)));
   }
 
   private applySort() {
@@ -518,7 +573,7 @@ export class Game {
     this.sortMode = mode;
     this.applySort();
     this.layoutHand();
-    saveRun(this.run);
+    this.persist();
   }
 
   private layoutHand(ms = 260) {
@@ -643,7 +698,7 @@ export class Game {
         const [j] = run.jokers.splice(from, 1);
         run.jokers.splice(to, 0, j);
         this.layoutJokers();
-        saveRun(run);
+        this.persist();
       } else {
         this.showJokerTooltip(v);
       }
@@ -717,12 +772,13 @@ export class Game {
 
   private sellJoker(uid: number) {
     const run = this.run!;
+    if (this.guardGuide()) return;
     if (this.busy || !sellJokerAction(run, uid)) return;
     sfx.sell();
     this.closeTooltip();
     this.syncJokers();
     juice(this.moneyText);
-    saveRun(run);
+    this.persist();
     if (run.phase === 'shop') this.renderShop();
   }
 
@@ -812,7 +868,7 @@ export class Game {
     this.closeTooltip();
     this.syncConsumables();
     juice(this.moneyText);
-    saveRun(run);
+    this.persist();
     if (run.phase === 'shop') this.renderShop();
   }
 
@@ -841,7 +897,7 @@ export class Game {
     if (res.destroyedJokers) extra.push(`${res.destroyedJokers} Jokers zerstört`);
     if (res.consumables.length) extra.push(`${res.consumables.length} erzeugt`);
     this.toast(res.message + (extra.length ? ` (${extra.join(', ')})` : ''), C.accent);
-    saveRun(run);
+    this.persist();
     if (run.phase === 'gameOver') this.showGameOver();
     else if (run.phase === 'shop') this.renderShop();
   }
@@ -871,12 +927,18 @@ export class Game {
     if (this.busy || !run?.round) return;
     const sel = this.selected();
     if (sel.length === 0) return;
+    if (this.tut && !this.tut.allowPlay(sel.map((v) => cardKey(v.card)))) {
+      sfx.deny();
+      return;
+    }
     this.busy = true;
     this.closeTooltip();
     this.updateButtons();
-    markHintSeen('play');
+    if (!this.tut) markHintSeen('play');
     this.updateHint();
+    this.notifyGuide('played');
 
+    const prevBest = getProfile().stats.bestHand;
     const result = playHand(run, sel.map((v) => v.card.id));
     const r = run.round;
     this.handsText.text = String(r.handsLeft);
@@ -921,6 +983,7 @@ export class Game {
     const before = r.score - result.total;
     await this.countUp((v) => this.setScore(v), before, r.score, 500);
     juice(this.scoreText);
+    if (!this.tut && prevBest > 0 && result.total > prevBest) this.toast('Neuer Bestwert!', C.money);
     if (this.moneyText.text !== '$' + run.money) {
       this.moneyText.text = '$' + run.money;
       juice(this.moneyText);
@@ -930,10 +993,10 @@ export class Game {
 
     await this.flyAway(sel);
     this.setHandDisplay('', null, 0, 0);
-    saveRun(run);
+    this.persist();
 
     const drawn = afterHand(run);
-    saveRun(run);
+    this.persist();
     this.notifyRescue();
     if (run.phase === 'roundWon') {
       await wait(250);
@@ -947,7 +1010,7 @@ export class Game {
       this.showGameOver();
       return;
     }
-    saveRun(run);
+    this.persist();
     this.refreshInfo();
   }
 
@@ -1016,8 +1079,13 @@ export class Game {
     if (this.busy || !run?.round) return;
     const sel = this.selected();
     if (sel.length === 0 || run.round.discardsLeft <= 0) return;
+    if (this.tut && !this.tut.allowDiscard(sel.map((v) => cardKey(v.card)))) {
+      sfx.deny();
+      return;
+    }
     this.busy = true;
     this.closeTooltip();
+    this.notifyGuide('discarded');
     discardHand(run, sel.map((v) => v.card.id));
     sfx.discard();
     this.discardsText.text = String(run.round.discardsLeft);
@@ -1026,7 +1094,7 @@ export class Game {
     this.layoutHand();
     await this.flyAway(sel);
     const drawn = afterHand(run);
-    saveRun(run);
+    this.persist();
     this.notifyRescue();
     if (run.phase === 'roundWon') {
       this.busy = false;
@@ -1040,7 +1108,7 @@ export class Game {
       this.showGameOver();
       return;
     }
-    saveRun(run);
+    this.persist();
     this.refreshInfo();
   }
 
@@ -1100,15 +1168,16 @@ export class Game {
     this.showRunSetup();
   }
 
-  private beginNewRun(deckId: string, stakeId: string) {
+  private beginNewRun(deckId: string, opts: { stakeId?: string; level?: number; seed?: string; daily?: { date: string; twistId: string } }) {
     this.hideHome();
     this.clearCardViews();
     this.clearScreen();
-    this.run = createRun({ seed: this.setupSeed || randomSeed(), deckId, stakeId });
+    this.runUnlocked = [];
+    this.run = createRun({ seed: opts.seed ?? (this.setupSeed || randomSeed()), deckId, ...opts });
     this.setupSeed = '';
     this.syncJokers();
     this.syncConsumables();
-    saveRun(this.run);
+    this.persist();
     this.refreshInfo();
     this.showPhase();
   }
@@ -1117,6 +1186,7 @@ export class Game {
     this.hideHome();
     this.clearCardViews();
     this.clearScreen();
+    this.runUnlocked = [];
     this.run = run;
     this.syncJokers();
     this.syncConsumables();
@@ -1129,65 +1199,413 @@ export class Game {
     this.showPhase();
   }
 
+  // ────────────────────────────────────────────────────────────── Fortschritt und Erfolge
+
+  /** Speichert den Run und übernimmt seinen Stand ins Profil (Statistik, Erfolge). In der Einführung wird nichts gespeichert. */
+  private persist() {
+    if (this.tut) return;
+    saveRun(this.run);
+    this.trackProgress();
+  }
+
+  private trackProgress() {
+    const run = this.run;
+    if (!run || this.tut) return;
+    const p = getProfile();
+    const changed = observeRun(p, run);
+    const fresh = evaluateAchievements(p, run, { collection: collectionProgress().fraction });
+    if (changed || fresh.length) saveProfile();
+    for (const a of fresh) {
+      this.runUnlocked.push(a.id);
+      this.queueAchievement(a);
+    }
+  }
+
+  private queueAchievement(a: AchievementDef) {
+    this.achQueue.push(a);
+    if (!this.achShowing) void this.drainAchievements();
+  }
+
+  private async drainAchievements() {
+    this.achShowing = true;
+    while (this.achQueue.length) await this.showAchievementBanner(this.achQueue.shift()!);
+    this.achShowing = false;
+  }
+
+  /** Banner oben am Bildschirm, bleibt unabhängig vom Animationstempo gut lesbar */
+  private async showAchievementBanner(a: AchievementDef) {
+    sfx.achievement();
+    const w = 640;
+    const h = 104;
+    const box = new Container();
+    box.addChild(panel(w, h, C.panelDark, 16, C.money));
+    const badge = new Graphics()
+      .circle(0, 0, 34).fill(0x2a1f4a).stroke({ width: 4, color: C.money })
+      .star(0, 0, 5, 22, 9).fill(C.money);
+    badge.position.set(58, h / 2);
+    const head = label('Erfolg freigeschaltet', 17, C.money);
+    head.anchor.set(0, 0.5);
+    head.position.set(112, 26);
+    const name = label(a.name, 30, C.text);
+    name.anchor.set(0, 0.5);
+    name.position.set(112, 58);
+    if (name.width > w - 250) name.scale.set((w - 250) / name.width);
+    const desc = label(a.secret ? 'Ein geheimer Erfolg' : a.description, 15, C.textDim, { fontWeight: '600' });
+    desc.anchor.set(0, 0.5);
+    desc.position.set(112, 86);
+    if (desc.width > w - 140) desc.scale.set((w - 140) / desc.width);
+    box.addChild(badge, head, name, desc);
+    for (let i = 0; i < 3; i++) {
+      box.addChild(new Graphics().star(w - 40 - i * 30, 28, 5, 11, 5).fill(i < a.stars ? C.money : 0x2a3548).stroke({ width: 1.5, color: 0x151c28 }));
+    }
+    box.pivot.set(w / 2, 0);
+    box.position.set(VIEW_W / 2, -h - 12);
+    this.achLayer.addChild(box);
+    await tween(box, { y: 14 }, 320, easeOutBack, true);
+    await new Promise((r) => setTimeout(r, 2800));
+    await tween(box, { y: -h - 12 }, 260, easeInOutCubic, true);
+    box.destroy({ children: true });
+  }
+
+  private showAchievements() {
+    const { box } = this.modal(ACH_W, ACH_H, C.panelDark);
+    buildAchievements(box, () => this.showMainMenu());
+  }
+
+  // ────────────────────────────────────────────────────────────── Einführungsrunde
+
+  /** Sperrt Eingaben, die in der Einführung nicht vorgesehen sind. Gibt true zurück, wenn gesperrt wurde. */
+  private guardGuide(): boolean {
+    if (!this.tut) return false;
+    sfx.deny();
+    this.toast('Das probierst du im echten Run aus.', 0x4a3f6b);
+    return true;
+  }
+
+  private notifyGuide(event: Parameters<TutorialFlow['notify']>[0], keys: readonly string[] = []) {
+    if (this.tut?.notify(event, keys)) this.updateGuide();
+  }
+
+  private guideTap() {
+    if (!this.tut) return;
+    sfx.select(true);
+    this.tut.tap();
+    if (this.tut.finished) this.showGuideDone();
+    else this.updateGuide();
+  }
+
+  private findDeep(root: Container | null, pred: (c: Container) => boolean): Container | null {
+    if (!root || root.destroyed) return null;
+    for (const c of root.children as Container[]) {
+      if (pred(c)) return c;
+      const hit = this.findDeep(c, pred);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  private findButton(root: Container | null, caption: string): Container | null {
+    return this.findDeep(root, (c) => c instanceof Button && c.caption.startsWith(caption));
+  }
+
+  /** Objekte, auf die der Zeiger im Schritt zeigt */
+  private guideTargets(target: GuideTarget | undefined, select?: readonly string[]): Container[] {
+    const one = (c?: Container | null) => (c ? [c] : []);
+    switch (target) {
+      case 'blindPlay': return one(this.refs.blindPlay);
+      case 'blindSkip': return [...one(this.refs.blindSkip), ...one(this.refs.blindBoss)];
+      case 'blindBoss': return one(this.refs.blindBoss);
+      case 'blindTarget': return one(this.refs.blindColumn);
+      case 'pickCards': return [...this.cardViews.values()].filter((v) => !select || select.includes(cardKey(v.card)));
+      case 'handPanel': return [this.handPanel];
+      case 'scorePanel': return [this.scorePanel];
+      case 'playBtn': return [this.playBtn];
+      case 'discardBtn': return [this.discardBtn];
+      case 'counters': return [this.handsText.parent, this.discardsText.parent].filter((c): c is Container => !!c);
+      case 'cashoutBtn': return one(this.refs.cashoutBtn);
+      case 'shopJoker':
+      case 'shopBuy': {
+        const buy = this.findButton(this.shopView, 'Kaufen');
+        return one(buy ?? this.findDeep(this.shopView, (c) => c instanceof JokerView));
+      }
+      case 'nextRound': return one(this.findButton(this.shopView, 'Next'));
+      case 'jokerTray': return one(this.jokerTray);
+      case 'targetPanel': return [this.blindPanel];
+      case 'moneyPanel': return one(this.moneyText.parent);
+      default: return [];
+    }
+  }
+
+  /** Zeigt Hinweisfeld und Zeiger passend zum aktuellen Schritt, versteckt sie während Animationen */
+  private updateGuide() {
+    const flow = this.tut;
+    if (!flow || flow.finished || this.busy) {
+      this.guide.hide();
+      return;
+    }
+    const step = flow.step;
+    // In Auswahlschritten bleiben nur die vorgesehenen Karten hell
+    for (const v of this.cardViews.values()) v.alpha = step.select && !step.select.includes(cardKey(v.card)) ? 0.4 : 1;
+    const prog = flow.progress;
+    this.guide.show(step, {
+      targets: () => this.guideTargets(step.target, step.select),
+      progress: `Schritt ${prog.current} von ${prog.total}`,
+      onNext: step.wait === 'tap' ? () => this.guideTap() : null,
+      union: step.target === 'pickCards' && !step.select,
+    });
+  }
+
+  /** Startet die geführte Einführungsrunde mit einem festen Szenario. Es wird nichts gespeichert. */
+  private startGuide() {
+    this.hideHome();
+    this.clearOverlay();
+    this.clearCardViews();
+    this.clearScreen();
+    this.busy = false;
+    this.tut = new TutorialFlow();
+    this.run = createTutorialRun();
+    this.syncJokers();
+    this.syncConsumables();
+    this.refreshInfo();
+    this.showPhase();
+  }
+
+  /** Beendet die Einführung. complete = geschafft, `then` = wohin es danach geht. */
+  private exitGuide(complete: boolean, then: 'menu' | 'setup' = 'menu') {
+    if (!this.tut) return;
+    this.tut = null;
+    this.guide.hide();
+    this.busy = false;
+    this.clearOverlay();
+    this.clearScreen();
+    this.clearCardViews();
+    this.run = null;
+    this.syncJokers();
+    this.syncConsumables();
+    const p = getProfile();
+    p.tutorialOffered = true;
+    if (complete) p.tutorialDone = true;
+    const fresh = evaluateAchievements(p, null, { collection: collectionProgress().fraction });
+    saveProfile();
+    for (const a of fresh) this.queueAchievement(a);
+    this.showMainMenu();
+    if (then === 'setup') this.showRunSetup();
+  }
+
+  /** Angebot der Einführungsrunde beim allerersten Start */
+  private showGuideOffer() {
+    const { box } = this.modal(720, 520, C.panelDark);
+    const head = label('Willkommen in der Sternwarte', 38, C.money);
+    head.position.set(360, 70);
+    const text = wrapText('Alatro ist ein Roguelike mit Pokerhänden. Spiel Karten aus, sammle Punkte, kaufe Jokers und besiege Blinds.\n\nIn einer kurzen geführten Runde zeigt dir Astra alles Wichtige, Schritt für Schritt. Du spielst dabei echte Hände. Das dauert nur ein paar Minuten.', 600, 22, C.text);
+    text.position.set(360, 130);
+    const go = new Button('Einführung starten', 400, 76, C.chips, () => this.startGuide(), 30);
+    go.position.set(360, 370);
+    const later = new Button('Später, ich kenne mich aus', 400, 56, 0x3b5068, () => {
+      const p = getProfile();
+      p.tutorialOffered = true;
+      saveProfile();
+      this.showMainMenu();
+    }, 22);
+    later.position.set(360, 452);
+    box.addChild(head, text, go, later);
+  }
+
+  /** Abschluss der Einführung */
+  private showGuideDone() {
+    this.guide.hide();
+    this.busy = false;
+    sfx.victory();
+    this.fx.flash(0.25, 0xffd23f);
+    const { box } = this.modal(700, 560, C.panelDark);
+    const head = label('Einführung geschafft!', 44, C.money, { stroke: { color: C.mult, width: 6 } });
+    head.position.set(350, 70);
+    const text = wrapText('Du kennst jetzt die Grundlagen: Hände spielen, Discards, Jokers kaufen und Blinds. Der Rest ergibt sich beim Spielen.\n\nFür deinen ersten richtigen Run empfehle ich die Stufe Morgenrot. Sie ist etwas leichter als das Grundspiel. Unter Erfolge sammelst du ab jetzt Sterne.', 600, 22, C.text);
+    text.position.set(350, 130);
+    const go = new Button('Echten Run starten', 400, 76, C.chips, () => this.exitGuide(true, 'setup'), 30);
+    go.position.set(350, 400);
+    const menu = new Button('Hauptmenü', 260, 56, 0x3b5068, () => this.exitGuide(true), 24);
+    menu.position.set(350, 490);
+    box.addChild(head, text, go, menu);
+  }
+
+  // ────────────────────────────────────────────────────────────── Run Setup, Tageslauf
+
+  /** Neuer Run: Deck wählen, dazu feste Stufe (Stakes) oder skalierende Schwierigkeit */
   private showRunSetup() {
     const pref = loadSetupPref();
+    const profile = getProfile();
+    const recommended = clampScale(profile.bestScale > 0 ? profile.bestScale + 1 : SCALE.start);
+    let mode: 'stakes' | 'scale' = pref.mode === 'scale' ? 'scale' : 'stakes';
     let deckIdx = Math.max(0, DECKS.findIndex((d) => d.id === pref.deckId));
-    let stakeIdx = Math.max(0, STAKES.findIndex((s) => s.id === pref.stakeId));
-    const { box } = this.modal(760, 700, C.panelDark);
+    const prefStake = STAKES.findIndex((s) => s.id === (pref.stakeId ?? BEGINNER_STAKE_ID));
+    let stakeIdx = prefStake >= 0 ? prefStake : 0;
+    let level = clampScale(pref.level ?? recommended);
+    const W = 800;
+    const { box } = this.modal(W, 880, C.panelDark);
     const head = label('Neuer Run', 44, C.text);
-    head.position.set(380, 50);
+    head.position.set(W / 2, 48);
     const backBtn = new Button('Zurück', 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
-    backBtn.position.set(100, 50);
+    backBtn.position.set(100, 48);
     box.addChild(head, backBtn);
     const content = new Container();
     box.addChild(content);
+    const body = (text: string, y: number, size = 18, color = C.textDim, width = 560) => {
+      const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
+      t.anchor.set(0.5, 0);
+      t.position.set(W / 2, y);
+      content.addChild(t);
+      return t;
+    };
+    const arrow = (txt: string, x: number, y: number, fn: () => void) => {
+      const b = new Button(txt, 70, 70, 0x3b5068, fn, 34);
+      b.position.set(x, y);
+      content.addChild(b);
+    };
+
+    /** Startwerte und Ziele des Small Blinds für die gewählte Schwierigkeit, aus einem Probe Run berechnet */
+    const preview = (deckId: string, opts: { stakeId?: string; level?: number }, y: number) => {
+      const pr = createRun({ seed: 'VORSCHAU', deckId, ...opts });
+      const tgt = (ante: number) => fmt(blindTarget(ante, 'small', { scaling: pr.rules.scaling, deckFactor: pr.rules.blindTargetFactor }));
+      body(`Start: ${pr.hands} Hands, ${pr.discards} Discards, ${pr.handSize} Karten, $${pr.money}\nSmall Blind Ziel: Ante 1 ${tgt(1)}, Ante 4 ${tgt(4)}, Ante 8 ${tgt(8)}`, y, 17, C.chips, 640);
+    };
 
     const render = () => {
       for (const c of [...content.children]) c.destroy({ children: true });
-      const deck = DECKS[deckIdx];
-      const stake = STAKES[stakeIdx];
-      const dl = label('Deck', 20, C.textDim);
-      dl.position.set(380, 105);
-      const back = cardBack(deck.color);
-      back.position.set(380, 200);
-      back.scale.set(0.8);
-      const dn = label(deck.name, 30, C.text);
-      dn.position.set(380, 290);
-      const dd = new Text({ text: deck.description, style: { fontFamily: FONT_BODY, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
-      dd.anchor.set(0.5, 0);
-      dd.position.set(380, 312);
-      const sl = label('Stake', 20, C.textDim);
-      sl.position.set(380, 392);
-      const sn = label(stake.name, 30, stake.color);
-      sn.position.set(380, 428);
-      const sd = new Text({ text: stakeIdx === 0 ? stake.description : `${stake.description}, plus alle vorherigen`, style: { fontFamily: FONT_BODY, fontSize: 18, fontWeight: '700', fill: C.textDim, wordWrap: true, wordWrapWidth: 420, align: 'center' } });
-      sd.anchor.set(0.5, 0);
-      sd.position.set(380, 452);
-      const arrow = (txt: string, x: number, y: number, fn: () => void) => {
-        const b = new Button(txt, 70, 70, 0x3b5068, fn, 34);
-        b.position.set(x, y);
+      // Modus
+      const tab = (text: string, x: number, active: boolean, fn: () => void) => {
+        const b = new Button(text, 330, 52, active ? C.accent : 0x3b5068, fn, 22);
+        b.position.set(x, 112);
         content.addChild(b);
       };
-      content.addChild(dl, back, dn, dd, sl, sn, sd);
-      arrow('‹', 110, 220, () => { deckIdx = (deckIdx + DECKS.length - 1) % DECKS.length; render(); });
-      arrow('›', 650, 220, () => { deckIdx = (deckIdx + 1) % DECKS.length; render(); });
-      arrow('‹', 110, 440, () => { stakeIdx = (stakeIdx + STAKES.length - 1) % STAKES.length; render(); });
-      arrow('›', 650, 440, () => { stakeIdx = (stakeIdx + 1) % STAKES.length; render(); });
+      tab('Feste Stufen', W / 2 - 170, mode === 'stakes', () => { mode = 'stakes'; render(); });
+      tab('Skalierend', W / 2 + 170, mode === 'scale', () => { mode = 'scale'; render(); });
+
+      // Deck
+      const deck = DECKS[deckIdx];
+      const dl = label('Deck', 20, C.textDim);
+      dl.position.set(W / 2, 170);
+      const back = cardBack(deck.color);
+      back.position.set(W / 2, 252);
+      back.scale.set(0.7);
+      const dn = label(deck.name, 30, C.text);
+      dn.position.set(W / 2, 330);
+      content.addChild(dl, back, dn);
+      body(deck.description, 354, 18, C.textDim, 480);
+      arrow('‹', 110, 250, () => { deckIdx = (deckIdx + DECKS.length - 1) % DECKS.length; render(); });
+      arrow('›', 690, 250, () => { deckIdx = (deckIdx + 1) % DECKS.length; render(); });
+
+      // Schwierigkeit
+      let stakeId: string | undefined;
+      let levelOut: number | undefined;
+      if (mode === 'stakes') {
+        const stake = STAKES[stakeIdx];
+        stakeId = stake.id;
+        const sl = label('Schwierigkeit', 20, C.textDim);
+        sl.position.set(W / 2, 438);
+        const sn = label(stake.name, 32, stake.color);
+        sn.position.set(W / 2, 478);
+        content.addChild(sl, sn);
+        const ladderIdx = STAKES.filter((s) => s.cumulative !== false).findIndex((s) => s.id === stake.id);
+        body(ladderIdx > 0 ? `${stake.description}, plus alle vorherigen` : stake.description, 506, 18, C.textDim, 480);
+        body(stake.cumulative === false ? 'Einsteigerstufe, außerhalb der Leiter' : `Stufe ${ladderIdx + 1} der Leiter von ${STAKES.filter((s) => s.cumulative !== false).length}`, 560, 16, C.textDim, 480);
+        preview(deck.id, { stakeId }, 612);
+        arrow('‹', 110, 470, () => { stakeIdx = (stakeIdx + STAKES.length - 1) % STAKES.length; render(); });
+        arrow('›', 690, 470, () => { stakeIdx = (stakeIdx + 1) % STAKES.length; render(); });
+      } else {
+        levelOut = level;
+        const band = scaleBand(level);
+        const sl = label('Stufe wählen', 20, C.textDim);
+        sl.position.set(W / 2, 438);
+        const sn = label(scaleName(level), 32, band.color);
+        sn.position.set(W / 2, 478);
+        content.addChild(sl, sn);
+        // Leiste mit allen Stufen zum Antippen
+        const segW = 26;
+        const gap = 3;
+        const total = SCALE.max - SCALE.min + 1;
+        const x0 = (W - (total * segW + (total - 1) * gap)) / 2;
+        for (let l = SCALE.min; l <= SCALE.max; l++) {
+          const seg = new Container();
+          const color = scaleBand(l).color;
+          const g = new Graphics()
+            .roundRect(0, 0, segW, 44, 6).fill(l <= level ? color : 0x1d2a3a)
+            .stroke({ width: l === level ? 4 : 2, color: l === level ? C.text : C.panelLine });
+          seg.addChild(g);
+          seg.position.set(x0 + (l - SCALE.min) * (segW + gap), 506);
+          seg.eventMode = 'static';
+          seg.cursor = 'pointer';
+          seg.hitArea = { contains: (x: number, y: number) => x >= -2 && x <= segW + 2 && y >= -6 && y <= 56 } as never;
+          seg.on('pointertap', () => { sfx.select(true); level = l; render(); });
+          content.addChild(seg);
+        }
+        const sum = body(scaleSummary(level).join('   ·   '), 562, 17, C.text, 640);
+        const py = sum.y + sum.height + 14;
+        preview(deck.id, { level }, py);
+        const note = profile.bestScale > 0
+          ? `Stufe ${SCALE.normal} ist das Grundspiel. Dein Bestwert: Stufe ${profile.bestScale} gewonnen, empfohlen: Stufe ${recommended}`
+          : `Stufe ${SCALE.normal} ist das Grundspiel. Für den Anfang empfohlen: Stufe 2 bis ${SCALE.normal}`;
+        body(note, py + 56, 15, C.textDim, 640);
+        arrow('‹', 52, 528, () => { level = clampScale(level - 1); render(); });
+        arrow('›', 748, 528, () => { level = clampScale(level + 1); render(); });
+      }
+
       const seedLbl = label('Seed', 20, C.textDim);
-      seedLbl.position.set(380, 520);
-      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 56, 0x3b5068, () => {
-        saveSetupPref({ deckId: deck.id, stakeId: stake.id });
+      seedLbl.position.set(W / 2, 748);
+      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 52, 0x3b5068, () => {
+        saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.showSeedEntry();
-      }, 26);
-      seedBtn.position.set(380, 566);
-      const start = new Button('Start', 300, 70, C.chips, () => {
-        saveSetupPref({ deckId: deck.id, stakeId: stake.id });
-        this.beginNewRun(deck.id, stake.id);
+      }, 24);
+      seedBtn.position.set(W / 2, 790);
+      const start = new Button('Start', 300, 66, C.chips, () => {
+        saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
+        this.beginNewRun(deck.id, stakeId !== undefined ? { stakeId } : { level: levelOut });
       }, 30);
-      start.position.set(380, 645);
+      start.position.set(W / 2, 850);
       content.addChild(seedLbl, seedBtn, start);
     };
     render();
+  }
+
+  /** Tageslauf: jeden Tag ein fester Seed mit Deck, Stufe und Tageswandlung */
+  private showDaily() {
+    const d = dailySetup(dateKey());
+    const entry = getProfile().daily[d.date];
+    const deck = DECKS.find((x) => x.id === d.deckId)!;
+    const twist = TWIST_BY_ID[d.twistId];
+    const W = 740;
+    const { box } = this.modal(W, 810, C.panelDark);
+    const head = label('Tageslauf', 44, C.text);
+    head.position.set(W / 2, 52);
+    const date = label(new Date(`${d.date}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }), 22, C.textDim);
+    date.position.set(W / 2, 100);
+    const back = cardBack(deck.color);
+    back.position.set(W / 2, 210);
+    back.scale.set(0.7);
+    const dn = label(deck.name, 30, C.text);
+    dn.position.set(W / 2, 290);
+    const dd = wrapText(deck.description, 520, 17, C.textDim);
+    dd.position.set(W / 2, 314);
+    const band = scaleBand(d.level);
+    const ln = label(scaleName(d.level), 28, band.color);
+    ln.position.set(W / 2, 394);
+    const ls = wrapText(scaleSummary(d.level).join(' · '), 600, 16, C.textDim);
+    ls.position.set(W / 2, 422);
+    const tw = label(`Wandlung: ${twist.name}`, 28, C.accent);
+    tw.position.set(W / 2, 500);
+    const td = wrapText(twist.description, 560, 18, C.text);
+    td.position.set(W / 2, 530);
+    const seed = label(`Seed ${d.seed}`, 18, C.textDim, { fontWeight: '600' });
+    seed.position.set(W / 2, 586);
+    const best = label(entry ? `Bisher heute: Ante ${entry.ante}${entry.won ? ', gewonnen' : ''}` : 'Heute noch nicht gespielt', 20, entry?.won ? C.green : C.textDim);
+    best.position.set(W / 2, 630);
+    const go = new Button(entry ? 'Nochmal spielen' : 'Starten', 360, 72, C.chips, () => {
+      this.beginNewRun(d.deckId, { level: d.level, seed: d.seed, daily: { date: d.date, twistId: d.twistId } });
+    }, 30);
+    go.position.set(W / 2, 690);
+    const bk = new Button('Zurück', 200, 50, 0x4a3f6b, () => this.showMainMenu(), 22);
+    bk.position.set(W / 2, 764);
+    box.addChild(head, date, back, dn, dd, ln, ls, tw, td, seed, best, go, bk);
   }
 
   /** Home Bildschirm (Vollbild). Nebenmenüs öffnen als Fenster darüber und führen per Zurück hierher. */
@@ -1201,10 +1619,18 @@ export class Game {
     // Ist der Home Bildschirm schon sichtbar (Rückkehr aus einem Nebenmenü), bleibt er stehen
     if (this.homeLayer.children.length > 0) return;
     this.setTableVisible(false);
+    const profile = getProfile();
+    const rank = rankOf(profile);
     this.homeLayer.addChild(buildHome({
       saved: canResume ? saved : null,
       version: APP_VERSION,
+      rank: { name: rank.name, color: rank.color, unlocked: unlockedCount(profile), total: ACHIEVEMENTS.length },
+      dailyDone: !!profile.daily[dateKey()],
+      guidePending: !profile.tutorialDone && !profile.tutorialOffered,
       actions: {
+        guide: () => this.startGuide(),
+        daily: () => this.showDaily(),
+        achievements: () => this.showAchievements(),
         resume: () => this.resume(saved!),
         newRun: () => this.startNewRun(),
         collection: () => this.showCollection(),
@@ -1376,6 +1802,8 @@ export class Game {
     BLIND_KINDS.forEach((kind, i) => {
       const col = new Container();
       col.position.set(35 + i * 315, 90);
+      if (i === run.blindIndex) this.refs.blindColumn = col;
+      if (kind === 'boss') this.refs.blindBoss = col;
       const state = i < run.blindIndex ? 'done' : i === run.blindIndex ? 'current' : 'future';
       const boss = kind === 'boss' && run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined;
       const color = boss ? boss.color : BLIND_COLORS[kind];
@@ -1419,10 +1847,12 @@ export class Game {
         const play = new Button('Spielen', kind === 'boss' ? 220 : 140, 58, C.money, () => this.beginRound(), 24);
         play.position.set(kind === 'boss' ? 150 : 85, 448);
         col.addChild(play);
+        this.refs.blindPlay = play;
         if (kind !== 'boss') {
           const skip = new Button('Skip', 110, 58, 0xf2711c, () => this.doSkip(), 24);
           skip.position.set(222, 448);
           col.addChild(skip);
+          this.refs.blindSkip = skip;
         }
       } else {
         const s = label(state === 'done' ? 'Erledigt' : 'Kommt noch', 21, C.textDim);
@@ -1435,9 +1865,10 @@ export class Game {
   }
 
   private doSkip() {
+    if (this.guardGuide()) return;
     const run = this.run!;
     const r = skipBlind(run);
-    saveRun(run);
+    this.persist();
     this.refreshInfo();
     juice(this.moneyText);
     this.toast(`Tag: ${TAG_BY_ID[r.tagId].name}${r.doubled ? ' (doppelt)' : ''}`);
@@ -1447,10 +1878,20 @@ export class Game {
 
   private async beginRound() {
     const run = this.run!;
+    if (this.tut && !this.tut.allowsEvent('blindStarted')) {
+      sfx.deny();
+      return;
+    }
     this.clearOverlay();
     this.clearScreen();
     this.clearCardViews();
-    const picked = selectBlind(run);
+    let picked: { money: number; consumables: string[] };
+    if (this.tut) {
+      startTutorialRound(run, run.blindIndex);
+      picked = { money: 0, consumables: [] };
+    } else {
+      picked = selectBlind(run);
+    }
     this.busy = true;
     this.syncConsumables();
     sfx.blindStart(BLIND_KINDS[Math.min(run.blindIndex, 2)]);
@@ -1463,12 +1904,17 @@ export class Game {
     }
     await this.drawCards([...run.round!.hand]);
     this.busy = false;
-    saveRun(run);
+    this.persist();
+    this.notifyGuide('blindStarted');
     this.refreshInfo();
   }
 
   private showRoundWon() {
     const run = this.run!;
+    if (this.tut?.finished) {
+      this.showGuideDone();
+      return;
+    }
     const e = computeEarnings(run);
     sfx.win();
     this.fx.flash(0.18, 0xffd23f);
@@ -1499,7 +1945,9 @@ export class Game {
       btn.enabled = false;
       const remaining = run.round!.hand.map((c) => this.cardViews.get(c.id)!).filter(Boolean);
       const paid = cashOut(run);
-      saveRun(run);
+      if (this.tut) rigTutorialShop(run);
+      this.persist();
+      this.notifyGuide('cashedOut');
       this.syncConsumables();
       juice(this.moneyText);
       this.clearOverlay();
@@ -1508,7 +1956,7 @@ export class Game {
       this.clearCardViews();
       if (run.won && !run.winShown) {
         run.winShown = true;
-        saveRun(run);
+        this.persist();
         this.showRunWon();
       } else {
         this.showShop();
@@ -1516,6 +1964,8 @@ export class Game {
     }, 28);
     btn.position.set(290, boxH - 75);
     box.addChild(btn);
+    this.refs.cashoutBtn = btn;
+    this.updateGuide();
   }
 
   private showShop() {
@@ -1529,13 +1979,18 @@ export class Game {
     this.refreshInfo();
     if (run.phase !== 'shop' || !run.shop) return;
     const after = () => {
-      saveRun(run);
+      this.persist();
       this.renderShop();
     };
     this.shopView = buildShop(run, {
       buyCard: (i) => {
+        if (this.tut && (i !== 0 || !this.tut.allowsEvent('bought'))) {
+          this.guardGuide();
+          return;
+        }
         if (buyCard(run, i)) {
           sfx.buy();
+          this.notifyGuide('bought');
           this.syncJokers();
           this.syncConsumables();
           juice(this.moneyText);
@@ -1543,6 +1998,7 @@ export class Game {
         }
       },
       buyAndUse: (i) => {
+        if (this.guardGuide()) return;
         const item = run.shop?.cards[i];
         const type = item?.kind === 'consumable' ? CONSUMABLE_BY_ID[item.defId]?.type : undefined;
         const res = buyAndUse(run, i);
@@ -1552,14 +2008,16 @@ export class Game {
         }
       },
       buyPack: (i) => {
+        if (this.guardGuide()) return;
         if (buyPack(run, i)) {
           sfx.packOpen();
-          saveRun(run);
+          this.persist();
           this.renderShop();
           this.showPack();
         }
       },
       buyVoucher: () => {
+        if (this.guardGuide()) return;
         if (buyVoucher(run)) {
           sfx.buy();
           this.fx.flash(0.06, 0xffd23f);
@@ -1568,14 +2026,20 @@ export class Game {
         }
       },
       reroll: () => {
+        if (this.guardGuide()) return;
         if (reroll(run)) {
           sfx.reroll();
           after();
         }
       },
       nextRound: () => {
+        if (this.tut && !this.tut.allowsEvent('leftShop')) {
+          this.guardGuide();
+          return;
+        }
         leaveShop(run);
-        saveRun(run);
+        this.persist();
+        this.notifyGuide('leftShop');
         this.showBlindSelect();
       },
     }, animate);
@@ -1664,7 +2128,7 @@ export class Game {
 
       const skip = new Button('Überspringen', 240, 56, 0xf2711c, () => {
         closePack(run);
-        saveRun(run);
+        this.persist();
         this.clearOverlay();
         this.showPhase();
       }, 22);
@@ -1685,7 +2149,7 @@ export class Game {
     this.syncJokers();
     this.syncConsumables();
     if (typeof res !== 'boolean') this.toast(res.message, C.accent);
-    saveRun(run);
+    this.persist();
     this.refreshInfo();
     if (run.phase === 'pack') this.showPack();
     else {
@@ -1694,57 +2158,135 @@ export class Game {
     }
   }
 
+  /** Rückschau eines Runs: Textzeilen und Rekorde (verglichen mit dem Stand vor Beginn des Runs) */
+  private runSummary(run: RunState): { lines: string[]; records: string[] } {
+    const sync = getProfile().sync;
+    const same = !!sync && sync.runId === run.runId && sync.startBestHand > 0;
+    const records: string[] = [];
+    if (same && run.stats.bestHand > sync!.startBestHand) records.push(`Neuer Rekord: Beste Hand ${fmt(run.stats.bestHand)}`);
+    if (same && run.ante > sync!.startBestAnte) records.push(`Neuer Rekord: Ante ${run.ante}`);
+    const bestType = run.stats.bestHandType ? ` (${HAND_DATA[run.stats.bestHandType].name})` : '';
+    const lines = [`Beste Hand: ${fmt(run.stats.bestHand)}${bestType}`];
+    const played = Object.values(run.handsPlayed).reduce((a, b) => a + b, 0);
+    lines.push(`Hands gespielt ${played}, Discards genutzt ${run.stats.discardsUsed}, Jokers gekauft ${run.stats.jokersBought}`);
+    const top = (Object.entries(run.handsPlayed) as [HandType, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])[0];
+    if (top) lines.push(`Meistgespielt: ${HAND_DATA[top[0]].name} (${top[1]}x, Level ${run.handLevels[top[0]]})`);
+    const names = run.jokers.map((j) => getJoker(j.defId)?.name).filter(Boolean);
+    lines.push(names.length ? `Jokers: ${names.join(', ')}` : 'Jokers: keine');
+    if (this.runUnlocked.length) {
+      const list = this.runUnlocked.map((id) => ACHIEVEMENTS.find((a) => a.id === id)?.name).filter(Boolean);
+      lines.push(`Neue Erfolge (${list.length}): ${list.join(', ')}`);
+    }
+    return { lines, records };
+  }
+
+  private difficultyLabel(run: RunState): string {
+    return run.difficulty !== null ? scaleName(run.difficulty) : STAKES.find((s) => s.id === run.stakeId)?.name ?? '';
+  }
+
+  /** Einstellung des Runs für "nochmal" und "etwas härter" */
+  private rerun(run: RunState, harder: boolean, sameSeed: boolean) {
+    let opts: { stakeId?: string; level?: number } = run.difficulty !== null ? { level: run.difficulty } : { stakeId: run.stakeId };
+    if (harder) {
+      if (run.difficulty !== null) opts = { level: clampScale(run.difficulty + 1) };
+      else {
+        const ladder = STAKES.filter((s) => s.cumulative !== false);
+        const at = ladder.findIndex((s) => s.id === run.stakeId);
+        opts = { stakeId: ladder[Math.min(ladder.length - 1, at + 1)].id };
+      }
+    }
+    this.beginNewRun(run.deckId, { ...opts, ...(sameSeed ? { seed: run.seed } : {}) });
+  }
+
+  /** Gibt es eine härtere Stufe als die des Runs? */
+  private canGoHarder(run: RunState): string | null {
+    if (run.daily) return null;
+    if (run.difficulty !== null) return run.difficulty < SCALE.max ? scaleName(run.difficulty + 1) : null;
+    const ladder = STAKES.filter((s) => s.cumulative !== false);
+    const at = ladder.findIndex((s) => s.id === run.stakeId);
+    return at < ladder.length - 1 ? ladder[at + 1].name : null;
+  }
+
   private showGameOver() {
     const run = this.run!;
-    saveRun(null);
+    if (!this.tut) saveRun(null);
     sfx.lose();
     this.fx.shake(12);
-    const { box } = this.modal(620, 580, C.panelDark);
+    const W = 760;
+    const sum = this.runSummary(run);
+    const info = wrapText(sum.lines.join('\n'), W - 120, 18, C.text);
+    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
+    const recH = recs ? recs.height + 14 : 0;
+    const tip = wrapText(`Tipp: ${TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length]}`, W - 140, 17, C.accent);
+    const infoH = info.height;
+    const H = 400 + recH + infoH + tip.height + 190;
+    const { box } = this.modal(W, H, C.panelDark);
     const head = label('Verloren', 64, C.mult);
-    head.position.set(310, 80);
-    const l1 = label(`Erreicht: Ante ${run.ante}, Round ${(run.ante - 1) * 3 + run.blindIndex + 1}`, 24);
-    l1.position.set(310, 165);
+    head.position.set(W / 2, 80);
+    const l1 = label(`Erreicht: Ante ${run.ante}, Round ${(run.ante - 1) * 3 + run.blindIndex + 1}`, 26);
+    l1.position.set(W / 2, 160);
+    const l1b = label(this.difficultyLabel(run) + (run.daily ? ', Tageslauf' : ''), 20, C.textDim);
+    l1b.position.set(W / 2, 196);
     const l2 = label(`Punkte: ${fmt(run.round?.score ?? 0)} / ${fmt(run.round?.target ?? 0)}`, 22, C.textDim);
-    l2.position.set(310, 205);
-    // Meistgespielte Hand und Joker des Runs als kleine Rückschau
-    const top = (Object.entries(run.handsPlayed) as [HandType, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])[0];
-    const rows: string[] = [];
-    if (top) rows.push(`Meistgespielt: ${HAND_DATA[top[0]].name} (${top[1]}x, Level ${run.handLevels[top[0]]})`);
-    const names = run.jokers.map((j) => getJoker(j.defId)?.name).filter(Boolean);
-    rows.push(names.length ? `Jokers: ${names.join(', ')}` : 'Jokers: keine');
-    const info = wrapText(rows.join('\n'), 540, 18, C.text);
-    info.position.set(310, 245);
-    const l3 = label(`Seed ${run.seed}`, 18, C.textDim);
-    l3.position.set(310, 372);
-    const b = new Button('Neuer Run', 320, 76, C.chips, () => this.startNewRun(), 30);
-    b.position.set(310, 438);
+    l2.position.set(W / 2, 228);
+    if (recs) recs.position.set(W / 2, 262);
+    info.position.set(W / 2, 262 + recH);
+    tip.position.set(W / 2, info.y + infoH + 22);
+    const seed = label(`Seed ${run.seed}`, 18, C.textDim);
+    seed.position.set(W / 2, tip.y + tip.height + 26);
+    const b = new Button('Neuer Run', 320, 70, C.chips, () => this.startNewRun(), 30);
+    b.position.set(W / 2 - 170, H - 126);
+    const again = new Button('Gleicher Seed', 320, 70, C.accent, () => this.rerun(run, false, true), 28);
+    again.position.set(W / 2 + 170, H - 126);
     const m = new Button('Hauptmenü', 220, 54, 0x3b5068, () => this.showMainMenu(), 22);
-    m.position.set(310, 520);
-    box.addChild(head, l1, l2, info, l3, b, m);
+    m.position.set(W / 2, H - 52);
+    box.addChild(head, l1, l1b, l2, info, tip, seed, b, again, m);
+    if (recs) box.addChild(recs);
   }
 
   private showRunWon() {
+    const run = this.run!;
     sfx.victory();
     this.fx.flash(0.3, 0xffd23f);
     this.fx.shake(10);
-    const { box } = this.modal(620, 440, C.panelDark);
+    const W = 760;
+    const sum = this.runSummary(run);
+    const info = wrapText(sum.lines.join('\n'), W - 120, 18, C.text);
+    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
+    const recH = recs ? recs.height + 14 : 0;
+    const harder = this.canGoHarder(run);
+    const H = 470 + recH + info.height + (harder ? 86 : 0) + 20;
+    const { box } = this.modal(W, H, C.panelDark);
     const head = label('Gewonnen!', 72, C.money, { stroke: { color: C.mult, width: 8 } });
-    head.position.set(310, 90);
-    const l = label(`Ante ${FINAL_ANTE} besiegt.`, 26);
-    l.position.set(310, 175);
-    const sd = label(`Seed ${this.run?.seed ?? ''}`, 18, C.textDim);
-    sd.position.set(310, 212);
-    const a = new Button('Endless weiterspielen', 380, 70, C.chips, () => this.showShop(), 26);
-    a.position.set(310, 270);
-    const b = new Button('Neuer Run', 380, 70, C.mult, () => this.startNewRun(), 26);
-    b.position.set(310, 360);
-    box.addChild(head, l, sd, a, b);
+    head.position.set(W / 2, 90);
+    const l = label(`Ante ${FINAL_ANTE} besiegt auf ${this.difficultyLabel(run)}${run.daily ? ' im Tageslauf' : ''}.`, 24);
+    l.position.set(W / 2, 175);
+    const sd = label(`Seed ${run.seed}`, 18, C.textDim);
+    sd.position.set(W / 2, 212);
+    if (recs) recs.position.set(W / 2, 250);
+    info.position.set(W / 2, 250 + recH);
+    box.addChild(head, l, sd, info);
+    if (recs) box.addChild(recs);
+    let y = 250 + recH + info.height + 60;
+    const a = new Button('Endless weiterspielen', 400, 70, C.chips, () => this.showShop(), 26);
+    a.position.set(W / 2, y);
+    box.addChild(a);
+    y += 86;
+    if (harder) {
+      const hb = new Button(`Härter: ${harder}`, 400, 70, C.accent, () => this.rerun(run, true, false), 26);
+      hb.position.set(W / 2, y);
+      box.addChild(hb);
+      y += 86;
+    }
+    const b = new Button('Neuer Run', 400, 70, C.mult, () => this.startNewRun(), 26);
+    b.position.set(W / 2, y);
+    box.addChild(b);
   }
 }
 
 const SETUP_KEY = 'alatro.setup';
 
-function loadSetupPref(): { deckId?: string; stakeId?: string } {
+function loadSetupPref(): { deckId?: string; stakeId?: string; mode?: string; level?: number } {
   try {
     return JSON.parse(localStorage.getItem(SETUP_KEY) ?? '{}');
   } catch {
@@ -1752,7 +2294,7 @@ function loadSetupPref(): { deckId?: string; stakeId?: string } {
   }
 }
 
-function saveSetupPref(p: { deckId: string; stakeId: string }) {
+function saveSetupPref(p: { deckId: string; stakeId: string; mode: string; level: number }) {
   try {
     localStorage.setItem(SETUP_KEY, JSON.stringify(p));
   } catch {

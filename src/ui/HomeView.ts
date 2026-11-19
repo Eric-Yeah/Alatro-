@@ -1,6 +1,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { DECKS } from '../data/decks';
 import { STAKES } from '../data/stakes';
+import { scaleName } from '../data/difficulty';
 import type { RunState } from '../core/run';
 import { cardBack } from './CardView';
 import { C, VIEW_H, VIEW_W, fmt } from './theme';
@@ -16,13 +17,16 @@ const HOME = {
   buttonW: 480,
   buttonH: 84,
   buttonGap: 104,
-  firstButtonY: 450,
-  smallW: 200,
-  smallH: 66,
-  smallGap: 220,
+  firstButtonY: 468,
+  halfW: 232,
+  halfGap: 248,
+  smallW: 180,
+  smallH: 62,
+  smallGap: 196,
+  rankY: 382,
   stars: 46,
-  fanX: 235,
-  fanY: 590,
+  fanX: 190,
+  fanY: 520,
   fanAngles: [-0.34, -0.12, 0.1],
   fanSpread: 78,
   deckColors: [0x5b3fa8, 0x2a5fa8, 0xa8324a],
@@ -35,11 +39,27 @@ export interface HomeActions {
   tutorial: () => void;
   options: () => void;
   patchNotes: () => void;
+  /** geführte Einführungsrunde */
+  guide: () => void;
+  daily: () => void;
+  achievements: () => void;
+}
+
+export interface HomeRank {
+  name: string;
+  color: number;
+  unlocked: number;
+  total: number;
 }
 
 export interface HomeInput {
   /** Gespeicherter Run, der sich fortsetzen lässt, sonst null */
   saved: RunState | null;
+  rank: HomeRank;
+  /** Tageslauf von heute schon gespielt? */
+  dailyDone: boolean;
+  /** Einführungsrunde noch nicht abgeschlossen (Knopf wird hervorgehoben) */
+  guidePending: boolean;
   version: string;
   actions: HomeActions;
 }
@@ -108,7 +128,12 @@ export function buildHome(input: HomeInput): Container {
   tag.position.set(VIEW_W / 2, HOME.taglineY);
   root.addChild(title, sub, tag);
 
-  // Hauptknöpfe: Fortsetzen (falls vorhanden), Neuer Run, Sammlung
+  // Rang und Erfolge
+  const rank = label(`${input.rank.name}  ·  ${input.rank.unlocked} von ${input.rank.total} Erfolgen`, 22, input.rank.color);
+  rank.position.set(VIEW_W / 2, HOME.rankY);
+  root.addChild(rank);
+
+  // Hauptknöpfe: Fortsetzen (falls vorhanden), Neuer Run
   let y = HOME.firstButtonY;
   const main = (text: string, color: number, fn: () => void, subline?: string) => {
     const b = new Button(text, HOME.buttonW, HOME.buttonH, color, fn, 32);
@@ -123,21 +148,39 @@ export function buildHome(input: HomeInput): Container {
   };
   if (saved) {
     const deck = DECKS.find((d) => d.id === saved.deckId)?.name ?? '';
-    const stake = STAKES.find((s) => s.id === saved.stakeId)?.name ?? '';
-    main('Fortsetzen', C.chips, actions.resume, `Ante ${saved.ante}, ${fmt(saved.money)} Geld, ${deck}, ${stake}`);
+    const stake = saved.difficulty !== null ? scaleName(saved.difficulty) : STAKES.find((s) => s.id === saved.stakeId)?.name ?? '';
+    main('Fortsetzen', C.chips, actions.resume, `Ante ${saved.ante}, ${fmt(saved.money)} Geld, ${deck}, ${stake}${saved.daily ? ', Tageslauf' : ''}`);
   }
   main('Neuer Run', C.mult, actions.newRun);
-  main('Sammlung', 0x6b5a9e, actions.collection);
+
+  // Zwei Hälften: Tageslauf und Erfolge
+  const half = (text: string, i: number, color: number, fn: () => void, sub?: string) => {
+    const b = new Button(text, HOME.halfW, HOME.buttonH, color, fn, 28);
+    b.position.set(VIEW_W / 2 + (i - 0.5) * HOME.halfGap, y);
+    root.addChild(b);
+    if (sub) {
+      const s = label(sub, 16, C.textDim, { fontWeight: '700' });
+      s.position.set(b.x, y + HOME.buttonH / 2 + 14);
+      root.addChild(s);
+    }
+  };
+  half('Tageslauf', 0, 0x2f9f7a, actions.daily, input.dailyDone ? 'heute gespielt' : 'neu heute');
+  half('Erfolge', 1, 0xc9962b, actions.achievements, `${input.rank.unlocked} von ${input.rank.total}`);
+  y += HOME.buttonGap + 12;
 
   // Nebenmenüs in einer Reihe
-  const small = (text: string, i: number, fn: () => void) => {
-    const b = new Button(text, HOME.smallW, HOME.smallH, 0x4a3f6b, fn, 24);
-    b.position.set(VIEW_W / 2 + (i - 1) * HOME.smallGap, y + 10);
+  const smalls: [string, () => void, number?][] = [
+    ['Sammlung', actions.collection, 0x6b5a9e],
+    [input.guidePending ? 'Einführung!' : 'Einführung', actions.guide, input.guidePending ? C.accent : 0x4a3f6b],
+    ['Anleitung', actions.tutorial],
+    ['Optionen', actions.options],
+    ['Neuigkeiten', actions.patchNotes],
+  ];
+  smalls.forEach(([text, fn, color], i) => {
+    const b = new Button(text, HOME.smallW, HOME.smallH, color ?? 0x4a3f6b, fn, 22);
+    b.position.set(VIEW_W / 2 + (i - (smalls.length - 1) / 2) * HOME.smallGap, y + 10);
     root.addChild(b);
-  };
-  small('Anleitung', 0, actions.tutorial);
-  small('Optionen', 1, actions.options);
-  small('Neuigkeiten', 2, actions.patchNotes);
+  });
 
   const ver = label(`Version ${version}`, 18, C.textDim, { fontWeight: '600' });
   ver.position.set(VIEW_W / 2, VIEW_H - 36);

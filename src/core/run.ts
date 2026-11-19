@@ -14,7 +14,27 @@ import { rollRarity, sellValue as sellFromPrice } from './shop';
 import { EDITIONS } from '../data/modifiers';
 import type { Card, HandType, Suit } from './types';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
+
+/** Zähler eines einzelnen Runs (für Erfolge und die Rückschau). Wird mit dem Spielstand gespeichert. */
+export interface RunStats {
+  /** höchste Punktzahl einer einzelnen Hand */
+  bestHand: number;
+  /** Hand Typ der besten Hand */
+  bestHandType: HandType | null;
+  /** abgeworfene Discards (Aktionen) */
+  discardsUsed: number;
+  rerolls: number;
+  jokersBought: number;
+  /** höchster Geldstand nach einer Auszahlung */
+  moneyPeak: number;
+  /** Blinds, die mit nur einer Hand gewonnen wurden */
+  oneHandWins: number;
+}
+
+export function newRunStats(): RunStats {
+  return { bestHand: 0, bestHandType: null, discardsUsed: 0, rerolls: 0, jokersBought: 0, moneyPeak: 0, oneHandWins: 0 };
+}
 
 /** Regeln eines Runs. Decks, Stakes und Vouchers verändern diese Werte (M2). */
 export interface RunRules {
@@ -142,6 +162,8 @@ export interface PackState {
 export interface RunState {
   version: number;
   seed: string;
+  /** eindeutige Kennung dieses Runs (Seed plus Startzeit), für die Statistik über mehrere Runs */
+  runId: string;
   rng: RngStreamsState;
   ante: number;
   blindIndex: number; // 0 small, 1 big, 2 boss
@@ -166,6 +188,14 @@ export interface RunState {
   phase: Phase;
   deckId: string;
   stakeId: string;
+  /** Stufe der skalierenden Schwierigkeit, null bei einer festen Stake Stufe */
+  difficulty: number | null;
+  /** Datum des Tageslaufs (JJJJ-MM-TT), null bei normalen Runs */
+  daily: string | null;
+  /** Tageswandlung des Tageslaufs */
+  twistId: string | null;
+  /** Zähler dieses Runs */
+  stats: RunStats;
   vouchers: string[];
   /** Tags, die auf ihr Ereignis warten */
   pendingTags: string[];
@@ -202,6 +232,7 @@ export function newRun(seed: string): RunState {
   return {
     version: SAVE_VERSION,
     seed,
+    runId: `${seed}-${Date.now().toString(36)}`,
     rng: RngStreams.create(seed).data,
     ante: 1,
     blindIndex: 0,
@@ -224,6 +255,10 @@ export function newRun(seed: string): RunState {
     phase: 'blindSelect',
     deckId: 'nachthimmel',
     stakeId: 'daemmerung',
+    difficulty: null,
+    daily: null,
+    twistId: null,
+    stats: newRunStats(),
     vouchers: [],
     pendingTags: [],
     skips: 0,
@@ -424,6 +459,10 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
   });
   r.playedTypes.push(type);
   r.score += result.total;
+  if (result.total > run.stats.bestHand) {
+    run.stats.bestHand = result.total;
+    run.stats.bestHandType = result.handType;
+  }
   run.money += result.money - (boss?.moneyPerHand ?? 0);
   run.handsPlayed[result.handType] = (run.handsPlayed[result.handType] ?? 0) + 1;
   const destroyedIds = new Set(result.destroyed.map((c) => c.id));
@@ -447,6 +486,7 @@ export function discardCards(run: RunState, ids: number[]): void {
   const discarded = takeFromHand(r, ids);
   r.discardPile.push(...discarded);
   r.discardsLeft--;
+  run.stats.discardsUsed++;
   run.money += runJokerHook(run, 'discard', { discarded }).money;
 }
 
@@ -497,6 +537,8 @@ export function computeEarnings(run: RunState): RoundEarnings {
 export function finishRound(run: RunState): RoundEarnings {
   const earnings = computeEarnings(run);
   run.money += earnings.total;
+  run.stats.moneyPeak = Math.max(run.stats.moneyPeak, run.money);
+  if (run.round && run.round.playedTypes.length === 1 && run.round.score >= run.round.target) run.stats.oneHandWins++;
   runJokerHook(run, 'roundEnd', {}, true);
   const wasBoss = run.round!.blind === 'boss';
   run.round = null;
