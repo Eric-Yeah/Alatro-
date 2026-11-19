@@ -1,48 +1,46 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { getJoker, type JokerInstance } from '../core/jokers';
 import { EDITIONS } from '../data/modifiers';
 import { editionOverlay } from './editionFx';
-import { drawJokerArt } from './jokerArt';
+import { ART_H, ART_Y, BAND_H, BAND_TEXT, BAND_Y, TILE_H, TILE_SCALE, TILE_W } from '../data/jokerArt';
+import { jokerTexture } from './jokerArt';
 import { effectTags } from './jokerInfo';
-import { C, EDITION_COLORS, FONT_BODY, RARITY_COLORS } from './theme';
+import { C, EDITION_COLORS, FONT_BODY } from './theme';
 import { label } from './widgets';
 
-export const JOKER_W = 104;
-export const JOKER_H = 140;
+export const JOKER_W = TILE_W * TILE_SCALE;
+export const JOKER_H = TILE_H * TILE_SCALE;
 
 export class JokerView extends Container {
   constructor(public readonly joker: JokerInstance) {
     super();
     const def = getJoker(joker.defId)!;
-    const color = RARITY_COLORS[def.rarity];
     const w = JOKER_W, h = JOKER_H;
-    const g = new Graphics()
-      .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
-      .roundRect(-w / 2, -h / 2, w, h, 10).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
-      .roundRect(-w / 2 + 7, -h / 2 + 7, w - 14, h - 50, 6).fill(color);
-    const art = new Graphics();
-    art.y = -h / 2 + 7 + (h - 50) / 2;
-    drawJokerArt(art, joker.defId, w - 14, h - 50, 26);
+    const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 });
+    // ganze Kachel als Pixel Art: Rahmen in Farbe der Seltenheit, Motiv, dunkles Namensband
+    const tile = new Sprite(jokerTexture(joker.defId, def.rarity));
+    tile.anchor.set(0.5);
+    tile.scale.set(TILE_SCALE);
     const name = new Text({
       text: def.name,
-      style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '800', fill: C.cardEdge, align: 'center', wordWrap: true, wordWrapWidth: w - 10 },
+      style: { fontFamily: FONT_BODY, fontSize: 14, fontWeight: '800', fill: BAND_TEXT, align: 'center' },
     });
     name.anchor.set(0.5);
-    name.y = h / 2 - 22;
+    name.y = -h / 2 + (BAND_Y + BAND_H / 2) * TILE_SCALE;
     // lange einzelne Wörter (z. B. Kartenhändler) verkleinern statt über den Kartenrand laufen
-    if (name.width > w - 8) name.scale.set((w - 8) / name.width);
-    this.addChild(g, art, name);
-    // Wirkungs Marken am unteren Rand der Grafik: Farbe und Buchstabe zeigen auf einen Blick, was der Joker tut
+    if (name.width > w - 14) name.scale.set((w - 14) / name.width);
+    this.addChild(shadow, tile, name);
+    // Wirkungs Marken am unteren Rand des Motivs: Farbe und Buchstabe zeigen auf einen Blick, was der Joker tut
     const tags = effectTags(def).slice(0, 5);
-    const pw = 22, ph = 17, gap = 3;
+    const pw = 18, ph = 14, gap = 2;
     const rowW = tags.length * pw + (tags.length - 1) * gap;
     tags.forEach((tg, i) => {
       const px = -rowW / 2 + i * (pw + gap);
-      const py = h / 2 - 43 - ph - 4;
+      const py = -h / 2 + (ART_Y + ART_H) * TILE_SCALE - ph - 5;
       const pill = new Graphics()
-        .roundRect(px - 2, py - 2, pw + 4, ph + 4, 7).fill(C.cardEdge)
-        .roundRect(px, py, pw, ph, 5).fill(tg.color);
-      const t = label(tg.short, 12, 0xffffff);
+        .roundRect(px - 2, py - 2, pw + 4, ph + 4, 6).fill(C.cardEdge)
+        .roundRect(px, py, pw, ph, 4).fill(tg.color);
+      const t = label(tg.short, 11, 0xffffff);
       t.position.set(px + pw / 2, py + ph / 2);
       this.addChild(pill, t);
     });
