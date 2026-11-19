@@ -21,7 +21,8 @@ Stand: Audit vor Beginn der Umbauten.
 | M2 Unit Tests (`src/core/m2.test.ts`) | `npm test` | 31 von 31 grün |
 | M4 Unit Tests (`src/core/m4.test.ts`, `m4info.test.ts`) | `npm test` | 62 von 62 grün |
 | M3 Unit Tests (`src/core/m3.test.ts`) | `npm test` | 97 von 97 grün |
-| M5 und M6 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen, Tempo, Grafikstufe, FPS Messung) | `npm test` | 15 von 15 grün (gesamt 246 in `src`) |
+| M5 und M6 Unit Tests (`src/m5.test.ts`: Einstellungen, Stufen, Tonleiter, Stimmungen, Tempo, Grafikstufe, FPS Messung) | `npm test` | 15 von 15 grün |
+| Review 0.4.0 (`src/core/fuzz.test.ts` Zufallsläufe mit Bot und Eingabeprüfung, Viewport mit sicheren Rändern) | `npm test` | gesamt 266 von 266 grün in `src`, Spezifikation 87 von 87 |
 
 Die Spezifikationstests laufen über den Adapter `tests/spec/helpers.ts`. Fehlende Engine Funktionen werfen dort "Noch nicht implementiert". Beim Umbau wird nur der Adapter angepasst, die erwarteten Werte bleiben. Die CI (GitHub Pages Deploy) führt nur `npm test` aus, damit rote Spezifikationstests das Deployment nicht blockieren.
 
@@ -247,6 +248,14 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **O62 (Auslöser Zeile):** Der Auslöser wird aus dem deutschen Beschreibungstext geraten (kein eigenes Datenfeld). Bei einem neuen Joker mit ungewöhnlichem Text prüfen, ob die Zeile passt, sonst das Muster in `triggerLabel` ergänzen. Ein Test stellt sicher, dass jeder Joker mindestens eine Marke und eine Zeile hat.
 * **Geprüft:** Joker Karten und Beschreibungen in beiden Paletten im Browser gerendert (Chromium). Tooltip im laufenden Spiel und die Pack Ansicht nur im Code angepasst, App startet ohne Fehler.
 
+### Review und Playtest (Version 0.4.0)
+
+* Ausführliche Befunde mit Priorität und Ergebnis stehen in `docs/PLAYTEST.md`.
+* Engine: Zufallsläufe mit Bot über alle Decks (Invarianten, Speichern und Laden in jedem Schritt, Determinismus) ohne Fehler. Eingabeprüfung, Teufelsmarkt, Hehler Balance (O62 bis O64).
+* UI: Boss Regel im Blind Feld, Round Score passt sich an, Consumable Zähler, Namen auf Karten, Seal und Edition lesbar, Shop Vorschau, Einführungshinweis, Game Over Rückschau, größere Tippflächen, sichere Ränder, Audio nach Unterbrechung (O65 bis O70).
+* Design: tiefere Nachtpalette, warmer Shop Ton, mehr Sterne. Alle Zahlen weiter in `src/data/juice.ts`.
+* Offen: Hochformat Layout am iPad (O68), Klang und Bildrate auf dem Gerät, leere Tischmitte im Ruhezustand.
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).
@@ -337,3 +346,12 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O59 | Patch Notes | Einträge in `src/data/patchnotes.ts`, Version steht dort und in `package.json` (ein Test prüft Gleichheit). Nach einem Update erscheinen sie einmal automatisch, gemerkt unter `alatro.patchSeen.v1`. Bei jedem Release einen Eintrag ergänzen |
 | O60 | Anleitung | Texte in `src/data/tutorial.ts`. Bei Regeländerungen (Startwerte, Blinds, Shop) die Seiten mit anpassen |
 | O61 | Home Bildschirm | Eigene Gestaltung (Sterne, Kartenfächer, Titel), keine Vorlage. Der Spieltisch wird dahinter ausgeblendet statt nur abgedunkelt. Der Menü Knopf im Spiel ist bei offenen Fenstern (z. B. Blind Auswahl) nicht erreichbar, wie bisher |
+| O62 | Hehler (Balance, Review 0.4.0) | Kosten 7 statt 3, Verkauf plus $8 statt plus $10. Vorher war Kaufen und Verkaufen ein sicherer Gewinn von $8 (aus Packs sogar $11 gratis). Neu bleibt ein kleiner Gewinn, der einen Slot kostet |
+| O63 | Eingabeprüfung Spielen und Abwerfen | `playCards` und `discardCards` werfen bei IDs, die nicht in der Hand liegen, oder bei Duplikaten, bevor eine Hand verbraucht wird. Die UI sendet nur gültige Auswahlen, die Prüfung schützt die Engine |
+| O64 | Teufelsmarkt ohne Joker | Das Geld sinkt nur auf $0, wenn ein Joker erzeugt wurde (leerer Pool lässt das Geld unberührt) |
+| O65 | Shop Vorschau | Im Shop und in Packs zeigt die Seitenleiste statt Round Score und Hand Feld eine Vorschau: nächster Blind mit Ziel und Belohnung, dazu die Boss Regel der Ante. Ist der nächste Blind der Boss, steht die Regel direkt unter seinem Namen |
+| O66 | Einführungshinweis | In der Tischmitte steht in der ersten Runde ein Hinweis zum Antippen der Karten, bis die erste Hand gespielt wurde. Gemerkt unter `alatro.hints.v1` (unabhängig vom Spielstand). Weitere Hinweise (Shop, Joker Reihenfolge) wären mit `hintSeen` und `markHintSeen` in `src/settings.ts` leicht zu ergänzen |
+| O67 | Sichere Ränder | `computeView` kennt Insets, `main.ts` liest `env(safe-area-inset-*)` über ein verstecktes Element. Gilt nur für das Querformat und iPad. Beim Handy im gedrehten Hochformat bleiben die Ränder unberücksichtigt |
+| O68 | Hochformat am iPad | Weiterhin nur eingepasst (Karten etwa halb so groß wie im Querformat). Ein eigenes Layout wäre ein größerer Schritt. Alternative: wie beim Handy um 90 Grad drehen, was den Faktor von 0,56 auf 0,75 hebt, aber Kopf neigen verlangt. Offen, Entscheidung beim Eigentümer |
+| O69 | Seal und Edition auf Karten | Seal zeigt einen Buchstaben im Kreis (E, M, S aus dem Namen), Editions zeigen ihren Namen oben rechts von der Eckmarke. Neue Seals sollten einen eindeutigen Anfangsbuchstaben haben, sonst wäre ein eigenes Feld in `SealDef` nötig |
+| O70 | Test Hook | `main.ts` setzt `globalThis.__PIXI_APP__` (Standard der Pixi Devtools). Automatisierte Browser Tests lesen darüber Texte und Tippflächen aus der Szene. Kein Einfluss auf das Spiel |

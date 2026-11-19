@@ -8,6 +8,18 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.4.0',
+    date: '19.11.2026',
+    title: 'Durchgesehen und aufgeräumt',
+    items: [
+      'Neu: Der Shop zeigt in der Seitenleiste den nächsten Blind und die Regel des Bosses. Ein Hinweis in der ersten Runde erklärt das Auswählen der Karten.',
+      'Neu: Karten zeigen den Namen ihrer Edition und einen Buchstaben im Seal. Das Game Over zeigt Meistgespieltes und Jokers.',
+      'Neu: Dunklere Nachtpalette mit mehr Sternen, im Shop mit warmem Messing Ton. Das Spielfeld achtet auf Statusleiste und Home Indikator.',
+      'Behoben: Abgeschnittene Boss Regel, zu lange Punktzahlen und Kartennamen, falscher Consumable Zähler, zu kleine Knöpfe in Detail Karten.',
+      'Balance: Hehler kostet $7 und zahlt $8 beim Verkauf (vorher ein sicherer Gewinn).',
+    ],
+  },
+  {
     version: '0.3.3',
     date: '19.11.2026',
     title: 'Jokers auf einen Blick',

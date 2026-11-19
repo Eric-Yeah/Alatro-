@@ -1,6 +1,6 @@
-# Übergabe: Stand nach M5, M6 teilweise, klarer Pixel Stil (Version 0.3.3)
+# Übergabe: Stand nach Review und Playtest (Version 0.4.0)
 
-Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
+Stand: 19.11.2026. Branch `claude/eager-brown-4vjfbc`. Befunde und Änderungen des Reviews: `docs/PLAYTEST.md`.
 
 ## Wo wir stehen
 
@@ -14,9 +14,17 @@ Stand: 18.11.2026. Branch `claude/zealous-ptolemy-xm2a7i`.
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
 | M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
 
-Teststand: `npm test` 263 von 263 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
+Teststand: `npm test` 266 von 266 grün, `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Review 0.4.0: was neu ist und wie man testet
+
+* **Zufallslauf Test:** `src/core/fuzz.test.ts` spielt Runs mit allen Decks per Bot (beste Hand per Engine Vorschau, Shop, Packs, Consumables), prüft Invarianten und wiederholt jeden Run mit Speichern und Laden in jedem Schritt. Läuft in `npm test` (etwa 5 Sekunden). Neue Mechaniken, die Zustand verändern, sollten hier keine Invariante brechen.
+* **Browser Tests per Playwright:** `main.ts` setzt `globalThis.__PIXI_APP__`. Ein Skript kann über `__PIXI_APP__.stage` alle Objekte mit `eventMode` `static` durchlaufen (Text und `getBounds()`), daraus Tippkoordinaten bilden und Szenen prüfen. Szenen lassen sich im Dev Server per `await import('/src/core/game.ts')` in der Seite erzeugen, als JSON nach `localStorage['alatro.run.v1']` schreiben, neu laden und Fortsetzen antippen (siehe Abschnitt Browser Test). Der Vite Dev Server lädt bei Dateiänderungen neu: für lange Bot Läufe eine Kopie des Projekts mit eigenem Port nutzen. Headless läuft WebGL per Software, ein Bildschirmfoto braucht dann Sekunden, die Bildrate sagt nichts über das iPad.
+* **Neue UI Bausteine:** Shop Vorschau in der Seitenleiste (`buildNextPanel`, `updateNextPanel` in `Game.ts`), Einführungshinweise (`hintSeen`, `markHintSeen` in `settings.ts`), sichere Ränder (`Insets` in `viewport.ts`), Game Over Rückschau (`showGameOver`).
+* **Werte im Blick:** Hehler kostet 7 und zahlt 8 (O62). Palette der Stimmungen in `data/juice.ts` (`MOODS`), Sternfarben im Shader in `Background.ts`.
+* **Als Nächstes:** Auf dem iPad prüfen: Klang nach Appwechsel (Audio Kontext), Statusleiste und Home Indikator in der installierten PWA (Insets), Bildrate mit FPS Anzeige, Tippgefühl der größeren Knöpfe. Entscheidung offen: Hochformat Layout (O68). Ideen: weitere Einführungshinweise für Shop und Joker Reihenfolge, leere Tischmitte füllen, Joker Karten im Tisch Fach etwas größer zeichnen.
 
 ## Projektstruktur
 
