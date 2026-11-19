@@ -8,11 +8,34 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
-    version: '0.5.1',
+    version: '0.6.2',
     date: '19.11.2026',
     title: 'Neuer Titel',
     items: [
       'Neu: Der Titel ALATRO im Hauptmenü besteht jetzt aus sechs Spielkarten, die beim Öffnen nacheinander hingeworfen werden. Berühr eine Karte, dann hebt sie sich. Tipp auf den Titel dreht alle Karten um, ein zweiter Tipp dreht sie zurück.',
+    ],
+  },
+  {
+    version: '0.6.1',
+    date: '19.11.2026',
+    title: 'Vibration',
+    items: [
+      'Neu: Vibration bei Berührungen, Zählschritten, X Mult, dem Aufschlag der Gesamtpunkte, Shop, Consumables, Sieg und Niederlage. Je höher der Treffer, desto kräftiger. In den Optionen abschaltbar.',
+      'Hinweis: Android Geräte vibrieren voll. Auf dem iPhone gibt es nur ein leichtes Tippen bei Berührungen, das iPad hat keinen Vibrationsmotor.',
+    ],
+  },
+  {
+    version: '0.6.0',
+    date: '19.11.2026',
+    title: 'Sternenatlas, Siegel und Rückschau',
+    items: [
+      'Neu: Die Sammlung heißt jetzt Sternenatlas. Oben steht der Gesamtfortschritt, neue Funde tragen ein NEU Schild, und noch unbekannte Einträge zeigen einen Hinweis, wo man sie findet. Auf dem Hauptmenü zeigt der Atlas Knopf den Fortschritt und leuchtet bei neuen Funden.',
+      'Neu: Im Run erscheint ein Hinweis, sobald etwas Neues in den Atlas kommt.',
+      'Neu: Siegel am Deck. Im Run Setup siehst du pro Deck die höchste Stufe der Leiter, auf der du gewonnen hast, und das nächste Ziel. Nichts ist gesperrt, es ist nur ein Ziel.',
+      'Neu: Sofort nochmal nach einem Run startet mit denselben Einstellungen und einem neuen Seed. Die Rückschau zeigt, wie viele Punkte bis zum Ziel fehlten (ab 30 Prozent) und was neu im Atlas ist.',
+      'Neu: Beim Hochzählen klingt ein heller Ton, sobald das Ziel des Blinds erreicht ist. Wer das Ziel deutlich übertrifft, sieht den Überschuss und hört eine größere Fanfare. Die Fanfare klingt für Small, Big und Boss Blind verschieden.',
+      'Neu: Tippen während der Punkte Animation beschleunigt sie kurz.',
+      'Behoben: Die Sammlung zeigte bei Jokers rohe Platzhalter wie {mult}. Zu hohe Fenster werden nun auf den Bildschirm eingepasst.',
     ],
   },
   {

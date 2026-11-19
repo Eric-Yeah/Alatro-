@@ -1,6 +1,6 @@
 import { richText } from './richText';
 import { Container, Graphics } from 'pixi.js';
-import { COLLECTION_TABS, collectionEntries, loadDiscovered, type CollectionEntry, type CollectionTab } from '../collection';
+import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS } from './theme';
 import { Button, label, tabBar } from './widgets';
 
@@ -25,25 +25,32 @@ function entryColor(e: CollectionEntry): number {
 /** Sammlung: alle Inhalte nach Reitern, nicht gesehene Einträge bleiben verdeckt. */
 export function buildCollection(box: Container, close: () => void) {
   const W = COLLECTION_W;
-  const found = new Set(loadDiscovered());
+  const discovered = loadDiscovered();
+  const found = new Set(discovered);
+  // Neu Marker: gelten, bis die Sammlung geschlossen wird
+  const fresh = new Set(unseenKeys(discovered));
+  const total = collectionProgress(discovered);
   let tab: CollectionTab = 'jokers';
   let page = 0;
 
-  const head = label('Sammlung', 38);
-  head.position.set(W / 2, 40);
-  box.addChild(head);
+  const head = label('Sternenatlas', 38);
+  head.position.set(W / 2, 30);
+  const overall = label(`${total.found} von ${total.total} entdeckt (${Math.round(total.fraction * 100)} Prozent)`, 18, C.accent);
+  overall.position.set(W / 2, 62);
+  box.addChild(head, overall);
   const dyn = new Container();
   box.addChild(dyn);
 
   const render = () => {
     for (const c of [...dyn.children]) c.destroy({ children: true });
-    const bar = tabBar(COLLECTION_TABS, W - 80, tab, (id) => { tab = id; page = 0; render(); }, 16);
-    bar.position.set(40, 82);
+    const bar = tabBar(COLLECTION_TABS.map((t) => ({ id: t.id, name: collectionEntries(t.id).some((e) => fresh.has(e.key)) ? `${t.name} *` : t.name })), W - 80, tab, (id) => { tab = id; page = 0; render(); }, 16);
+    bar.position.set(40, 88);
     dyn.addChild(bar);
 
     const entries = collectionEntries(tab);
     const seen = entries.filter((e) => found.has(e.key)).length;
-    const count = label(`${seen} von ${entries.length} entdeckt`, 20, C.textDim);
+    const newHere = entries.filter((e) => fresh.has(e.key)).length;
+    const count = label(`${seen} von ${entries.length} entdeckt${newHere ? `, ${newHere} neu` : ''}`, 20, newHere ? C.money : C.textDim);
     count.position.set(W / 2, 156);
     dyn.addChild(count);
 
@@ -64,6 +71,18 @@ export function buildCollection(box: Container, close: () => void) {
       const sub = label(known ? groupName(e.group) : 'Noch nicht gesehen', 15, known ? color === 0x2e2838 ? C.textDim : C.accent : C.textDim);
       sub.position.set(x + CELL_W / 2, y + 70);
       dyn.addChild(name, sub);
+      if (known && fresh.has(e.key)) {
+        const badge = label('NEU', 14, 0x1a1a1a);
+        const bw = badge.width + 16;
+        const bg = new Graphics().roundRect(x + CELL_W - bw - 10, y + 22, bw, 22, 6).fill(C.money);
+        badge.position.set(x + CELL_W - bw / 2 - 10, y + 33);
+        dyn.addChild(bg, badge);
+      }
+      if (!known) {
+        const hint = richText(collectionHint(e), CELL_W - 28, { size: 15, theme: 'dark' });
+        hint.position.set(x + CELL_W / 2, y + 96);
+        dyn.addChild(hint);
+      }
       if (known) {
         const d = richText(e.description, CELL_W - 28, { size: 15, theme: 'dark' });
         d.position.set(x + CELL_W / 2, y + 92);
@@ -83,7 +102,7 @@ export function buildCollection(box: Container, close: () => void) {
   };
   render();
 
-  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, close, 24);
+  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, () => { markAllSeen(); close(); }, 24);
   closeBtn.position.set(W - 190, COLLECTION_H - 50);
   box.addChild(closeBtn);
 }

@@ -8,6 +8,7 @@ import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import type { PackDef } from '../data/packs';
 import { sfx } from './audio';
+import { haptics } from './haptics';
 import { CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
@@ -382,6 +383,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     selected = slot;
     if (!slot) return;
     sfx.click();
+    haptics.tap();
     tween(slot.item, { y: slot.homeY - L.lift }, 140, easeOutBack);
     const w = L.calloutW;
     const cx = Math.max(w / 2 + 14, Math.min(SHOP_W - w / 2 - 14, slot.x));

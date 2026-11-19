@@ -1,3 +1,4 @@
+import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
 import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
 
 export interface Settings {
@@ -7,6 +8,7 @@ export interface Settings {
   speed: string;
   quality: Quality;
   fps: boolean;
+  haptics: boolean;
 }
 
 const KEY = 'alatro.settings.v2';
@@ -24,12 +26,26 @@ export function parseSettings(raw: unknown): Settings {
     speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
     quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
+    haptics: typeof o.haptics === 'boolean' ? o.haptics : DEFAULT_SETTINGS.haptics,
   };
 }
 
-/** Tempofaktor der aktuellen Einstellung (1 = normal) */
+/** Kurzzeitiger Schub durch Tippen während einer Animation (Zeitpunkt, bis zu dem er gilt) */
+let boostUntil = 0;
+
+/** Tippen beschleunigt die laufende Animation für kurze Zeit (Faktor und Dauer in data/report.ts) */
+export function tapBoost(now: number = performance.now()) {
+  boostUntil = now + TAP_BOOST_MS;
+}
+
+export function boostActive(now: number = performance.now()): boolean {
+  return now < boostUntil;
+}
+
+/** Tempofaktor der aktuellen Einstellung (1 = normal), mit Schub durch Tippen */
 export function speedFactor(s: Settings = getSettings()): number {
-  return SPEED_STEPS.find((x) => x.id === s.speed)?.factor ?? 1;
+  const base = SPEED_STEPS.find((x) => x.id === s.speed)?.factor ?? 1;
+  return boostActive() ? base * TAP_BOOST : base;
 }
 
 export function clampVolume(v: number): number {
