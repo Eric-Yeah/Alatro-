@@ -80,6 +80,8 @@ class Haptics {
   total(boom: number) { this.play(totalPattern(boom)); }
 
   // ───────────────────────────────────────────── Spielfluss
+  /** Ziel des Blinds beim Hochzählen erreicht */
+  goal() { this.play(HAPTICS.goal); }
   win() { this.play(HAPTICS.win); }
   lose() { this.play(HAPTICS.lose); }
   victory() { this.play(HAPTICS.victory); }

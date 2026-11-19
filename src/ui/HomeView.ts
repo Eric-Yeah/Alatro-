@@ -60,6 +60,8 @@ export interface HomeInput {
   dailyDone: boolean;
   /** Einführungsrunde noch nicht abgeschlossen (Knopf wird hervorgehoben) */
   guidePending: boolean;
+  /** Fortschritt des Sternenatlas (Sammlung) und Zahl der noch nicht angesehenen Funde */
+  atlas: { found: number; total: number; fresh: number };
   version: string;
   actions: HomeActions;
 }
@@ -170,7 +172,7 @@ export function buildHome(input: HomeInput): Container {
 
   // Nebenmenüs in einer Reihe
   const smalls: [string, () => void, number?][] = [
-    ['Sammlung', actions.collection, 0x6b5a9e],
+    [input.atlas.fresh ? 'Atlas!' : 'Atlas', actions.collection, input.atlas.fresh ? C.accent : 0x6b5a9e],
     [input.guidePending ? 'Einführung!' : 'Einführung', actions.guide, input.guidePending ? C.accent : 0x4a3f6b],
     ['Anleitung', actions.tutorial],
     ['Optionen', actions.options],
@@ -180,6 +182,11 @@ export function buildHome(input: HomeInput): Container {
     const b = new Button(text, HOME.smallW, HOME.smallH, color ?? 0x4a3f6b, fn, 22);
     b.position.set(VIEW_W / 2 + (i - (smalls.length - 1) / 2) * HOME.smallGap, y + 10);
     root.addChild(b);
+    if (i === 0) {
+      const s = label(`${input.atlas.found} von ${input.atlas.total}`, 16, C.textDim, { fontWeight: '700' });
+      s.position.set(b.x, y + 10 + HOME.smallH / 2 + 14);
+      root.addChild(s);
+    }
   });
 
   const ver = label(`Version ${version}`, 18, C.textDim, { fontWeight: '600' });

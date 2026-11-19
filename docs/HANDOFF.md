@@ -1,6 +1,6 @@
-# Übergabe: Stand nach Erfolgen, Einführung und Schwierigkeit (Version 0.5.0)
+# Übergabe: Stand nach Sternenatlas, Siegeln und Rückschau (Version 0.6.0)
 
-Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
+Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
 ## Wo wir stehen
 
@@ -17,6 +17,21 @@ Stand: 19.11.2026. Branch `claude/focused-planck-u8jueu`. Befunde und Änderunge
 Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Version 0.6.0: Sternenatlas, Siegel, Rückschau
+
+Grundlage ist der Bericht `docs/HOOK_REPORT.md` (Recherche, Vergleich, 14 Vorschläge). Was umgesetzt wurde und die Entscheidungen: `AUDIT.md`, Abschnitt "Sternenatlas, Siegel und Rückschau" und O79 bis O84.
+
+| Thema | Wo |
+|---|---|
+| Atlas mit Fortschritt, Hinweisen, Neu Markern | `src/collection.ts`, `src/ui/CollectionView.ts`, Knopf in `src/ui/HomeView.ts`, Toast `Game.announceDiscoveries` |
+| Siegel am Deck | `src/profile.ts` (`winsByDeckStake`, `deckSeal`, `nextSealGoal`), Anzeige in `Game.showRunSetup` |
+| Rückschau, Sofort nochmal | `src/report.ts` (rein), `src/data/report.ts` (Zahlen), `Game.showGameOver`, `Game.runSummary` |
+| Juice | Ziel erreicht und Überschuss in `Game.play` und `Game.showRoundWon`, Fanfare und `sfx.goal` in `src/ui/audio.ts`, Tippen beschleunigt über `tapBoost` in `src/settings.ts` |
+
+* **Als Nächstes:** Auf dem iPad prüfen: Tippgefühl von Sofort nochmal, ob der Tipp Schub stört (Faktor `TAP_BOOST`), Lesbarkeit der Atlas Hinweise. Danach Bildrate messen und erst dann Partikel (V8) bauen.
+* **Offene Entscheidungen aus dem Bericht (Abschnitt 7):** Soll es Gating von Inhalten geben (V5)? Export und Import des Spielstands? Kurzlauf (V11)? Challenge Runs (V10)? Hochformat Layout (O68)?
+* **Nicht umgesetzt:** V5, V10 bis V14 aus dem Bericht.
 
 ## Version 0.5.0: Erfolge, Einführung, Schwierigkeit
 
@@ -35,9 +50,9 @@ Einzelheiten und Entscheidungen: `AUDIT.md`, Abschnitt "Erfolge, Einführung und
 * **Neuen Erfolg anlegen:** Eintrag in `ACHIEVEMENTS` mit vorhandener Bedingungsart. Eine neue Bedingungsart braucht einen Zweig in `condProgress` und `condMet` in `src/achievements.ts`.
 * **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit und Tippgefühl von Hinweisfeld und Zeiger der Einführung, Schwierigkeit der Stufen 4 bis 12 im echten Spiel (Zahlen in `data/difficulty.ts`), Erfolgs Banner im laufenden Spiel. Ideen: Erfolge mit Belohnung (freischaltbare Decks), Tageslauf Rangliste lokal, weitere Tageswandlungen, Joker Katalog erweitern.
 
-## Version 0.5.1: Vibration
+## Version 0.6.1: Vibration
 
-`src/ui/haptics.ts` (`haptics.tap()`, `select`, `total(boom)`, `impact(shake)` usw.), Muster in `HAPTICS` in `src/data/juice.ts`, Rechnung in `juiceMath.ts` (`impactMs`, `totalPattern`), Option "Vibration" in den Optionen. Aufrufe stehen neben den `sfx` Aufrufen in `Game.ts`, `widgets.ts` (Button) und `ShopView.ts`. Einzelheiten und Grenzen auf iOS: `AUDIT.md` O79.
+`src/ui/haptics.ts` (`haptics.tap()`, `select`, `total(boom)`, `impact(shake)` usw.), Muster in `HAPTICS` in `src/data/juice.ts`, Rechnung in `juiceMath.ts` (`impactMs`, `totalPattern`), Option "Vibration" in den Optionen. Aufrufe stehen neben den `sfx` Aufrufen in `Game.ts`, `widgets.ts` (Button) und `ShopView.ts`. Einzelheiten und Grenzen auf iOS: `AUDIT.md` O85.
 
 * **Als Nächstes:** Auf einem Android Handy und einem iPhone spüren, ob Stärke und Dauer der Muster passen (Zahlen in `HAPTICS`), vor allem die leichten Zählschritte.
 

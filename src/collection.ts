@@ -8,10 +8,12 @@ import { DECKS } from './data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from './data/modifiers';
 import { TAGS } from './data/tags';
 import { VOUCHERS } from './data/vouchers';
-import { allJokers } from './core/jokers';
+import { allJokers, getJoker, jokerDescription } from './core/jokers';
 import type { RunState } from './core/run';
 
 const KEY = 'alatro.collection.v1';
+/** Einträge, die der Spieler in der Sammlung schon gesehen hat (für die Neu Marker) */
+const SEEN_KEY = 'alatro.collection.seen.v1';
 
 export type CollectionTab = 'jokers' | 'sternbild' | 'elixier' | 'omen' | 'vouchers' | 'tags' | 'bosses' | 'decks' | 'mods';
 
@@ -42,7 +44,7 @@ export interface CollectionEntry {
 export function collectionEntries(tab: CollectionTab): CollectionEntry[] {
   switch (tab) {
     case 'jokers':
-      return allJokers().map((j) => ({ key: `joker:${j.id}`, name: j.name, description: j.description, group: j.rarity }));
+      return allJokers().map((j) => ({ key: `joker:${j.id}`, name: j.name, description: jokerDescription(j), group: j.rarity }));
     case 'sternbild':
     case 'elixier':
     case 'omen':
@@ -135,4 +137,92 @@ export function collectionProgress(discovered: string[] = loadDiscovered()): { f
   const set = new Set(discovered);
   const found = all.filter((k) => set.has(k)).length;
   return { found, total: all.length, fraction: all.length ? found / all.length : 0 };
+}
+
+/** Fortschritt eines einzelnen Reiters */
+export function tabProgress(tab: CollectionTab, discovered: string[] = loadDiscovered()): { found: number; total: number } {
+  const set = new Set(discovered);
+  const entries = collectionEntries(tab);
+  return { found: entries.filter((e) => set.has(e.key)).length, total: entries.length };
+}
+
+/**
+ * Hinweis für einen noch nicht entdeckten Eintrag. Er nennt, wo man ihn findet, ohne den Namen zu verraten.
+ * Rein aus den Daten abgeleitet, damit neue Inhalte automatisch einen Hinweis bekommen.
+ */
+export function collectionHint(e: CollectionEntry): string {
+  const [kind, id] = e.key.split(':');
+  switch (kind) {
+    case 'joker': {
+      if (e.group === 'legendary') return 'Sehr selten. Kommt nur über ein Omen ins Spiel.';
+      const min = getJoker(id)?.minAnte ?? 1;
+      const rar = e.group === 'common' ? 'Häufig im Shop' : e.group === 'uncommon' ? 'Gelegentlich im Shop' : 'Selten im Shop';
+      return min > 1 ? `${rar}, erst ab Ante ${min}.` : `${rar}.`;
+    }
+    case 'consumable':
+      return e.group === 'sternbild' ? 'Ein Sternbild. Kauf Sternbild Packs oder spiele Hände seltener Art.'
+        : e.group === 'elixier' ? 'Ein Elixier. Es steckt in Elixier Packs und im Shop.' : 'Ein Omen. Es steckt in Omen Packs und im Shop.';
+    case 'voucher':
+      return e.group === 'Upgrade' ? 'Ein Upgrade. Der Basis Voucher dazu muss zuerst gekauft sein.' : 'Wird im Shop als Voucher des Antes angeboten.';
+    case 'tag': {
+      const min = TAGS.find((t) => t.id === id)?.minAnte ?? 1;
+      return min > 1 ? `Eine Skip Belohnung, erst ab Ante ${min}.` : 'Eine Skip Belohnung. Überspringe einen Blind.';
+    }
+    case 'boss':
+      return e.group === 'Showdown' ? 'Ein Showdown Boss. Er wartet am Ende des Runs.' : 'Ein Boss Blind. Er erwartet dich am Ende eines Antes.';
+    case 'deck':
+      return 'Starte einen Run mit diesem Deck.';
+    default:
+      return e.group === 'Edition' ? 'Eine Edition auf Jokers und Karten.' : e.group === 'Seal' ? 'Ein Seal auf einer Karte.' : 'Ein Enhancement auf einer Karte.';
+  }
+}
+
+export function loadSeen(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SEEN_KEY) ?? 'null');
+    return Array.isArray(raw) ? raw.filter((k): k is string => typeof k === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveSeen(keys: string[]) {
+  try {
+    localStorage.setItem(SEEN_KEY, JSON.stringify(keys));
+  } catch {
+    /* Speicher nicht verfügbar */
+  }
+}
+
+/**
+ * Entdeckte Einträge, die noch nicht angesehen wurden. Gibt es noch keinen Seen Speicher (Update von
+ * einer älteren Version), gilt alles Bisherige als gesehen, damit nicht die ganze Sammlung "Neu" trägt.
+ */
+export function unseenKeys(discovered: string[] = loadDiscovered()): string[] {
+  let seen: string[] | null = null;
+  try {
+    seen = localStorage.getItem(SEEN_KEY) === null ? null : loadSeen();
+  } catch {
+    seen = null;
+  }
+  if (seen === null) {
+    saveSeen(discovered);
+    return [];
+  }
+  const set = new Set(seen);
+  return discovered.filter((k) => !set.has(k));
+}
+
+/** Alle entdeckten Einträge als gesehen markieren */
+export function markAllSeen() {
+  saveSeen(loadDiscovered());
+}
+
+/** Anzeigename eines Eintrags anhand des Schlüssels, oder null */
+export function entryName(key: string): string | null {
+  for (const t of COLLECTION_TABS) {
+    const hit = collectionEntries(t.id).find((e) => e.key === key);
+    if (hit) return hit.name;
+  }
+  return null;
 }

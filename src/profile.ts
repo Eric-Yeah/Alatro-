@@ -46,6 +46,8 @@ export interface Profile {
   unlocked: Record<string, number>;
   winsByDeck: Record<string, number>;
   winsByStake: Record<string, number>;
+  /** Siege je Deck und fester Stufe, Schlüssel `deckId|stakeId` (Siegel am Deck) */
+  winsByDeckStake: Record<string, number>;
   /** höchste Stufe der skalierenden Schwierigkeit, auf der ein Run gewonnen wurde (0 = keine) */
   bestScale: number;
   /** Einführungsrunde abgeschlossen */
@@ -70,6 +72,7 @@ export function newProfile(): Profile {
     unlocked: {},
     winsByDeck: {},
     winsByStake: {},
+    winsByDeckStake: {},
     bestScale: 0,
     tutorialDone: false,
     tutorialOffered: false,
@@ -95,6 +98,7 @@ export function parseProfile(raw: unknown): Profile {
   base.unlocked = rec(o.unlocked);
   base.winsByDeck = rec(o.winsByDeck);
   base.winsByStake = rec(o.winsByStake);
+  base.winsByDeckStake = rec(o.winsByDeckStake);
   base.bestScale = num(o.bestScale);
   base.tutorialDone = o.tutorialDone === true;
   base.tutorialOffered = o.tutorialOffered === true;
@@ -129,6 +133,29 @@ function runCounters(run: RunState) {
     bossesBeaten: Math.max(0, run.ante - 1),
     vouchers: run.vouchers.length,
   };
+}
+
+export function deckStakeKey(deckId: string, stakeId: string): string {
+  return `${deckId}|${stakeId}`;
+}
+
+/** Höchste Stufe der Leiter, auf der mit dem Deck gewonnen wurde: Rang (0 beginnt) und Id, oder null */
+export function deckSeal(p: Profile, deckId: string): { rank: number; stakeId: string } | null {
+  let best: { rank: number; stakeId: string } | null = null;
+  for (const s of STAKES) {
+    const rank = stakeRank(s.id);
+    if (rank < 0 || !p.winsByDeckStake[deckStakeKey(deckId, s.id)]) continue;
+    if (!best || rank > best.rank) best = { rank, stakeId: s.id };
+  }
+  return best;
+}
+
+/** Die nächste Stufe der Leiter nach dem Siegel des Decks (die erste, wenn es noch keins hat), oder null am Ende */
+export function nextSealGoal(p: Profile, deckId: string): string | null {
+  const ladder = STAKES.filter((s) => s.cumulative !== false);
+  const seal = deckSeal(p, deckId);
+  const next = ladder[(seal?.rank ?? -1) + 1];
+  return next ? next.id : null;
 }
 
 /** Rang eines Stake auf der Leiter (Einsteigerstufen und skalierende Läufe haben keinen) */
@@ -181,6 +208,10 @@ export function observeRun(p: Profile, run: RunState): boolean {
     p.winsByDeck[run.deckId] = (p.winsByDeck[run.deckId] ?? 0) + 1;
     p.winsByStake[run.stakeId] = (p.winsByStake[run.stakeId] ?? 0) + 1;
     if (run.difficulty !== null) p.bestScale = Math.max(p.bestScale, run.difficulty);
+    else {
+      const k = deckStakeKey(run.deckId, run.stakeId);
+      p.winsByDeckStake[k] = (p.winsByDeckStake[k] ?? 0) + 1;
+    }
   }
   if (run.phase === 'gameOver' && !run.won && !sync.lossCounted) {
     sync.lossCounted = true;

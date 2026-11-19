@@ -24,10 +24,12 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
-import { clampVolume, cycleSpeed, getSettings, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
+import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
 import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
-import { collectionProgress, loadDiscovered } from '../collection';
+import { collectionProgress, entryName, loadDiscovered, unseenKeys } from '../collection';
+import { nearMiss, newKeys, overkill } from '../report';
+import { OVERKILL_BIG, REPORT_NEW_MAX } from '../data/report';
 import { evaluateAchievements, rankOf, unlockedCount } from '../achievements';
 import { ACHIEVEMENTS, type AchievementDef } from '../data/achievements';
 import { dailySetup, dateKey, TWIST_BY_ID } from '../data/daily';
@@ -35,7 +37,7 @@ import { SCALE, clampScale, scaleBand, scaleName, scaleSummary } from '../data/d
 import type { GuideTarget } from '../data/guide';
 import { TutorialFlow } from '../core/tutorialFlow';
 import { cardKey, createTutorialRun, rigTutorialShop, startTutorialRound } from '../core/tutorialRun';
-import { getProfile, observeRun, saveProfile } from '../profile';
+import { deckSeal, getProfile, nextSealGoal, observeRun, saveProfile } from '../profile';
 import { ACH_H, ACH_W, buildAchievements } from './AchievementsView';
 import { Guide } from './Guide';
 import { sfx } from './audio';
@@ -111,6 +113,9 @@ export class Game {
   private achQueue: AchievementDef[] = [];
   private achShowing = false;
   private runUnlocked: string[] = [];
+  /** Sammlung beim Start des Runs (für Neu im Atlas) und beim letzten Speichern (für die Toasts) */
+  private runStartKeys: string[] = [];
+  private knownKeys: string[] = [];
 
   private cardViews = new Map<number, CardView>();
   private jokerViews = new Map<number, JokerView>();
@@ -161,6 +166,8 @@ export class Game {
   private speedBtn!: Button;
 
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
+    // Tippen während einer laufenden Animation beschleunigt sie kurz
+    if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => { if (this.busy) tapBoost(); }, { passive: true });
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
     this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer, this.flashLayer, this.achLayer);
@@ -936,6 +943,7 @@ export class Game {
     if (sel.length === 0) return;
     if (this.tut && !this.tut.allowPlay(sel.map((v) => cardKey(v.card)))) {
       sfx.deny();
+      haptics.deny();
       return;
     }
     this.busy = true;
@@ -990,7 +998,17 @@ export class Game {
     this.fx.flash(tier.flash);
     await tween(this.totalText, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
     const before = r.score - result.total;
-    await this.countUp((v) => this.setScore(v), before, r.score, 500);
+    let goalHit = before >= r.target;
+    await this.countUp((v) => {
+      this.setScore(v);
+      if (!goalHit && v >= r.target) {
+        goalHit = true;
+        sfx.goal();
+        haptics.goal();
+        this.fx.flash(0.14, C.money);
+        juice(this.scoreText);
+      }
+    }, before, r.score, 500);
     juice(this.scoreText);
     if (!this.tut && prevBest > 0 && result.total > prevBest) this.toast('Neuer Bestwert!', C.money);
     if (this.moneyText.text !== '$' + run.money) {
@@ -1093,6 +1111,7 @@ export class Game {
     if (sel.length === 0 || run.round.discardsLeft <= 0) return;
     if (this.tut && !this.tut.allowDiscard(sel.map((v) => cardKey(v.card)))) {
       sfx.deny();
+      haptics.deny();
       return;
     }
     this.busy = true;
@@ -1153,8 +1172,10 @@ export class Game {
     box.addChild(panel(w, h, color, 20));
     box.pivot.set(w / 2, h / 2);
     box.position.set(VIEW_W / 2, VIEW_H / 2);
-    box.scale.set(0.85);
-    tween(box, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
+    // Hohe Fenster (lange Rückschau) werden so verkleinert, dass sie auf den Bildschirm passen
+    const fit = Math.min(1, (VIEW_H - 30) / h);
+    box.scale.set(0.85 * fit);
+    tween(box, { 'scale.x': fit, 'scale.y': fit }, 260, easeOutBack);
     o.addChild(box);
     this.overlayLayer.addChild(o);
     return { o, box };
@@ -1186,6 +1207,7 @@ export class Game {
     this.clearCardViews();
     this.clearScreen();
     this.runUnlocked = [];
+    this.runStartKeys = this.knownKeys = loadDiscovered();
     this.run = createRun({ seed: opts.seed ?? (this.setupSeed || randomSeed()), deckId, ...opts });
     this.setupSeed = '';
     this.syncJokers();
@@ -1200,6 +1222,7 @@ export class Game {
     this.clearCardViews();
     this.clearScreen();
     this.runUnlocked = [];
+    this.runStartKeys = this.knownKeys = loadDiscovered();
     this.run = run;
     this.syncJokers();
     this.syncConsumables();
@@ -1219,6 +1242,19 @@ export class Game {
     if (this.tut) return;
     saveRun(this.run);
     this.trackProgress();
+    this.announceDiscoveries();
+  }
+
+  /** Meldet Einträge, die seit dem letzten Speichern neu in den Sternenatlas gekommen sind */
+  private announceDiscoveries() {
+    const now = loadDiscovered();
+    const added = newKeys(this.knownKeys, now);
+    this.knownKeys = now;
+    if (!added.length) return;
+    const names = added.map((k) => entryName(k)).filter((n): n is string => !!n);
+    if (!names.length) return;
+    const text = names.length <= 2 ? `Neu im Atlas: ${names.join(', ')}` : `Neu im Atlas: ${names[0]} und ${names.length - 1} weitere`;
+    this.toast(text, C.money);
   }
 
   private trackProgress() {
@@ -1567,6 +1603,19 @@ export class Game {
         arrow('›', 748, 528, () => { level = clampScale(level + 1); render(); });
       }
 
+      if (mode === 'stakes') {
+        const seal = deckSeal(profile, deck.id);
+        const goalId = nextSealGoal(profile, deck.id);
+        const sealName = seal ? STAKES.find((s) => s.id === seal.stakeId)?.name ?? '' : '';
+        const wonHere = stakeId !== undefined && (profile.winsByDeckStake[`${deck.id}|${stakeId}`] ?? 0) > 0;
+        const goalName = goalId ? STAKES.find((s) => s.id === goalId)?.name : null;
+        const parts = [
+          seal ? `Siegel am Deck: ${sealName}` : 'Noch kein Siegel an diesem Deck',
+          ...(wonHere ? ['Auf dieser Stufe gewonnen'] : []),
+          ...(goalName ? [`Nächstes Ziel: ${goalName}`] : ['Alle Stufen der Leiter gemeistert']),
+        ];
+        body(parts.join('   ·   '), 690, 17, wonHere || seal ? C.money : C.textDim, 700);
+      }
       const seedLbl = label('Seed', 20, C.textDim);
       seedLbl.position.set(W / 2, 748);
       const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 52, 0x3b5068, () => {
@@ -1644,6 +1693,7 @@ export class Game {
       rank: { name: rank.name, color: rank.color, unlocked: unlockedCount(profile), total: ACHIEVEMENTS.length },
       dailyDone: !!profile.daily[dateKey()],
       guidePending: !profile.tutorialDone && !profile.tutorialOffered,
+      atlas: { ...collectionProgress(), fresh: unseenKeys().length },
       actions: {
         guide: () => this.startGuide(),
         daily: () => this.showDaily(),
@@ -1902,6 +1952,7 @@ export class Game {
     const run = this.run!;
     if (this.tut && !this.tut.allowsEvent('blindStarted')) {
       sfx.deny();
+      haptics.deny();
       return;
     }
     this.clearOverlay();
@@ -1939,9 +1990,10 @@ export class Game {
       return;
     }
     const e = computeEarnings(run);
-    sfx.win();
+    const over = overkill(run.round!.score, run.round!.target);
+    sfx.win(run.round!.blind, !!over && over.ratio >= OVERKILL_BIG);
     haptics.win();
-    this.fx.flash(0.18, 0xffd23f);
+    this.fx.flash(over ? 0.26 : 0.18, 0xffd23f);
     const lines: [string, number][] = [
       ['Blind Belohnung', e.blindReward],
       [`Übrige Hands (${run.round!.handsLeft})`, e.handsBonus],
@@ -1949,18 +2001,24 @@ export class Game {
       [`Zinsen ($1 je $${run.rules.interestPer}, max. $${run.rules.interestCap + jokerPassive(run).interestCapDelta})`, e.interest],
       ...(e.jokers ? [['Jokers', e.jokers] as [string, number]] : []),
     ];
-    const boxH = 288 + 58 * lines.length;
+    const overH = over ? 36 : 0;
+    const boxH = 288 + 58 * lines.length + overH;
     const { box } = this.modal(580, boxH, C.panelDark);
     const head = label('Blind geschafft!', 44, C.money);
     head.position.set(290, 60);
     box.addChild(head);
+    if (over) {
+      const ol = label(`Überschuss: ${fmt(over.extra)} Punkte (${Math.round(over.ratio * 100)} Prozent des Ziels)`, 19, C.chips);
+      ol.position.set(290, 112);
+      box.addChild(ol);
+    }
     lines.forEach(([t, v], i) => {
       const l = label(t, 22, C.text);
       l.anchor.set(0, 0.5);
-      l.position.set(40, 150 + i * 58);
+      l.position.set(40, 150 + overH + i * 58);
       const r = label('$' + v, 30, C.money);
       r.anchor.set(1, 0.5);
-      r.position.set(540, 150 + i * 58);
+      r.position.set(540, 150 + overH + i * 58);
       l.alpha = r.alpha = 0;
       wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
       box.addChild(l, r);
@@ -2202,6 +2260,11 @@ export class Game {
     if (top) lines.push(`Meistgespielt: ${HAND_DATA[top[0]].name} (${top[1]}x, Level ${run.handLevels[top[0]]})`);
     const names = run.jokers.map((j) => getJoker(j.defId)?.name).filter(Boolean);
     lines.push(names.length ? `Jokers: ${names.join(', ')}` : 'Jokers: keine');
+    const fresh = newKeys(this.runStartKeys, loadDiscovered()).map((k) => entryName(k)).filter((n): n is string => !!n);
+    if (fresh.length) {
+      const shown = fresh.slice(0, REPORT_NEW_MAX).join(', ');
+      lines.push(`Neu im Atlas (${fresh.length}): ${shown}${fresh.length > REPORT_NEW_MAX ? ` und ${fresh.length - REPORT_NEW_MAX} weitere` : ''}`);
+    }
     if (this.runUnlocked.length) {
       const list = this.runUnlocked.map((id) => ACHIEVEMENTS.find((a) => a.id === id)?.name).filter(Boolean);
       lines.push(`Neue Erfolge (${list.length}): ${list.join(', ')}`);
@@ -2249,7 +2312,9 @@ export class Game {
     const recH = recs ? recs.height + 14 : 0;
     const tip = wrapText(`Tipp: ${TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length]}`, W - 140, 17, C.accent);
     const infoH = info.height;
-    const H = 400 + recH + infoH + tip.height + 190;
+    const near = nearMiss(run.round?.score ?? 0, run.round?.target ?? 0);
+    const nearH = near ? 34 : 0;
+    const H = 400 + recH + infoH + tip.height + 190 + nearH + 76;
     const { box } = this.modal(W, H, C.panelDark);
     const head = label('Verloren', 64, C.mult);
     head.position.set(W / 2, 80);
@@ -2259,18 +2324,25 @@ export class Game {
     l1b.position.set(W / 2, 196);
     const l2 = label(`Punkte: ${fmt(run.round?.score ?? 0)} / ${fmt(run.round?.target ?? 0)}`, 22, C.textDim);
     l2.position.set(W / 2, 228);
-    if (recs) recs.position.set(W / 2, 262);
-    info.position.set(W / 2, 262 + recH);
+    const nl = near ? label(`Dir fehlten ${fmt(near.missing)} Punkte (${Math.round(near.fraction * 100)} Prozent des Ziels)`, 20, C.chips) : null;
+    if (nl) nl.position.set(W / 2, 262);
+    if (recs) recs.position.set(W / 2, 262 + nearH);
+    info.position.set(W / 2, 262 + nearH + recH);
     tip.position.set(W / 2, info.y + infoH + 22);
     const seed = label(`Seed ${run.seed}`, 18, C.textDim);
     seed.position.set(W / 2, tip.y + tip.height + 26);
-    const b = new Button('Neuer Run', 320, 70, C.chips, () => this.startNewRun(), 30);
-    b.position.set(W / 2 - 170, H - 126);
+    // Erste Reihe: sofort weiter. Im Tageslauf gibt es nur den gleichen Seed (der Seed ist der Tag).
+    const quick = run.daily ? null : new Button('Sofort nochmal', 660, 70, C.mult, () => this.rerun(run, false, false), 32);
+    if (quick) quick.position.set(W / 2, H - 202);
     const again = new Button('Gleicher Seed', 320, 70, C.accent, () => this.rerun(run, false, true), 28);
     again.position.set(W / 2 + 170, H - 126);
+    const b = new Button('Neuer Run', 320, 70, C.chips, () => this.startNewRun(), 30);
+    b.position.set(W / 2 - 170, H - 126);
     const m = new Button('Hauptmenü', 220, 54, 0x3b5068, () => this.showMainMenu(), 22);
     m.position.set(W / 2, H - 52);
     box.addChild(head, l1, l1b, l2, info, tip, seed, b, again, m);
+    if (quick) box.addChild(quick);
+    if (nl) box.addChild(nl);
     if (recs) box.addChild(recs);
   }
 

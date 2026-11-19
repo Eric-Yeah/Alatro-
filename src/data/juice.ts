@@ -107,6 +107,7 @@ export const HAPTICS = {
   impact: { minMs: 18, maxMs: 90, fullShake: 16 },
   /** Aufschlag der Gesamtpunkte: Dauer wächst mit der Stufe (boom 0 bis 1), ab echoFrom folgt ein Nachschlag */
   total: { minMs: 25, maxMs: 100, echoFrom: 0.6, echoGap: 45, echoMs: 35 },
+  goal: [18, 40, 30],
   win: [40, 60, 40, 60, 90],
   lose: [90, 60, 180],
   victory: [40, 50, 40, 50, 40, 50, 140],
