@@ -22,7 +22,7 @@ export const HOME_TITLE = {
   ] as readonly TitleLetter[],
   /** Abstand der Kartenmitten */
   spacing: 134,
-  letterSize: 96,
+  letterSize: 118,
   pipSize: 20,
   /** Startlage beim Hinwerfen: Versatz nach oben und Drehung */
   dealFromY: -420,

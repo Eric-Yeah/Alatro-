@@ -4,7 +4,7 @@ import { SUIT_SYMBOLS } from '../data/cards';
 import { HOME_TITLE as T } from '../data/homeTitle';
 import { sfx } from './audio';
 import { CARD_H, CARD_W } from './CardView';
-import { C, FONT_BODY, STYLE, SUIT_COLORS } from './theme';
+import { C, FONT_BODY, FONT_TITLE, STYLE, SUIT_COLORS } from './theme';
 import { easeInOutCubic, easeOutBack, easeOutCubic, loop, tween, wait } from './tween';
 import { label } from './widgets';
 
@@ -17,7 +17,7 @@ function cardFront(ch: string, suit: Suit): Container {
     .roundRect(-w / 2 + 4, -h / 2 + 6, w, h, 10).fill(STYLE.shadowColor)
     .roundRect(-w / 2, -h / 2, w, h, 10).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
     .roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 6).stroke({ width: 1.5, color, alpha: 0.35 }));
-  const letter = label(ch, T.letterSize, color, { dropShadow: false });
+  const letter = label(ch, T.letterSize, color, { dropShadow: false, fontFamily: FONT_TITLE });
   letter.y = 4;
   c.addChild(letter);
   for (const rot of [0, Math.PI]) {

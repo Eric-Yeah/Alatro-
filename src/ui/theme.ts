@@ -66,6 +66,8 @@ export const RARITY_NAMES: Record<Rarity, string> = {
 
 /** Eigene Pixel Schrift, Systemschrift nur als Rückfall für Zeichen, die sie nicht kennt */
 export const FONT_BODY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+/** Titelschrift nur für die Buchstaben der Titelkarten, Rückfall auf die Pixel Schrift */
+export const FONT_TITLE = '"Alatro Karte", "Alatro Pixel", system-ui, sans-serif';
 export const FONT = '"Alatro Pixel", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 export function fmt(n: number): string {

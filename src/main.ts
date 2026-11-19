@@ -36,7 +36,7 @@ function readSafeInsets(): Insets {
 
 async function main() {
   // Schrift laden, bevor der erste Text gezeichnet wird (sonst bleibt die Systemschrift im Cache)
-  try { await document.fonts.load('20px "Alatro Pixel"'); } catch { /* Rückfall auf Systemschrift */ }
+  try { await Promise.all([document.fonts.load('20px "Alatro Pixel"'), document.fonts.load('20px "Alatro Karte"')]); } catch { /* Rückfall auf Systemschrift */ }
   const app = new Application();
   await app.init({
     resizeTo: window,

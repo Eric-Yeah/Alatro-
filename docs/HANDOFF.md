@@ -20,7 +20,7 @@ Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat
 
 ## Version 0.6.2: Titel aus Karten
 
-Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards.ts`, Zahlen in `src/data/homeTitle.ts`): Hinwerfen beim Öffnen, Anheben beim Berühren, Umdrehen per Tipp. Auf dem iPad prüfen: Tippgefühl der Karten, Abstand zum Untertitel. Siehe `AUDIT.md` O86.
+Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards.ts`, Zahlen in `src/data/homeTitle.ts`): Hinwerfen beim Öffnen, Anheben beim Berühren, Umdrehen per Tipp. Die Buchstaben stehen in der eigenen Schrift `Alatro Karte` (`tools/titlefont.py`, nur A L T R O). Auf dem iPad prüfen: Tippgefühl der Karten, Abstand zum Untertitel. Siehe `AUDIT.md` O86.
 
 ## Version 0.6.0: Sternenatlas, Siegel, Rückschau
 
