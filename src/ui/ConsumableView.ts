@@ -45,6 +45,8 @@ export class ConsumableView extends Container {
     });
     name.anchor.set(0.5);
     name.y = h / 2 - 22;
+    // lange Namen (z. B. Alchemistentisch) verkleinern statt am Kartenrand abzuschneiden
+    if (name.width > w - 8) name.scale.set((w - 8) / name.width);
     this.addChild(g, art, name);
     this.eventMode = 'static';
     this.cursor = 'pointer';

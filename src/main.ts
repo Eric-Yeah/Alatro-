@@ -26,6 +26,8 @@ async function main() {
     preference: 'webgl',
   });
   document.body.appendChild(app.canvas);
+  // Standard Hook der Pixi Devtools, nützt auch automatisierten Tests
+  (globalThis as any).__PIXI_APP__ = app;
 
   const bg = new Background();
   const game = new Game({ setMood: (mood, bossColor) => bg.setMood(mood, bossColor) });
