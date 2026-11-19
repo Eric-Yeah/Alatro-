@@ -6,13 +6,14 @@ import { richText } from './richText';
 import type { RunState } from '../core/run';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
-import type { PackDef } from '../data/packs';
 import { sfx } from './audio';
 import { haptics } from './haptics';
 import { CARD_H, CardView } from './CardView';
 import { ConsumableView } from './ConsumableView';
+import { PackView, packPixelSize } from './PackView';
+import { VOUCHER_H, VOUCHER_W, VoucherView } from './VoucherView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, shade } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
 import { easeOutBack, tween, wait } from './tween';
 import { Button, label, panel, wrapText } from './widgets';
 
@@ -52,24 +53,15 @@ const L = {
   /** Karten Maße vor dem Skalieren (Joker, Consumable) */
   itemW: 104,
   itemH: 140,
-  packW: 124,
-  packH: 168,
-  packScale: 1.15,
-  voucherScale: 1.2,
+  /** Leeres Fach für Packs (Normal Pack plus Rand), Jumbo und Mega ragen darüber hinaus */
+  packSlotW: 144,
+  packSlotH: 192,
   calloutW: 290,
 };
 
 const INSET = 0x141b27;
 const INSET_LINE = 0x0b1018;
 const SHOP_FRAME = 0xc8412f;
-
-/** Mischt eine Farbe mit Weiß, k = 0 unverändert, 1 weiß. */
-function lighten(hex: number, k: number): number {
-  const r = Math.round(((hex >> 16) & 255) + (255 - ((hex >> 16) & 255)) * k);
-  const g = Math.round(((hex >> 8) & 255) + (255 - ((hex >> 8) & 255)) * k);
-  const b = Math.round((hex & 255) + (255 - (hex & 255)) * k);
-  return (r << 16) | (g << 8) | b;
-}
 
 /** Preis Fahne: dunkles Schild mit Goldrand, sitzt mit der Unterkante auf dem Artikel. */
 function priceTag(price: number, affordable: boolean): Container {
@@ -96,75 +88,6 @@ function inset(x: number, y: number, w: number, h: number): Graphics {
 
 function emptySlot(x: number, y: number, w: number, h: number): Graphics {
   return new Graphics().roundRect(x - w / 2, y - h / 2, w, h, 10).stroke({ width: 2, color: 0x3b5068, alpha: 0.7 });
-}
-
-/** Symbol für Pack und Beutel: Stern, Kolben, Mond oder Karte. */
-function packSymbol(kind: PackDef['kind'], cx: number, cy: number): Graphics {
-  const g = new Graphics();
-  if (kind === 'joker' || kind === 'sternbild') {
-    g.star(cx, cy, 5, 22, 10).fill({ color: 0xffffff, alpha: 0.95 });
-  } else if (kind === 'elixier') {
-    g.roundRect(cx - 6, cy - 24, 12, 14, 3).fill({ color: 0xffffff, alpha: 0.95 });
-    g.circle(cx, cy + 6, 17).fill({ color: 0xffffff, alpha: 0.95 });
-    g.circle(cx, cy + 8, 10).fill({ color: CONSUMABLE_COLORS.elixier, alpha: 0.95 });
-  } else if (kind === 'omen') {
-    g.circle(cx, cy, 20).fill({ color: 0xffffff, alpha: 0.95 });
-    g.circle(cx + 9, cy - 4, 17).fill(CONSUMABLE_COLORS.omen);
-  } else {
-    g.roundRect(cx - 14, cy - 20, 28, 40, 4).fill({ color: 0xffffff, alpha: 0.95 }).stroke({ width: 2, color: C.cardEdge });
-    g.circle(cx, cy, 6).fill(C.mult);
-  }
-  return g;
-}
-
-/** Folienbeutel eines Booster Packs: Quetschkanten oben und unten, Folienglanz, Namensschild. */
-function packArt(def: PackDef, color: number): Container {
-  const c = new Container();
-  const w = L.packW, h = L.packH;
-  const crimp = 18;
-  const g = new Graphics()
-    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.4 })
-    .roundRect(-w / 2, -h / 2, w, h, 8).fill(color).stroke({ width: 3, color: C.panelLine });
-  // Quetschkanten mit senkrechten Rillen
-  for (const y0 of [-h / 2, h / 2 - crimp]) {
-    g.rect(-w / 2 + 2, y0 + 2, w - 4, crimp - 2).fill(shade(color, 0.78));
-    for (let x = -w / 2 + 8; x < w / 2 - 4; x += 8) g.rect(x, y0 + 3, 3, crimp - 4).fill({ color: 0xffffff, alpha: 0.28 });
-  }
-  // Glanzstreifen
-  g.poly([-w / 2 + 10, h / 2 - crimp, -w / 2 + 40, h / 2 - crimp, w / 2 - 6, -h / 2 + crimp, w / 2 - 36, -h / 2 + crimp]).fill({ color: 0xffffff, alpha: 0.13 });
-  // Emblem und Namensschild
-  g.circle(0, -22, 32).fill(shade(color, 0.55)).stroke({ width: 3, color: lighten(color, 0.55) });
-  g.roundRect(-w / 2 + 8, 22, w - 16, 52, 8).fill(0x151b27).stroke({ width: 2, color: lighten(color, 0.4), alpha: 0.9 });
-  c.addChild(g, packSymbol(def.kind, 0, -22));
-  const name = label(def.name, 16, 0xffffff, { wordWrap: true, wordWrapWidth: w - 28, align: 'center', lineHeight: 18 });
-  name.position.set(0, 48);
-  if (name.height > 46) name.scale.set(46 / name.height);
-  c.addChild(name);
-  return c;
-}
-
-/** Voucher als Eintrittskarte: Kopfstreifen, Kristallkugel aus Stern, Name. */
-function voucherArt(name: string): Container {
-  const c = new Container();
-  const w = 112, h = 150;
-  const g = new Graphics()
-    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.4 })
-    .roundRect(-w / 2, -h / 2, w, h, 10).fill(0x3b2a86).stroke({ width: 3, color: C.cardEdge })
-    .roundRect(-w / 2 + 5, -h / 2 + 5, w - 10, 26, 6).fill(C.money)
-    .circle(0, -8, 30).fill(0x23185a).stroke({ width: 3, color: lighten(0x3b2a86, 0.5) })
-    .circle(-9, -17, 7).fill({ color: 0xffffff, alpha: 0.25 })
-    .star(0, -8, 5, 20, 9).fill({ color: C.money })
-    .poly([-w / 2 + 6, h / 2 - 30, -w / 2 + 28, h / 2 - 30, w / 2 - 6, -h / 2 + 34, w / 2 - 28, -h / 2 + 34]).fill({ color: 0xffffff, alpha: 0.08 });
-  // gestrichelte Abrisslinie
-  for (let x = -w / 2 + 8; x < w / 2 - 8; x += 12) g.rect(x, 33, 6, 2).fill({ color: 0xffffff, alpha: 0.35 });
-  const head = label('Voucher', 15, 0x2b2540);
-  head.position.set(0, -h / 2 + 18);
-  const t = label(name, 16, 0xffffff, { wordWrap: true, wordWrapWidth: w - 14, align: 'center', lineHeight: 18 });
-  t.position.set(0, 46);
-  if (t.width > w - 12) t.scale.set((w - 12) / t.width);
-  if (t.height > 46) t.scale.set(Math.min(t.scale.x, 46 / t.height));
-  c.addChild(g, head, t);
-  return c;
 }
 
 /** Zahlen des Leuchtschilds in der Seitenleiste */
@@ -475,9 +398,8 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   if (shop.voucher) {
     const v = VOUCHER_BY_ID[shop.voucher.voucherId];
     const can = run.money >= shop.voucher.price;
-    const view = voucherArt(v.name);
-    view.scale.set(L.voucherScale);
-    addSlot(view, vcx, rowCy, 112 * L.voucherScale, 150 * L.voucherScale, shop.voucher, 'above', {
+    const view = new VoucherView(v.name);
+    addSlot(view, vcx, rowCy, VOUCHER_W, VOUCHER_H, shop.voucher, 'above', {
       name: v.name,
       badge: 'Voucher',
       badgeColor: C.money,
@@ -497,16 +419,16 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   shop.packs.forEach((p, i) => {
     const x = packsX + (packsW * (i + 0.5)) / pn;
     if (!p) {
-      slotLayer.addChild(emptySlot(x, rowCy, L.packW * L.packScale, L.packH * L.packScale));
+      slotLayer.addChild(emptySlot(x, rowCy, L.packSlotW, L.packSlotH));
       return;
     }
     const def = PACK_BY_ID[p.packId];
     const color = def.kind === 'joker' ? C.mult : def.kind === 'karten' ? C.chips : CONSUMABLE_COLORS[def.kind];
     const can = run.money >= p.price;
-    slotLayer.addChild(emptySlot(x, rowCy, L.packW * L.packScale, L.packH * L.packScale));
-    const pv = packArt(def, color);
-    pv.scale.set(L.packScale);
-    addSlot(pv, x, rowCy, L.packW * L.packScale, L.packH * L.packScale, p, 'above', {
+    const { w: pw0, h: ph0 } = packPixelSize(def);
+    slotLayer.addChild(emptySlot(x, rowCy, L.packSlotW, L.packSlotH));
+    const pv = new PackView(def);
+    addSlot(pv, x, rowCy, pw0, ph0, p, 'above', {
       name: def.name,
       badge: def.size === 'normal' ? 'Normal' : def.size === 'jumbo' ? 'Jumbo' : 'Mega',
       badgeColor: color,
