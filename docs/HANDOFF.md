@@ -33,9 +33,9 @@ Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards
 
 Neues Kartendesign (Details und offene Punkte O88 bis O92 in `AUDIT.md`). Karten sind Pixel Raster im Code: Daten in `src/data/cardArt/`, Renderer ohne DOM in `src/ui/cardArt/`, `CardView` zeigt sie als Sprite mit nearest Skalierung. Zwei Paletten (Standard, Hoher Kontrast), Wahl in den Optionen, gespeichert in `settings.cardPalette` (keine Save Migration).
 
-* **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (zwölf Einträge in `FIGURES`: Kopf und Körper als halbe Zeilen, die gespiegelt werden, dazu Gegenstand und Hautton), Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
+* **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (zwölf Einträge in `FIGURES`: Hut und Körper als halbe Zeilen im Entwurfsraster, dazu Gegenstand, Hautton und Gesichtsart), feine Gesichter in `faceSprites.ts`. Die Karte ist 82 mal 114 Pixel groß und wird mit 1,5 dargestellt, Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
 * **Weitere Grafiken:** Jokers (`src/ui/jokerSprites*.ts`, `docs/joker-art.md`), Consumables und Packs (`src/ui/consumable*.ts`, `src/ui/packArt*.ts`, `src/ui/consumableTray.ts`, Zahlen in `src/data/consumableArt.ts`, `packArt.ts`, `voucherArt.ts`, `artFx.ts`, Notizen in `docs/consumable-pack-art.md`). Vorschau Bilder liegen in `preview/`.
-* **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit von Rang und Farbe bei dreifacher Vergrößerung, Schärfe der Karten im Hand Fächer (leichte Drehung).
+* **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit von Rang und Farbe bei dreifacher Vergrößerung, Schärfe der Karten im Hand Fächer (leichte Drehung, Skalierung 1,5).
 
 ## Version 0.6.0: Sternenatlas, Siegel, Rückschau
 

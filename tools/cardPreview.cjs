@@ -20,12 +20,12 @@ const sheets = [
   // vergrößerte Bildkarten und Asse (nur J, Q, K, A), beide Paletten nebeneinander
   {
     const imgs = sheets.map((s) => readFileSync(path.join(tmp, `faces-${s.id}.png`)).toString('base64'));
-    const page = await b.newPage({ viewport: { width: 1800, height: 900 }, deviceScaleFactor: 2 });
+    const page = await b.newPage({ viewport: { width: 2800, height: 1200 }, deviceScaleFactor: 1 });
     await page.setContent(`<style>@font-face{font-family:P;src:url(data:font/ttf;base64,${font})}
       body{margin:0;background:#14275a;color:#fff;font-family:P,monospace;padding:24px;width:max-content}
       h1{font-size:34px;margin:0 0 6px}p{margin:0 0 18px;color:#9fb4cc;font-size:18px}
       .row{display:flex;gap:40px}h2{font-size:24px;margin:0 0 10px}
-      img{image-rendering:pixelated;display:block;zoom:5}</style>
+      img{image-rendering:pixelated;display:block;zoom:4}</style>
       <h1>Alatro: Ass, Bube, Dame, König</h1><p>Links Standard, rechts Hoher Kontrast. Spalten: Ass, Bube, Dame, König. Zeilen: Pik, Herz, Kreuz, Karo.</p>
       <div class=row><div><h2>Standard</h2><img id=i src="data:image/png;base64,${imgs[0]}"></div><div><h2>Hoher Kontrast</h2><img src="data:image/png;base64,${imgs[1]}"></div></div>`);
     await page.waitForSelector('#i');
@@ -38,7 +38,7 @@ const sheets = [
     await page.setContent(`<style>@font-face{font-family:P;src:url(data:font/ttf;base64,${font})}
       body{margin:0;background:#14275a;color:#fff;font-family:P,monospace;padding:24px;width:max-content}
       h1{font-size:34px;margin:0 0 6px}p{margin:0 0 18px;color:#9fb4cc;font-size:18px}
-      img{image-rendering:pixelated;display:block;zoom:3}</style>
+      img{image-rendering:pixelated;display:block;zoom:1.5}</style>
       <h1>${s.title}</h1><p>${s.sub} Letzte Spalte: Kartenrücken.</p><img id=i src="data:image/png;base64,${img}">`);
     await page.waitForSelector('#i');
     await page.locator('body').screenshot({ path: path.join(root, 'preview', s.file) });
