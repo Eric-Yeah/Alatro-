@@ -29,6 +29,7 @@ Grundlage ist der Bericht `docs/HOOK_REPORT.md` (Recherche, Vergleich, 14 Vorsch
 | Rückschau, Sofort nochmal | `src/report.ts` (rein), `src/data/report.ts` (Zahlen), `Game.showGameOver`, `Game.runSummary` |
 | Juice | Ziel erreicht und Überschuss in `Game.play` und `Game.showRoundWon`, Fanfare und `sfx.goal` in `src/ui/audio.ts`, Tippen beschleunigt über `tapBoost` in `src/settings.ts` |
 
+* **Live stellen:** Der Deploy (GitHub Pages) läuft nur durch, wenn der Commit auf dem Branch `claude/funny-brahmagupta-ic0bpe` liegt. Ein Push nur auf `main` scheiterte beim Schritt "deploy" (Version 0.6.0, Lauf 21), derselbe Commit auf dem Deploy Branch ging durch (Lauf 22). Vermutlich erlaubt die Umgebung `github-pages` nur diesen Branch, die Einstellung selbst wurde nicht eingesehen. Vorgehen: Tests und Build lokal, Commit auf dem Arbeitsbranch, dann Fast Forward des Deploy Branches (`git push origin HEAD:claude/funny-brahmagupta-ic0bpe`), danach den Lauf unter Actions prüfen.
 * **Als Nächstes:** Auf dem iPad prüfen: Tippgefühl von Sofort nochmal, ob der Tipp Schub stört (Faktor `TAP_BOOST`), Lesbarkeit der Atlas Hinweise. Danach Bildrate messen und erst dann Partikel (V8) bauen.
 * **Offene Entscheidungen aus dem Bericht (Abschnitt 7):** Soll es Gating von Inhalten geben (V5)? Export und Import des Spielstands? Kurzlauf (V11)? Challenge Runs (V10)? Hochformat Layout (O68)?
 * **Nicht umgesetzt:** V5, V10 bis V14 aus dem Bericht.
