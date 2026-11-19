@@ -74,14 +74,21 @@ export class CardView extends Container {
         style: { fontFamily: FONT_BODY, fontSize: 13, fontWeight: '800', fill: rankless ? 0xe8e0f8 : C.cardEdge },
       });
       tag.anchor.set(0.5);
-      tag.y = h / 2 - 34;
+      // links von der Eckmarke unten rechts halten und lange Namen (Quecksilber) schrumpfen
+      tag.x = -8;
+      tag.y = h / 2 - 30;
+      if (tag.width > 72) tag.scale.set(72 / tag.width);
       this.face.addChild(tag);
     }
     // Seal als Siegelkreis rechts
     if (card.seal && SEALS[card.seal]) {
       const sc = SEAL_COLORS[card.seal] ?? C.accent;
-      const seal = new Graphics().circle(w / 2 - 16, 4, 11).fill(sc).stroke({ width: 2, color: 0xffffff, alpha: 0.7 });
-      this.face.addChild(seal);
+      const seal = new Graphics().circle(w / 2 - 16, 4, 12).fill(sc).stroke({ width: 2, color: 0xffffff, alpha: 0.8 });
+      // Anfangsbuchstabe im Siegel (E Echo, M Münze, S Stern), damit die Farbe allein nicht erraten werden muss
+      const sl = new Text({ text: SEALS[card.seal].name.charAt(0), style: { fontFamily: FONT_BODY, fontSize: 14, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1b1530, width: 3 } } });
+      sl.anchor.set(0.5);
+      sl.position.set(w / 2 - 16, 4);
+      this.face.addChild(seal, sl);
     }
     // Edition als leuchtender Rahmen
     if (card.edition && EDITIONS[card.edition]) {
@@ -92,6 +99,12 @@ export class CardView extends Container {
       this.face.addChild(glow);
       const fx = editionOverlay(card.edition, w, h, 10);
       if (fx) this.face.addChild(fx);
+      // Name der Edition oben, rechts von der Eckmarke
+      const en = new Text({ text: EDITIONS[card.edition].name, style: { fontFamily: FONT_BODY, fontSize: 12, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1b1530, width: 4 } } });
+      en.anchor.set(0.5);
+      en.position.set(14, -h / 2 + 13);
+      if (en.width > 56) en.scale.set(56 / en.width);
+      this.face.addChild(en);
     }
 
     this.addChild(this.face);
