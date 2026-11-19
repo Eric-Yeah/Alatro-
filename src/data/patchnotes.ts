@@ -8,12 +8,20 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
-    version: '0.8.1',
+    version: '0.8.2',
     date: '19.11.2026',
     title: 'Kräftigere Zahlen und Symbole',
     items: [
       'Besser: Zahlen und Buchstaben in den Ecken der Karten sind größer und haben dickere Striche, damit man Rang und Farbe auf einen Blick erkennt.',
       'Besser: Die Symbole in der Mitte der Zahlenkarten haben eine dunkle Kontur und heben sich klarer ab.',
+    ],
+  },
+  {
+    version: '0.8.1',
+    date: '19.11.2026',
+    title: 'Kuppelblende',
+    items: [
+      'Neu: Übergangsanimation zwischen den großen Screens. Beim Öffnen der App und beim Wechsel zwischen Home Bildschirm und Spiel (neuer Run, Fortsetzen, Einführung, Menü) schließen sich zwei Hälften der Sternwarten Kuppel und öffnen sich wieder. Während der Blende sind Berührungen gesperrt. Das Animationstempo aus den Optionen gilt auch hier.',
     ],
   },
   {

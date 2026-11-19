@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Pixel Art für Karten, Jokers, Consumables und Packs (Version 0.8.0)
+# Übergabe: Stand nach Kuppelblende (Version 0.8.1)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -17,6 +17,13 @@ Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen
 Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 grün, `npm run build` grün.
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
+
+## Version 0.8.1: Kuppelblende
+
+Übergangsanimation zwischen den großen Screens: zwei Hälften der Sternwarten Kuppel schließen sich, der Screen dahinter wird getauscht, dann öffnen sie sich (`src/ui/ScreenTransition.ts`, Zahlen in `src/data/transition.ts`, Einbindung in `Game.transit`). Sie läuft beim Start der App und bei Home zu Spiel und zurück. Details und offene Punkte: `AUDIT.md` O94.
+
+* **Weitere Blende anlegen:** Wechsel in `Game.transit(() => ...)` einpacken, der Aufbau des neuen Screens gehört in den Rückruf.
+* **Als Nächstes:** Auf dem iPad prüfen: Dauer und Ruckeln beim Tausch.
 
 ## Version 0.7.1: Hintergrundmusik im Mix
 
