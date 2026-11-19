@@ -54,6 +54,9 @@ export class Button extends Container {
 
   setText(t: string) { this.txt.text = t; }
 
+  /** Aktuelle Beschriftung (für die Einführung, die Knöpfe in fremden Ansichten findet) */
+  get caption(): string { return this.txt.text; }
+
   /** Verschiebt die Beschriftung senkrecht, z. B. um darunter einen Preis zu zeigen. */
   nudgeText(dy: number) { this.txt.y += dy; }
 

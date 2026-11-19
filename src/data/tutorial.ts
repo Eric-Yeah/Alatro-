@@ -112,9 +112,9 @@ export const TUTORIAL: readonly TutorialPage[] = [
   {
     id: 'tipps',
     tab: 'Tipps',
-    title: 'Decks, Stakes und Tipps',
+    title: 'Decks, Schwierigkeit und Tipps',
     lines: [
-      'Vor dem Run wählst du ein Deck und einen Stake. Decks bringen kleine Boni, Stakes machen das Spiel schwerer. Mit einem Seed lässt sich ein Run wiederholen.',
+      'Vor dem Run wählst du ein Deck und die Schwierigkeit. Decks bringen kleine Boni. Mit einem Seed lässt sich ein Run wiederholen.',
       'Ein paar Tipps für den Anfang:',
       '* Spiele öfter dieselbe Pokerhand und hebe sie mit Sternbildern an.',
       '* Gib nicht alles aus. Zinsen sind in den ersten Antes eine verlässliche Einnahme.',
@@ -122,6 +122,20 @@ export const TUTORIAL: readonly TutorialPage[] = [
       '* Ordne Jokers sinnvoll: Mult Boni zuerst, Multiplikatoren danach.',
       '* Nutze Discards, um nach starken Händen zu suchen, statt schwache Hände zu spielen.',
       'Wenn dir die Animationen zu lang dauern, schalte in den Optionen oder mit dem Tempo Knopf am Tisch auf ein schnelleres Tempo.',
+    ],
+  },
+  {
+    id: 'schwierigkeit',
+    tab: 'Schwierigkeit',
+    title: 'Schwierigkeit, Erfolge und Tageslauf',
+    lines: [
+      'Du kannst die Schwierigkeit auf zwei Arten wählen:',
+      '* Feste Stufen: Morgenrot ist etwas leichter als das Grundspiel, danach folgt die Leiter von Dämmerung bis Ewige Nacht. Jede Stufe der Leiter enthält alle Regeln der vorherigen.',
+      '* Skalierend: 20 Stufen, die du per Antippen der Leiste wählst. Das Ziel der Blinds wächst mit jeder Stufe, ab bestimmten Stufen kommen Regeln dazu. Stufe 4 ist das Grundspiel, Stufe 1 bis 3 ist leichter.',
+      'Nach einem Sieg schlägt dir das Spiel die nächsthärtere Stufe vor.',
+      'Unter Erfolge sammelst du Sterne. Sie bestimmen deinen Rang. Dort steht auch deine Statistik über alle Runs.',
+      'Der Tageslauf bietet jeden Tag einen festen Run mit Seed, Deck, Stufe und einer Wandlung, die eine Regel verändert. Dein bestes Ante pro Tag wird gemerkt.',
+      'Die geführte Einführungsrunde startest du jederzeit über den Knopf Einführung im Hauptmenü.',
     ],
   },
 ];

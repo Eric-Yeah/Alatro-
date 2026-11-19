@@ -151,6 +151,11 @@ class Sfx {
     [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.32, 'triangle', 0.2, { delay: i * 0.1 }));
     this.tone(1568, 1, 'sine', 0.16, { delay: 0.6 });
   }
+  /** Erfolg freigeschaltet: kurzer, heller Dreiklang mit Nachklang */
+  achievement() {
+    [784, 988, 1319].forEach((f, i) => this.tone(f, 0.2, 'triangle', 0.16, { delay: i * 0.09 }));
+    this.tone(1976, 0.7, 'sine', 0.1, { delay: 0.3 });
+  }
   blindStart(kind: 'small' | 'big' | 'boss') {
     if (kind === 'boss') {
       this.tone(98, 0.7, 'sawtooth', 0.16, { slideTo: 82, lowpass: 600 });
