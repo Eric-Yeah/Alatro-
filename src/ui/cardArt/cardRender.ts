@@ -1,7 +1,7 @@
 import type { Rank, Suit } from '../../core/types';
 import { CARD_BASE, CARD_PALETTES, type CardPaletteId, type SuitColors } from '../../data/cardArt/cardPalettes';
-import { ACE_SHAPES, CARD_PX_H, CARD_PX_W, COURT_HALF, COURT_PANEL, INDEX_FONT, PIP_COL, PIP_LAYOUT, PIP_ROW, SUIT_PIP, SUIT_SMALL } from '../../data/cardArt/cardGlyphs';
-import { COURT_HALF_ROWS, COURT_HELD, COURT_PATTERN, type Court } from '../../data/cardArt/courtSprites';
+import { ACE_GLINT, ACE_ORNAMENT, ACE_SHAPES, CARD_PX_H, CARD_PX_W, COURT_HALF, COURT_PANEL, INDEX_FONT, PIP_COL, PIP_LAYOUT, PIP_ROW, PIP_SIZE, SUIT_PIP, SUIT_SMALL } from '../../data/cardArt/cardGlyphs';
+import { COURT_PATTERN, FIGURE, FIGURES, type Court, type CourtId } from '../../data/cardArt/courtSprites';
 import { PixelBuffer, gridBuffer, mirrorRows, mixColor, type ColorMap } from './pixelBuffer';
 
 // Zeichnet Kartenvorderseiten und Rückseiten als Pixel Puffer (ohne DOM, testbar).
@@ -61,59 +61,147 @@ function drawPips(buf: PixelBuffer, rank: Rank, suit: Suit, color: number) {
   const { up, down } = pipBuffers(suit, color);
   for (const [col, row] of PIP_LAYOUT[rank] ?? []) {
     const cx = PIP_COL[col];
-    buf.blitBuffer(row > PIP_ROW.mid ? down : up, cx - 3, row - 3);
+    const r = (PIP_SIZE - 1) / 2;
+    buf.blitBuffer(row > PIP_ROW.mid ? down : up, cx - r, row - r);
   }
 }
 
-/** Großes Farbsymbol (Ass, Kristall), zentriert auf der Karte */
-function drawBig(buf: PixelBuffer, suit: Suit, main: number, light: number, dark: number) {
-  const shape = gridBuffer(mirrorRows(ACE_SHAPES[suit]), { '#': main, L: light, D: dark });
-  buf.blitBuffer(shape, Math.floor((CARD_PX_W - shape.w) / 2), Math.floor((CARD_PX_H - shape.h) / 2));
+/** Form des Asses aus halben Zeilen als Maske (true = Pixel gehört zur Form) */
+function aceMask(suit: Suit): boolean[][] {
+  return mirrorRows(ACE_SHAPES[suit]).map((r) => [...r].map((c) => c === '#'));
+}
+
+/** Form mit Licht (oben links), Schatten (unten rechts), Glanzpixeln und dunkler Kontur */
+function shadedShape(mask: boolean[][], main: number, light: number, dark: number, outline: number, glint?: readonly [number, number]): PixelBuffer {
+  const h = mask.length, w = mask[0].length;
+  const at = (x: number, y: number) => !!mask[y]?.[x];
+  const buf = new PixelBuffer(w + 2, h + 2);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!at(x, y)) continue;
+      let c = main;
+      if (!at(x + 1, y) || !at(x, y + 1) || !at(x + 1, y + 1)) c = dark;
+      else if (!at(x - 1, y) || !at(x, y - 1) || !at(x - 1, y - 1)) c = light;
+      else if (!at(x - 2, y - 1) && !at(x - 2, y)) c = light;
+      buf.set(x + 1, y + 1, c);
+    }
+  }
+  if (glint) {
+    const [gx, gy] = glint;
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1]]) if (at(gx + dx, gy + dy)) buf.set(gx + dx + 1, gy + dy + 1, 0xffffff);
+    if (at(gx + 3, gy + 1)) buf.set(gx + 4, gy + 2, light);
+  }
+  const base = new PixelBuffer(buf.w, buf.h);
+  base.blitBuffer(buf, 0, 0);
+  for (let y = 0; y < buf.h; y++) {
+    for (let x = 0; x < buf.w; x++) {
+      if (base.solid(x, y)) continue;
+      if (base.solid(x - 1, y) || base.solid(x + 1, y) || base.solid(x, y - 1) || base.solid(x, y + 1)) buf.set(x, y, outline);
+    }
+  }
+  return buf;
+}
+
+/** Ass: großes verziertes Symbol in der Mitte, getönte Scheibe, Punktringe, vier Funken, Eckverzierung und feines Muster */
+function drawAce(buf: PixelBuffer, suit: Suit, s: SuitColors) {
+  const cx = CARD_PX_W >> 1, cy = CARD_PX_H >> 1;
+  const soft = mixColor(CARD_BASE.face, s.main, 0.3);
+  const softer = mixColor(CARD_BASE.face, s.main, 0.13);
+  // feines Rautenmuster
+  for (let y = 6; y < CARD_PX_H - 6; y++) for (let x = 11; x < CARD_PX_W - 11; x++) if ((x + y) % 8 === 0 && (x - y + 80) % 8 === 0) buf.set(x, y, softer);
+  // getönte Scheibe mit hellem Rand
+  const R = ACE_ORNAMENT.ringRadius;
+  for (let y = -R; y <= R; y++) {
+    for (let x = -R; x <= R; x++) {
+      const d = Math.hypot(x, y);
+      if (d <= R - 2) buf.set(cx + x, cy + y, softer);
+      else if (d <= R - 1) buf.set(cx + x, cy + y, soft);
+    }
+  }
+  // äußerer Punktring
+  for (let a = 0; a < 64; a++) {
+    const ang = (a / 64) * Math.PI * 2;
+    buf.set(cx + Math.round(Math.cos(ang) * (R + 2)), cy + Math.round(Math.sin(ang) * (R + 2)), a % 2 === 0 ? soft : s.light);
+  }
+  // Funken oben, unten, links und rechts, kleine Rauten in den Ecken des Feldes
+  const D = ACE_ORNAMENT.sparkleDist;
+  for (const [sx, sy] of [[cx, cy - D], [cx, cy + D], [cx - D + 4, cy], [cx + D - 4, cy]]) {
+    buf.set(sx, sy, s.main);
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) buf.set(sx + dx, sy + dy, s.light);
+  }
+  for (const [sx, sy] of [[cx + 12, cy - 19], [cx - 12, cy + 19]]) {
+    buf.set(sx, sy, s.main);
+    buf.set(sx - 1, sy, soft); buf.set(sx + 1, sy, soft); buf.set(sx, sy - 1, soft); buf.set(sx, sy + 1, soft);
+  }
+  const shape = shadedShape(aceMask(suit), s.main, s.light, s.dark, s.dark, ACE_GLINT[suit]);
+  buf.blitBuffer(shape, cx - (shape.w >> 1), cy - (shape.h >> 1) + (suit === 'H' ? 1 : 0));
+}
+
+/** Kristall für Karten ohne Rang */
+function drawGem(buf: PixelBuffer, color: number) {
+  const mask = aceMask('D');
+  const shape = shadedShape(mask, color, mixColor(color, 0xffffff, 0.5), mixColor(color, 0x000000, 0.3), mixColor(color, 0x000000, 0.55), [6, 5]);
+  buf.blitBuffer(shape, (CARD_PX_W - shape.w) >> 1, (CARD_PX_H - shape.h) >> 1);
 }
 
 /** Muster hinter den Figuren (obere Hälfte, wird für die untere gedreht) */
 function drawPattern(half: PixelBuffer, kind: 'stars' | 'bubbles' | 'diamonds' | 'leaves', color: number) {
-  const spots: [number, number][] = [[2, 3], [13, 2], [5, 9], [15, 8], [1, 15], [11, 17], [14, 14], [8, 5]];
+  const w = half.w, h = half.h;
   if (kind === 'stars') {
-    for (const [x, y] of spots) half.set(x, y, color);
-    for (const [x, y] of [[3, 12], [14, 4]]) {
+    for (const [x, y] of [[2, 3], [18, 2], [5, 12], [17, 10], [1, 18], [14, 20], [19, 16], [10, 4], [3, 8], [12, 15]]) half.set(x, y, color);
+    for (const [x, y] of [[4, 6], [16, 5], [3, 20]]) {
       half.set(x, y, color); half.set(x - 1, y, color); half.set(x + 1, y, color); half.set(x, y - 1, color); half.set(x, y + 1, color);
     }
   } else if (kind === 'bubbles') {
-    for (const [x, y] of [[2, 2], [13, 5], [3, 11], [14, 15], [10, 1]]) {
+    for (const [x, y] of [[2, 2], [16, 4], [3, 11], [17, 15], [12, 1], [8, 20], [1, 17]]) {
       half.set(x, y, color); half.set(x + 1, y, color); half.set(x, y + 1, color); half.set(x + 1, y + 1, color);
     }
   } else if (kind === 'diamonds') {
-    for (let y = 0; y < half.h; y++) for (let x = 0; x < half.w; x++) if ((x + y) % 6 === 0 && (x - y + 60) % 6 === 0) half.set(x, y, color);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((x + y) % 6 === 0 && (x - y + 60) % 6 === 0) half.set(x, y, color);
   } else {
-    for (const [x, y] of spots) { half.set(x, y, color); half.set(x + 1, y - 1, color); half.set(x - 1, y - 1, color); }
+    for (const [x, y] of [[2, 3], [16, 2], [4, 13], [17, 11], [2, 19], [13, 20], [9, 5]]) { half.set(x, y, color); half.set(x + 1, y - 1, color); half.set(x - 1, y - 1, color); }
   }
 }
 
 export function courtColors(s: SuitColors): ColorMap {
   return {
     a: s.main, A: s.light, b: s.dark,
+    c: s.sec, C: s.secLight, e: s.secDark,
     t: s.trim, T: s.trimLight, u: s.trimDark,
     g: s.gem,
     s: CARD_BASE.skin, S: CARD_BASE.skinShade,
     w: CARD_BASE.white, W: CARD_BASE.whiteShade,
     h: s.hair, H: s.hairDark,
     k: CARD_BASE.ink, m: CARD_BASE.mouth,
-    G: CARD_BASE.steel, c: CARD_BASE.glass, r: 0xe0384a, y: CARD_BASE.glow, o: CARD_BASE.flame,
+    G: CARD_BASE.steel, F: CARD_BASE.steelDark, v: CARD_BASE.glass, r: 0xe0384a, y: CARD_BASE.glow, o: CARD_BASE.flame,
     d: 0xf2c14a, D: 0xb07a1e, n: CARD_BASE.wood, N: CARD_BASE.woodDark, l: CARD_BASE.leaf, L: CARD_BASE.leafDark,
   };
 }
 
-/** Eine Figurenhälfte (17 mal 21) mit Hintergrundmuster, Figur und gehaltenem Gegenstand */
+/** Raster einer Figur (19 mal 23): erst der Körper, dann der Kopf darüber */
+export function figureGrid(id: CourtId): string[] {
+  const f = FIGURES[id];
+  const rows: string[][] = Array.from({ length: FIGURE.h }, () => Array(FIGURE.w).fill('.'));
+  const body = mirrorRows(f.body);
+  body.forEach((r, j) => [...r].forEach((c, i) => { if (c !== '.') rows[FIGURE.bodyY + j][i] = c; }));
+  const head = mirrorRows(f.head);
+  const pad = FIGURE.headH - head.length;
+  const x0 = (FIGURE.w - FIGURE.headW) >> 1;
+  head.forEach((r, j) => [...r].forEach((c, i) => { if (c !== '.') rows[pad + j][x0 + i] = c; }));
+  return rows.map((r) => r.join(''));
+}
+
+/** Eine Figurenhälfte (21 mal 24) mit Hintergrundmuster, Figur und gehaltenen Gegenständen */
 function courtHalf(court: Court, suit: Suit, s: SuitColors): PixelBuffer {
   const half = new PixelBuffer(COURT_HALF.w, COURT_HALF.h);
   half.fillRect(0, 0, COURT_HALF.w, COURT_HALF.h, s.tint);
-  drawPattern(half, COURT_PATTERN[suit], mixColor(s.tint, s.main, 0.2));
+  drawPattern(half, COURT_PATTERN[suit], mixColor(s.tint, s.main, 0.22));
+  // schmaler Zierrahmen in Gold, die Figur überdeckt ihn teilweise
+  half.strokeRect(0, 0, COURT_HALF.w, COURT_HALF.h + 1, s.trim);
   const map = courtColors(s);
-  const figure = gridBuffer(mirrorRows(COURT_HALF_ROWS[court]), map, CARD_BASE.ink, true);
-  half.blitBuffer(figure, 0, 0);
-  const held = COURT_HELD[suit][court];
-  half.blitBuffer(gridBuffer(held.rows, map, CARD_BASE.ink), held.x, held.y);
+  const id = `${suit}${court}` as CourtId;
+  half.blitBuffer(gridBuffer(figureGrid(id), map, CARD_BASE.ink, true), 0, 0);
+  for (const held of FIGURES[id].held) half.blitBuffer(gridBuffer(held.rows, map, CARD_BASE.ink), held.x, held.y);
   return half;
 }
 
@@ -124,7 +212,7 @@ function drawCourt(buf: PixelBuffer, court: Court, suit: Suit, s: SuitColors) {
   buf.blitBuffer(half, COURT_HALF.x, COURT_HALF.y);
   // untere Hälfte: um 180 Grad gedreht, die Mittellinie liegt dazwischen
   buf.blitBuffer(half.rotated180(), COURT_HALF.x, P.y + P.h - 1 - COURT_HALF.h);
-  buf.fillRect(P.x + 1, P.y + Math.floor(P.h / 2), P.w - 2, 1, s.dark);
+  buf.fillRect(P.x + 1, P.y + (P.h >> 1), P.w - 2, 1, s.dark);
   buf.strokeRect(P.x, P.y, P.w, P.h, s.dark);
 }
 
@@ -134,13 +222,12 @@ export function renderCard(suit: Suit, rank: Rank, paletteId: CardPaletteId, opt
   const buf = new PixelBuffer(CARD_PX_W, CARD_PX_H);
   drawBase(buf, opts.face ?? CARD_BASE.face);
   if (opts.rankless) {
-    const r = CARD_BASE.rankless;
-    drawBig(buf, 'D', r, mixColor(r, 0xffffff, 0.5), mixColor(r, 0x000000, 0.3));
+    drawGem(buf, CARD_BASE.rankless);
     return buf;
   }
   const court = COURT_BY_RANK[rank];
   if (court) drawCourt(buf, court, suit, s);
-  else if (rank === 14) drawBig(buf, suit, s.main, s.light, s.dark);
+  else if (rank === 14) drawAce(buf, suit, s);
   else drawPips(buf, rank, suit, s.main);
   const idx = drawIndex(rank, suit, s.main);
   buf.blitBuffer(idx, 0, 0);
