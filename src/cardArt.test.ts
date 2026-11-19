@@ -53,9 +53,9 @@ describe('Pixel Art Karten', () => {
           // Pip Zone zwischen den Indexspalten, Glanzpunkte (weiß) gehören nicht zur Farbe und zählen nicht
           for (let y = 0; y < CARD_PX_H; y++) for (let x = 14; x < CARD_PX_W - 14; x++) { const c = b.get(x, y); if (c !== null && colors.has(c)) n++; }
           const spots = PIP_LAYOUT[rank]?.length ?? 0;
-          // jeder Pip hat 2 mal 'pixels' Pixel (gespiegelte halbe Zeilen), ein paar Pixel pro Pip sind Glanz
+          // jeder Pip hat 2 mal 'pixels' Pixel (gespiegelte halbe Zeilen), ein paar Pixel pro Pip sind Glanz, dazu kommt die dunkle Kontur (höchstens 90 Pixel pro Pip)
           expect(n, `${suit}${rank} ${id}`).toBeGreaterThan(spots * pixels * 2 - spots * 8);
-          expect(n, `${suit}${rank} ${id}`).toBeLessThanOrEqual(spots * pixels * 2);
+          expect(n, `${suit}${rank} ${id}`).toBeLessThanOrEqual(spots * (pixels * 2 + 90));
         }
       }
     }
@@ -217,7 +217,7 @@ describe('Pixel Art Karten', () => {
       expect(SUIT_PIP[suit].length).toBe(PIP_SIZE);
     }
     for (const g of Object.values(INDEX_FONT)) {
-      expect(g.length).toBe(7);
+      expect(g.length).toBe(9);
       g.forEach((r) => expect(r.length).toBe(g[0].length));
     }
   });
