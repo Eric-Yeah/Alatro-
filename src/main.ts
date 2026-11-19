@@ -85,6 +85,17 @@ async function main() {
   // Audio startet erst nach einer Berührung (iPad)
   for (const type of ['pointerup', 'touchend', 'click', 'keydown']) window.addEventListener(type, () => sfx.unlock(), { capture: true });
 
+  // iPad: Seite darf nie scrollen, wackeln oder zoomen (schnelles Doppeltippen, Pinch, Gummiband)
+  const stop = (e: Event) => { if (e.cancelable) e.preventDefault(); };
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend', 'dblclick']) document.addEventListener(type, stop, { passive: false });
+  document.addEventListener('touchmove', stop, { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 350) stop(e);
+    lastTouchEnd = now;
+  }, { passive: false });
+
   const resize = () => {
     const w = app.screen.width;
     const h = app.screen.height;
