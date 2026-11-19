@@ -19,9 +19,18 @@ export interface Held {
   y: number;
 }
 
+/** Hauttöne der Figuren: Haut und Schatten */
+export const SKIN_TONES = {
+  pale: { skin: 0xf6d2b8, shade: 0xd8967e },
+  tan: { skin: 0xe2ab7c, shade: 0xb87a52 },
+  brown: { skin: 0xa86c46, shade: 0x7a442a },
+} as const;
+export type SkinTone = keyof typeof SKIN_TONES;
+
 export interface Figure {
   /** Name der Figur (für Atlas und Test) */
   name: string;
+  skin: SkinTone;
   head: readonly string[];
   body: readonly string[];
   held: readonly Held[];
@@ -56,37 +65,43 @@ function torso(suit: Suit, top: string[], fabric: string[], panel: string, botto
 export const FIGURES: Record<CourtId, Figure> = {
   // ───────────────────────── Pik: Beobachter des Himmels
   SJ: {
+    skin: 'pale',
     name: 'Fernrohr Gehilfe',
     head: ['.......g', '......aa', '.....Aaa', '....Aaaa', '...Aaaaa', '..Aaaaaa', '.tTtTtTt', ...FACE_BOY],
-    body: torso('S', ['......wwww', '....wwWWww', '..bbaaaaww'], ['.bbaA', 'bbaaA', 'bbaAa', 'bbaaa', 'bbaAa', 'bbaaa'], 'cc', ['bbtTtTtTtT', 'bbaaaaabbb']),
+    body: torso('S', ['......wwww', '....wwWWww', '..bbaaaaww'], ['.ccaA', 'ccaaA', 'ccyaA', 'ccaaA', 'ccaya', 'ccaaA'], 'ww', ['bbtTtTtTtT', 'bcaCaCaCaC'], 'a'),
     held: [{ x: 0, y: 10, rows: ['.....GG', '....GvG', '...nnG.', '..nnN..', '.nnN...', 'nnN....', 'GG.....'] }],
   },
   SQ: {
+    skin: 'pale',
     name: 'Mondpriesterin',
     head: ['.yy....g', '.yyy..tT', '..yyytTt', '...yttTt', '..tTtTtT', '..hhhhhh', '.hhhhhhh', ...FACE_GIRL],
     body: torso('S', ['......ssss', '....hhssss', '..hhhbsttT'], ['.hhaa', 'hhaaA', 'hhaaa', 'hhaaA', 'hhaaa', 'hhaaA'], 'cC', ['hhatTtTtTt', 'hbaCcCcCcC'], 'T', 'a'),
     held: [{ x: 15, y: 8, rows: ['.yyy.', 'yy...', 'y....', 'yy...', '.yyy.', '..N..', '..N..', '..N..', '..N..', '..N..', '..N..', '..N..'] }],
   },
   SK: {
+    skin: 'pale',
     name: 'Sternenkönig',
     head: ['.......y', '.....yyy', '......yy', '.t..t..t', '.tTtTtTt', '.uttgtgt', '.uuuuuuu', ...FACE_KING_LONG],
-    body: torso('S', ['......wwww', '...wwwwwww', '..wkwwwkww'], ['.bbcc', 'bbccc', 'bbcCc', 'bbccc', 'bbcCc', 'bbccc'], 'aa', ['bbtttttttT', 'bbcccaaaaa']),
+    body: torso('S', ['......wwww', '...wwwwwww', '..wkwwwkww'], ['.bbcc', 'bbccy', 'bbcCc', 'bbccy', 'bbcCc', 'bbccy'], 'aa', ['bbtttttttT', 'bbcCcaaAaa']),
     held: [{ x: 0, y: 4, rows: ['..y..', '.yyy.', 'yyyyy', '.yyy.', '.y.y.', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..', '..d..'] }],
   },
   // ───────────────────────── Herz: Alchemisten
   HJ: {
+    skin: 'tan',
     name: 'Kolben Lehrling',
     head: ['....hhhh', '..hhhhhh', '.aAaaaaa', '.bbbbbbb', '.GvvvGGG', ...FACE_BOY],
-    body: torso('H', ['......ssss', '....wwssss', '..bbawwwww'], ['.bbaA', 'bbaaA', 'bbaAa', 'bbaaa', 'bbaAa', 'bbaaa'], 'cc', ['bbtttttttt', 'bbaaaaaccc']),
+    body: torso('H', ['......ssss', '....wwssss', '..bbawwwww'], ['.bbaA', 'bbaaA', 'bbaAt', 'bbaaa', 'bbaAt', 'bbaaa'], 'cc', ['bbtttttttt', 'bbacacacac']),
     held: [{ x: 15, y: 10, rows: ['.GG..', '..v..', '.vvv.', 'vrrrv', 'vrrrv', '.vvv.'] }],
   },
   HQ: {
+    skin: 'pale',
     name: 'Alchemistin',
     head: ['.......g', '......aa', '..w...Aa', '..w..Aaa', '..wwaaaa', '.tTtTtTt', '.hhhhhhh', ...FACE_GIRL],
     body: torso('H', ['......ssss', '....wwssss', '..bbwwsttT'], ['.bbaA', 'bbaAa', 'bbaaA', 'bbaAa', 'bbaaA', 'bbaAa'], 'tT', ['bbtTtTtTtT', 'bbaaaccaac'], 'a'),
     held: [{ x: 15, y: 11, rows: ['yyyyy', 'yrrry', '.yry.', '..y..', '..y..', '.yyy.'] }],
   },
   HK: {
+    skin: 'brown',
     name: 'Großalchemist',
     head: ['..o..o.y', '.ooyooyy', '.tTtTtTt', '.utgtgtg', '.uuuuuuu', ...FACE_KING_ROUND],
     body: torso('H', ['......wwww', '...wwwwwww', '..wwkwwwkw'], ['.bbta', 'bbtaA', 'bbtaa', 'bbtaA', 'bbtaa', 'bbtaA'], 'ww', ['bbtttttttT', 'bbcaaaaaaa'], 'a'),
@@ -94,18 +109,21 @@ export const FIGURES: Record<CourtId, Figure> = {
   },
   // ───────────────────────── Karo: Goldmacher
   DJ: {
+    skin: 'tan',
     name: 'Münzjunge',
     head: ['.....ccC', '....cCcc', '...aAaaa', '..Aaaaaa', '.aaaaaaa', '.bbbbbbb', ...FACE_BOY],
     body: torso('D', ['......ssss', '....wwssss', '..bbacacww'], ['.bcac', 'bcaca', 'bacac', 'bcaca', 'bacac', 'bcaca'], 'tt', ['bbtTtTtTtT', 'bbaaaaabbb'], 'a'),
     held: [{ x: 14, y: 13, rows: ['.dddd.', 'dyddDd', 'dydDDd', 'dddDDd', '.DDDD.'] }],
   },
   DQ: {
+    skin: 'pale',
     name: 'Goldschmiedin',
     head: ['.......g', '......tT', '....tTtT', '..hhhhhh', '.hhhhhhh', ...FACE_GIRL],
     body: torso('D', ['......ssss', '....hhssss', '..hhhbsttt'], ['.hhba', 'hhbaA', 'hhbaa', 'hhbaA', 'hhbaa', 'hhbaA'], 'tT', ['hhbcccccct', 'hbaAcacacT'], 'c', 'a'),
     held: [{ x: 15, y: 9, rows: ['..g..', '.gwg.', 'ggggg', '.ggg.', '..g..', '..d..', '..d..', '..d..'] }],
   },
   DK: {
+    skin: 'brown',
     name: 'Goldkönig',
     head: ['.g.g...g', '.t.t...t', '.tTtTtTt', '.tgtgtgt', '.uuuuuuu', ...FACE_KING_MUST],
     body: torso('D', ['......ssss', '...tTtTtTt', '..tTtttTtt'], ['.tuaa', 'ttuaA', 'ttuaa', 'ttuaA', 'ttuaa', 'ttuaA'], 'cc', ['bbtttttttT', 'bbaaaaaaaa']),
@@ -113,18 +131,21 @@ export const FIGURES: Record<CourtId, Figure> = {
   },
   // ───────────────────────── Kreuz: Kräuterkundige
   CJ: {
+    skin: 'pale',
     name: 'Kräutersammler',
     head: ['.......a', '......aA', '.....aaa', '....aAaa', '...aAaaa', '..aaAaaa', '..alLlLl', ...FACE_HOOD],
     body: torso('C', ['......ssss', '....aaAAaa', '..bbaaaAAa'], ['.bbaA', 'ccaaA', 'ccaAa', 'ccaaa', 'ccaAa', 'ccaaa'], 'nn', ['bbnnnnnnnT', 'bbaaaaabbb']),
     held: [{ x: 15, y: 13, rows: ['l.l.l', 'lLlLl', '.lLl.', '..n..', '..n..', '..n..'] }],
   },
   CQ: {
+    skin: 'brown',
     name: 'Kräuterfrau',
     head: ['....l..l', '...l.l.r', '.lLlLlLr', '..hhhhhh', '.hhhhhhh', ...FACE_GIRL],
     body: torso('C', ['......ssss', '....hhssss', '..hhhbsLlL'], ['.hhba', 'hhbaA', 'hhbaa', 'hhbaA', 'hhbaa', 'hhbaA'], 'll', ['hhblLlLlLl', 'hbcCcCcCcc'], 'T', 'a'),
     held: [{ x: 15, y: 13, rows: ['..G..', '.GGG.', 'GyyyG', 'GyoyG', 'GyyyG', '.GGG.'] }],
   },
   CK: {
+    skin: 'tan',
     name: 'Waldkönig',
     head: ['n..n...y', 'nn.nn.yy', '.nnnn.yy', '..nnntTt', '..tTtTtT', '..uuguug', ...FACE_KING_MUTTON],
     body: torso('C', ['......ssss', '...lLlLlLl', '..lLlllLll'], ['.bbcc', 'bbccc', 'bbcCc', 'bbccc', 'bbcCc', 'bbccc'], 'aa', ['bbtttttttT', 'bbcccaaaaa']),

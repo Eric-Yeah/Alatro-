@@ -24,9 +24,9 @@ Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards
 
 ## Pixel Art Spielkarten (Branch `claude/confident-hawking-9wzkrq`, nicht live)
 
-Neues Kartendesign (Details und offene Punkte O85 bis O89 in `AUDIT.md`). Karten sind Pixel Raster im Code: Daten in `src/data/cardArt/`, Renderer ohne DOM in `src/ui/cardArt/`, `CardView` zeigt sie als Sprite mit nearest Skalierung. Zwei Paletten (Standard, Hoher Kontrast), Wahl in den Optionen, gespeichert in `settings.cardPalette` (keine Save Migration).
+Neues Kartendesign (Details und offene Punkte O88 bis O92 in `AUDIT.md`). Karten sind Pixel Raster im Code: Daten in `src/data/cardArt/`, Renderer ohne DOM in `src/ui/cardArt/`, `CardView` zeigt sie als Sprite mit nearest Skalierung. Zwei Paletten (Standard, Hoher Kontrast), Wahl in den Optionen, gespeichert in `settings.cardPalette` (keine Save Migration).
 
-* **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (halbe Zeilen, werden gespiegelt), Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
+* **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (zwölf Einträge in `FIGURES`: Kopf und Körper als halbe Zeilen, die gespiegelt werden, dazu Gegenstand und Hautton), Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
 * **Live stellen:** erst nach Freigabe des Eigentümers. Dann diesen Branch nach `main` mergen (löst den Pages Deploy aus). Bis dahin nicht auf `main` oder `claude/funny-brahmagupta-ic0bpe` pushen.
 * **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit von Rang und Farbe bei dreifacher Vergrößerung, Schärfe der Karten im Hand Fächer (leichte Drehung).
 

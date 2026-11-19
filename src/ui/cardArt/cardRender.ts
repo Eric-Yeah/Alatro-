@@ -1,7 +1,7 @@
 import type { Rank, Suit } from '../../core/types';
 import { CARD_BASE, CARD_PALETTES, type CardPaletteId, type SuitColors } from '../../data/cardArt/cardPalettes';
 import { ACE_GLINT, ACE_ORNAMENT, ACE_SHAPES, CARD_PX_H, CARD_PX_W, COURT_HALF, COURT_PANEL, INDEX_FONT, PIP_COL, PIP_LAYOUT, PIP_ROW, PIP_SIZE, SUIT_PIP, SUIT_SMALL } from '../../data/cardArt/cardGlyphs';
-import { COURT_PATTERN, FIGURE, FIGURES, type Court, type CourtId } from '../../data/cardArt/courtSprites';
+import { COURT_PATTERN, FIGURE, FIGURES, SKIN_TONES, type Court, type CourtId } from '../../data/cardArt/courtSprites';
 import { PixelBuffer, gridBuffer, mirrorRows, mixColor, type ColorMap } from './pixelBuffer';
 
 // Zeichnet Kartenvorderseiten und Rückseiten als Pixel Puffer (ohne DOM, testbar).
@@ -198,8 +198,19 @@ function courtHalf(court: Court, suit: Suit, s: SuitColors): PixelBuffer {
   drawPattern(half, COURT_PATTERN[suit], mixColor(s.tint, s.main, 0.22));
   // schmaler Zierrahmen in Gold, die Figur überdeckt ihn teilweise
   half.strokeRect(0, 0, COURT_HALF.w, COURT_HALF.h + 1, s.trim);
-  const map = courtColors(s);
   const id = `${suit}${court}` as CourtId;
+  const tone = SKIN_TONES[FIGURES[id].skin];
+  const map: ColorMap = { ...courtColors(s), s: tone.skin, S: tone.shade };
+  // Heiligenschein: getönte Scheibe mit Ring hinter dem Kopf
+  const hx = half.w >> 1, hy = 8;
+  const disc = mixColor(s.tint, s.secLight, 0.5), ring = mixColor(s.tint, s.sec, 0.55);
+  for (let y = -10; y <= 10; y++) {
+    for (let x = -10; x <= 10; x++) {
+      const d = Math.hypot(x, y);
+      if (d <= 8.5) half.set(hx + x, hy + y, disc);
+      else if (d <= 9.7) half.set(hx + x, hy + y, ring);
+    }
+  }
   half.blitBuffer(gridBuffer(figureGrid(id), map, CARD_BASE.ink, true), 0, 0);
   for (const held of FIGURES[id].held) half.blitBuffer(gridBuffer(held.rows, map, CARD_BASE.ink), held.x, held.y);
   return half;

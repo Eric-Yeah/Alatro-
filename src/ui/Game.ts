@@ -591,7 +591,7 @@ export class Game {
   private layoutHand(ms = 260) {
     const hand = this.run?.round?.hand ?? [];
     const n = hand.length;
-    const spacing = Math.min(114, 820 / Math.max(n - 1, 1));
+    const spacing = Math.min(108, 780 / Math.max(n - 1, 1));
     hand.forEach((c, i) => {
       const v = this.cardViews.get(c.id);
       if (!v) return;
