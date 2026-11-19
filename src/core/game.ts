@@ -19,7 +19,9 @@ import { EDITIONS } from '../data/modifiers';
 import type { RunMods } from '../data/modsSpec';
 import { FIRST_SHOP_PACK, PACKS, type PackDef } from '../data/packs';
 import { BASE_PRICES } from '../data/shop';
-import { STAKES, type StakeDef } from '../data/stakes';
+import { DEFAULT_STAKE_ID, STAKES, stakeChain, type StakeDef } from '../data/stakes';
+import { clampScale, scaleMods } from '../data/difficulty';
+import { TWIST_BY_ID } from '../data/daily';
 import { TAGS, type TagDef } from '../data/tags';
 import { VOUCHERS, type VoucherDef } from '../data/vouchers';
 import { REROLL } from '../data/economy';
@@ -64,7 +66,8 @@ export function applyMods(run: RunState, m: RunMods) {
   if (m.editionRate !== undefined) r.editionRate = m.editionRate;
   if (m.scaling !== undefined) r.scaling = m.scaling;
   if (m.smallBlindReward !== undefined) r.smallBlindReward = m.smallBlindReward;
-  if (m.blindTargetFactor !== undefined) r.blindTargetFactor = m.blindTargetFactor;
+  // Faktoren verschiedener Quellen (Stufe, Deck, Wandlung) multiplizieren sich
+  if (m.blindTargetFactor !== undefined) r.blindTargetFactor *= m.blindTargetFactor;
   if (m.balance !== undefined) r.balance = m.balance;
   if (m.noInterest !== undefined) r.noInterest = m.noInterest;
   if (m.perHandLeft !== undefined) r.perHandLeft = m.perHandLeft;
@@ -87,18 +90,38 @@ function buildDeck(deck: DeckDef): Card[] {
 export interface RunSetup {
   seed: string;
   deckId?: string;
+  /** feste Stake Stufe (Leiter oder Einsteigerstufe) */
   stakeId?: string;
+  /** Stufe der skalierenden Schwierigkeit, hat Vorrang vor stakeId */
+  level?: number;
+  /** Tageslauf: Datum und Tageswandlung */
+  daily?: { date: string; twistId: string };
 }
 
-/** Neuer Run mit Deck und Stake. Stakes wirken kumulativ (alle bis zur gewählten Stufe). */
+/** Pseudo Stake Id für Runs mit skalierender Schwierigkeit */
+export const SCALE_STAKE_ID = 'skala';
+
+/** Neuer Run mit Deck und Schwierigkeit. Stakes der Leiter wirken kumulativ (alle bis zur gewählten Stufe). */
 export function createRun(setup: RunSetup): RunState {
   const run = newRun(setup.seed);
   const deck = DECK_BY_ID[setup.deckId ?? DECKS[0].id] ?? DECKS[0];
-  const stakeIndex = Math.max(0, STAKES.findIndex((s) => s.id === setup.stakeId));
+  if (setup.level !== undefined) {
+    run.stakeId = SCALE_STAKE_ID;
+    run.difficulty = clampScale(setup.level);
+    for (const m of scaleMods(run.difficulty)) applyMods(run, m);
+  } else {
+    const stake = STAKE_BY_ID[setup.stakeId ?? ''] ?? STAKE_BY_ID[DEFAULT_STAKE_ID];
+    run.stakeId = stake.id;
+    for (const s of stakeChain(stake.id)) applyMods(run, s.mods);
+  }
   run.deckId = deck.id;
-  run.stakeId = STAKES[stakeIndex].id;
-  for (const s of STAKES.slice(0, stakeIndex + 1)) applyMods(run, s.mods);
   applyMods(run, deck.mods);
+  const twist = setup.daily ? TWIST_BY_ID[setup.daily.twistId] : undefined;
+  if (setup.daily && twist) {
+    run.daily = setup.daily.date;
+    run.twistId = twist.id;
+    applyMods(run, twist.mods);
+  }
   run.deck = buildDeck(deck);
   run.nextCardId = Math.max(0, ...run.deck.map((c) => c.id)) + 1;
   enterAnte(run);
@@ -336,6 +359,7 @@ export function reroll(run: RunState): boolean {
   run.money -= cost;
   if (s.freeRerolls > 0) s.freeRerolls--;
   else s.rerollsUsed++;
+  run.stats.rerolls++;
   // Reroll ersetzt nur die normalen Karten Slots, nicht Packs, Voucher oder gratis Tag Jokers
   const keepFree = s.cards.filter((c): c is ShopItem & { kind: 'joker' } => c?.kind === 'joker' && !!c.free);
   const exclude = new Set(keepFree.map((c) => c.defId));
@@ -358,7 +382,10 @@ export function buyCard(run: RunState, index: number): boolean {
   if (!canBuyCard(run, index)) return false;
   const item = run.shop!.cards[index]!;
   run.money -= item.price;
-  if (item.kind === 'joker') addJoker(run, item.defId, { edition: item.edition, buyPrice: item.free ? 0 : item.price });
+  if (item.kind === 'joker') {
+    addJoker(run, item.defId, { edition: item.edition, buyPrice: item.free ? 0 : item.price });
+    run.stats.jokersBought++;
+  }
   else if (item.kind === 'consumable') addConsumable(run, item.defId, item.price);
   else run.deck.push(item.card);
   run.shop!.cards[index] = null;

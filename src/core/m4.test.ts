@@ -623,7 +623,7 @@ describe('Spielstand Version 4', () => {
     delete v3.rules.sternbildXMult;
     delete v3.rules.shopCardMods;
     const m = migrateRun(v3)!;
-    expect(m.version).toBe(4);
+    expect(m.version).toBe(5);
     expect(m.consumables).toEqual([]);
     expect(m.rules.typeWeights.sternbild).toBe(4);
     expect(m.rules.sternbildXMult).toBe(1);
