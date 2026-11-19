@@ -1,4 +1,5 @@
 // Zahlen für Juice (Shake, Flash, Tonleiter, Stimmungen). Reine Darstellung, keine Spielregeln.
+import type { CardPaletteId } from './cardArt/cardPalettes';
 
 /** Stufen für Shake und Flash nach dem Verhältnis Handpunkte zu Blind Ziel. Die letzte passende Stufe gilt. */
 export interface ScoreTier {
@@ -117,5 +118,7 @@ export const DEFAULT_SETTINGS = {
   quality: 'voll' as Quality,
   /** kleine FPS Anzeige oben rechts */
   fps: false,
+  /** Farbpalette der Spielkarten (ID aus data/cardArt/cardPalettes.ts) */
+  cardPalette: 'standard' as CardPaletteId,
 };
 export const VOLUME_STEP = 0.1;

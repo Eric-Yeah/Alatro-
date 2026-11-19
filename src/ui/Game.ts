@@ -25,6 +25,7 @@ import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
 import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
+import { CARD_PALETTES, CARD_PALETTE_IDS } from '../data/cardArt/cardPalettes';
 import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
 import { collectionProgress, entryName, loadDiscovered, unseenKeys } from '../collection';
@@ -1718,7 +1719,7 @@ export class Game {
   /** Optionen: werden sofort gespeichert und angewendet */
   private showOptions() {
     const W = 660;
-    const { box } = this.modal(W, 800, C.panelDark);
+    const { box } = this.modal(W, 890, C.panelDark);
     const head = label('Optionen', 44, C.text);
     head.position.set(W / 2, 56);
     box.addChild(head);
@@ -1769,9 +1770,16 @@ export class Game {
       }, 22);
       quality.position.set(W - 150, qy);
       onOff(5, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
+      const cpy = row(6, 'Kartenfarben', CARD_PALETTES[st.cardPalette].description);
+      const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, 56, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
+        const at = Math.max(0, CARD_PALETTE_IDS.indexOf(st.cardPalette));
+        updateSettings({ cardPalette: CARD_PALETTE_IDS[(at + 1) % CARD_PALETTE_IDS.length] });
+        render();
+      }, 22);
+      cardPal.position.set(W - 170, cpy);
       const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
-      back.position.set(W / 2, 710);
-      dyn.addChild(minus, plus, speed, quality, back);
+      back.position.set(W / 2, 800);
+      dyn.addChild(minus, plus, speed, quality, cardPal, back);
     };
     render();
   }
@@ -2166,7 +2174,7 @@ export class Game {
         const cs = Math.min(112, 880 / Math.max(cards.length, 1));
         cards.forEach((card, i) => {
           const cv = new CardView(card);
-          cv.scale.set(0.7);
+          cv.scale.set(2 / 3);
           const on = targets.includes(card.id);
           cv.position.set(W / 2 + (i - (cards.length - 1) / 2) * cs, 620 - (on ? 16 : 0));
           cv.on('pointertap', () => {

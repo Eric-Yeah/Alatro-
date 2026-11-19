@@ -1,4 +1,5 @@
 import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
+import { CARD_PALETTE_IDS, type CardPaletteId } from './data/cardArt/cardPalettes';
 import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
 
 export interface Settings {
@@ -8,6 +9,7 @@ export interface Settings {
   speed: string;
   quality: Quality;
   fps: boolean;
+  cardPalette: CardPaletteId;
 }
 
 const KEY = 'alatro.settings.v2';
@@ -25,6 +27,7 @@ export function parseSettings(raw: unknown): Settings {
     speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
     quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
+    cardPalette: CARD_PALETTE_IDS.find((x) => x === o.cardPalette) ?? DEFAULT_SETTINGS.cardPalette,
   };
 }
 

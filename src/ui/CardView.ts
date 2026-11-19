@@ -1,11 +1,24 @@
-import { Container, Graphics, Text } from 'pixi.js';
-import { SUIT_SYMBOLS, isFace, isRankless, rankLabel, type Card } from '../core/cards';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
+import { isRankless, type Card } from '../core/cards';
+import { CARD_PX_H, CARD_PX_SCALE, CARD_PX_W } from '../data/cardArt/cardGlyphs';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import { getSettings, onSettings } from '../settings';
+import { cardBackTexture, cardTexture } from './cardArt/cardTextures';
 import { editionOverlay } from './editionFx';
-import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS, SUIT_COLORS } from './theme';
+import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS } from './theme';
 
-export const CARD_W = 112;
-export const CARD_H = 156;
+/** Kartengröße in Bildschirm Einheiten: Pixel Textur (37 mal 51) dreifach vergrößert */
+export const CARD_W = CARD_PX_W * CARD_PX_SCALE;
+export const CARD_H = CARD_PX_H * CARD_PX_SCALE;
+
+/** Alle lebenden Kartenansichten, damit ein Palettenwechsel in den Einstellungen sofort wirkt */
+const live = new Set<CardView>();
+let listening = false;
+function ensureListener() {
+  if (listening) return;
+  listening = true;
+  onSettings(() => { for (const v of live) v.refreshArt(); });
+}
 
 export class CardView extends Container {
   selected = false;
@@ -14,58 +27,39 @@ export class CardView extends Container {
   homeRot = 0;
   readonly face = new Container();
   private debuffOverlay: Container | null = null;
+  private readonly art: Sprite;
+  private readonly faceColor: number | undefined;
+
+  private currentTexture() {
+    const card = this.card;
+    return cardTexture(card.suit, card.rank, getSettings().cardPalette, { face: this.faceColor, rankless: isRankless(card) });
+  }
+
+  /** Textur neu setzen (nach Wechsel der Kartenpalette) */
+  refreshArt() {
+    if (this.destroyed) return;
+    this.art.texture = this.currentTexture();
+  }
+
+  override destroy(options?: Parameters<Container['destroy']>[0]) {
+    live.delete(this);
+    super.destroy(options);
+  }
 
   constructor(public readonly card: Card) {
     super();
     const w = CARD_W, h = CARD_H;
     const rankless = isRankless(card);
-    const color = rankless ? 0xd8d0e8 : SUIT_COLORS[card.suit];
-    const sym = SUIT_SYMBOLS[card.suit];
-    const rl = rankLabel(card.rank);
-    const faceColor = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] ?? C.cardFace : C.cardFace;
+    const faceColor = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] : undefined;
+    this.faceColor = faceColor;
 
-    const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 });
-    const body = new Graphics()
-      .roundRect(-w / 2, -h / 2, w, h, 10).fill(faceColor).stroke({ width: 3, color: C.cardEdge })
-      .roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 6).stroke({ width: 1.5, color, alpha: 0.35 });
-    this.face.addChild(shadow, body);
-
-    const style = { fontFamily: FONT_BODY, fontWeight: '900' as const, fill: color };
-    if (rankless) {
-      const t = new Text({ text: '◆', style: { ...style, fontSize: 58 } });
-      t.anchor.set(0.5);
-      t.y = -8;
-      this.face.addChild(t);
-    } else {
-      const corner = (rot: number) => {
-        const c = new Container();
-        const r = new Text({ text: rl, style: { ...style, fontSize: 26 } });
-        r.anchor.set(0.5, 0);
-        const s = new Text({ text: sym, style: { ...style, fontSize: 20 } });
-        s.anchor.set(0.5, 0);
-        s.y = 26;
-        c.addChild(r, s);
-        c.position.set(rot ? w / 2 - 18 : -w / 2 + 18, rot ? h / 2 - 8 : -h / 2 + 8);
-        c.rotation = rot;
-        return c;
-      };
-      const center = new Container();
-      if (isFace(card.rank) || card.rank === 14) {
-        const frame = new Graphics().roundRect(-30, -42, 60, 84, 8).fill({ color, alpha: 0.12 }).stroke({ width: 2, color, alpha: 0.6 });
-        const big = new Text({ text: rl, style: { ...style, fontSize: 50 } });
-        big.anchor.set(0.5);
-        big.y = -10;
-        const small = new Text({ text: sym, style: { ...style, fontSize: 26 } });
-        small.anchor.set(0.5);
-        small.y = 24;
-        center.addChild(frame, big, small);
-      } else {
-        const big = new Text({ text: sym, style: { ...style, fontSize: 64 } });
-        big.anchor.set(0.5);
-        center.addChild(big);
-      }
-      this.face.addChild(corner(0), corner(Math.PI), center);
-    }
+    const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.35 });
+    this.art = new Sprite(this.currentTexture());
+    this.art.anchor.set(0.5);
+    this.art.scale.set(CARD_PX_SCALE);
+    this.face.addChild(shadow, this.art);
+    live.add(this);
+    ensureListener();
 
     // Enhancement Name unten
     if (card.enhancement && ENHANCEMENTS[card.enhancement]) {
@@ -97,7 +91,7 @@ export class CardView extends Container {
         .roundRect(-w / 2 - 3, -h / 2 - 3, w + 6, h + 6, 12).stroke({ width: 5, color: ec, alpha: 0.9 })
         .roundRect(-w / 2 + 3, -h / 2 + 3, w - 6, h - 6, 8).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
       this.face.addChild(glow);
-      const fx = editionOverlay(card.edition, w, h, 10);
+      const fx = editionOverlay(card.edition, w, h, 8);
       if (fx) this.face.addChild(fx);
       // Name der Edition oben, rechts von der Eckmarke
       const en = new Text({ text: EDITIONS[card.edition].name, style: { fontFamily: FONT_BODY, fontSize: 12, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1b1530, width: 4 } } });
@@ -121,7 +115,7 @@ export class CardView extends Container {
       return;
     }
     const o = new Container();
-    o.addChild(new Graphics().roundRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 10).fill({ color: 0x1b1530, alpha: 0.55 }));
+    o.addChild(new Graphics().roundRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 8).fill({ color: 0x1b1530, alpha: 0.55 }));
     const x = new Text({ text: '✕', style: { fontFamily: FONT_BODY, fontSize: 64, fontWeight: '900', fill: 0xff4d5e } });
     x.anchor.set(0.5);
     x.alpha = 0.85;
@@ -134,13 +128,10 @@ export class CardView extends Container {
 export function cardBack(color: number = C.cardBack): Container {
   const c = new Container();
   const w = CARD_W, h = CARD_H;
-  const g = new Graphics()
-    .roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 10).fill({ color: 0x000000, alpha: 0.35 })
-    .roundRect(-w / 2, -h / 2, w, h, 10).fill(color).stroke({ width: 3, color: C.cardEdge })
-    .roundRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20, 6).stroke({ width: 2, color: 0xffffff, alpha: 0.35 });
-  for (let i = -3; i <= 3; i++) {
-    g.moveTo(-w / 2 + 14, i * 18).lineTo(0, i * 18 - 30).lineTo(w / 2 - 14, i * 18).stroke({ width: 2, color: 0xffffff, alpha: 0.12 });
-  }
-  c.addChild(g);
+  const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.35 });
+  const art = new Sprite(cardBackTexture(color));
+  art.anchor.set(0.5);
+  art.scale.set(CARD_PX_SCALE);
+  c.addChild(shadow, art);
   return c;
 }
