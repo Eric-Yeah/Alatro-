@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ACE_SHAPES, CARD_PX_H, CARD_PX_W, INDEX_FONT, PIP_LAYOUT, SUIT_PIP, SUIT_SMALL } from './data/cardArt/cardGlyphs';
 import { CARD_BASE, CARD_PALETTES, CARD_PALETTE_IDS } from './data/cardArt/cardPalettes';
-import { COURT_HALF_ROWS, COURT_HELD } from './data/cardArt/courtSprites';
+import { COURT_PATTERN, FIGURE, FIGURES, type CourtId } from './data/cardArt/courtSprites';
 import { RANKS, SUITS } from './data/cards';
 import { DEFAULT_SETTINGS } from './data/juice';
 import { parseSettings } from './settings';
-import { courtColors, renderCard, renderCardBack } from './ui/cardArt/cardRender';
-import { mirrorRows, PixelBuffer } from './ui/cardArt/pixelBuffer';
+import { courtColors, figureGrid, renderCard, renderCardBack } from './ui/cardArt/cardRender';
+import { PixelBuffer } from './ui/cardArt/pixelBuffer';
 
 const same = (a: PixelBuffer, b: PixelBuffer) => a.data.every((v, i) => v === b.data[i]);
 
@@ -61,46 +61,89 @@ describe('Pixel Art Karten', () => {
     }
   });
 
-  it('Bildkarten: untere Hälfte ist die gedrehte obere, Zeilen und Zeichen sind gültig', () => {
-    for (const court of ['J', 'Q', 'K'] as const) {
-      const rows = COURT_HALF_ROWS[court];
-      expect(rows.length).toBe(20);
-      rows.forEach((r) => expect(r.length).toBe(8));
-      expect(mirrorRows(rows)[0].length).toBe(15);
+  it('Zwölf Bildkarten haben je eine eigene Figur mit gültigen Rastern und Zeichen', () => {
+    const ids = Object.keys(FIGURES) as CourtId[];
+    expect(ids.length).toBe(12);
+    expect(new Set(ids.map((id) => figureGrid(id).join('\n'))).size).toBe(12);
+    expect(new Set(ids.map((id) => FIGURES[id].name)).size).toBe(12);
+    for (const id of ids) {
+      const f = FIGURES[id];
+      f.head.forEach((r) => expect(r.length, `${id} Kopf`).toBe((FIGURE.headW + 1) / 2));
+      expect(f.head.length, `${id} Kopf Höhe`).toBeLessThanOrEqual(FIGURE.headH);
+      expect(f.body.length, `${id} Körper`).toBe(FIGURE.bodyRows);
+      f.body.forEach((r) => expect(r.length, `${id} Körper Breite`).toBe((FIGURE.w + 1) / 2));
+      for (const h of f.held) {
+        const w = h.rows[0].length;
+        h.rows.forEach((r) => expect(r.length, `${id} Gegenstand`).toBe(w));
+      }
+      const g = figureGrid(id);
+      expect(g.length).toBe(FIGURE.h);
+      g.forEach((r) => expect(r.length).toBe(FIGURE.w));
     }
+    // alle Zeichen sind in der Farbtabelle (beide Paletten)
+    for (const pid of CARD_PALETTE_IDS) {
+      const map = courtColors(CARD_PALETTES[pid].suits.S);
+      for (const id of ids) {
+        const chars = new Set<string>([...figureGrid(id).join(''), ...FIGURES[id].held.flatMap((h) => [...h.rows.join('')])]);
+        for (const c of chars) if (c !== '.') expect(map[c], `${id} Zeichen ${c}`).toBeDefined();
+      }
+    }
+    expect(Object.keys(COURT_PATTERN).length).toBe(4);
+  });
+
+  it('Bildkarten: Farben der Figuren sind mehrfarbig, die Kartenfarbe bleibt erkennbar', () => {
     for (const id of CARD_PALETTE_IDS) {
-      const map = courtColors(CARD_PALETTES[id].suits.S);
-      const chars = new Set<string>();
-      for (const court of ['J', 'Q', 'K'] as const) {
-        COURT_HALF_ROWS[court].forEach((r) => [...r].forEach((c) => chars.add(c)));
-        for (const suit of SUITS) {
-          const held = COURT_HELD[suit][court];
-          const w = held.rows[0].length;
-          held.rows.forEach((r) => expect(r.length).toBe(w));
-          held.rows.forEach((r) => [...r].forEach((c) => chars.add(c)));
+      for (const suit of SUITS) {
+        for (const rank of [11, 12, 13] as const) {
+          const b = renderCard(suit, rank, id);
+          const colors = new Map<number, number>();
+          for (let y = 4; y < 28; y++) for (let x = 10; x < 31; x++) { const c = b.get(x, y); if (c !== null) colors.set(c, (colors.get(c) ?? 0) + 1); }
+          expect(colors.size, `${suit}${rank} ${id}`).toBeGreaterThanOrEqual(10);
+          const s = CARD_PALETTES[id].suits[suit];
+          const suitPixels = [s.main, s.light, s.dark].reduce((n, c) => n + (colors.get(c) ?? 0), 0);
+          expect(suitPixels, `${suit}${rank} ${id} Kartenfarbe`).toBeGreaterThan(30);
         }
       }
-      for (const c of chars) if (c !== '.') expect(map[c], `Zeichen ${c}`).toBeDefined();
     }
+  });
+
+  it('Untere Hälfte der Bildkarten ist die gedrehte obere', () => {
     const b = renderCard('S', 13, 'standard');
-    const top = new PixelBuffer(17, 21);
-    const bottom = new PixelBuffer(17, 21);
-    for (let y = 0; y < 21; y++) for (let x = 0; x < 17; x++) {
-      const t = b.get(10 + x, 4 + y), u = b.get(10 + x, 26 + y);
+    const top = new PixelBuffer(21, 24);
+    const bottom = new PixelBuffer(21, 24);
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 21; x++) {
+      const t = b.get(10 + x, 4 + y), u = b.get(10 + x, 29 + y);
       if (t !== null) top.set(x, y, t);
       if (u !== null) bottom.set(x, y, u);
     }
-    // Muster und Figur sind symmetrisch gedreht (Figurenhälfte liegt um 180 Grad)
     expect(same(top.rotated180(), bottom)).toBe(true);
+  });
+
+  it('Ass: größeres Symbol mit Verzierung, alle vier verschieden und mehrfarbig', () => {
+    for (const id of CARD_PALETTE_IDS) {
+      const seen = new Set<string>();
+      for (const suit of SUITS) {
+        const b = renderCard(suit, 14, id);
+        seen.add(b.data.join(','));
+        const colors = new Set<number>();
+        for (let y = 8; y < 48; y++) for (let x = 9; x < 32; x++) { const c = b.get(x, y); if (c !== null) colors.add(c); }
+        expect(colors.size).toBeGreaterThanOrEqual(7);
+        // Symbol füllt mindestens 17 Pixel Breite in der Mitte
+        let w = 0;
+        for (let x = 0; x < CARD_PX_W; x++) if (b.get(x, CARD_PX_H >> 1) === CARD_PALETTES[id].suits[suit].dark) w++;
+        expect(w).toBeGreaterThan(0);
+      }
+      expect(seen.size).toBe(4);
+    }
   });
 
   it('Raster der Symbole und Schrift sind rechteckig', () => {
     for (const suit of SUITS) {
       const small = SUIT_SMALL[suit];
       small.forEach((r) => expect(r.length).toBe(5));
-      SUIT_PIP[suit].forEach((r) => expect(r.length).toBe(7));
-      expect(SUIT_PIP[suit].length).toBe(7);
-      ACE_SHAPES[suit].forEach((r) => expect(r.length).toBe(8));
+      SUIT_PIP[suit].forEach((r) => expect(r.length).toBe(9));
+      expect(SUIT_PIP[suit].length).toBe(9);
+      ACE_SHAPES[suit].forEach((r) => expect(r.length).toBe(10));
     }
     for (const g of Object.values(INDEX_FONT)) {
       expect(g.length).toBe(5);

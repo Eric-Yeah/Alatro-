@@ -16,10 +16,11 @@ const GAP = 3;
 const BG = [0x1d, 0x2a, 0x3a];
 const order = ['S', 'H', 'C', 'D'] as const;
 const ranks = [14, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] as const;
+const faceRanks = [14, 11, 12, 13] as const;
 void SUITS; void RANKS;
 
-for (const id of CARD_PALETTE_IDS) {
-  const cols = ranks.length + 1;
+function sheet(id: (typeof CARD_PALETTE_IDS)[number], list: readonly number[], withBack: boolean, name: string) {
+  const cols = list.length + (withBack ? 1 : 0);
   const rows = order.length;
   const W = (cols * (CARD_PX_W + GAP) + GAP) * scale;
   const H = (rows * (CARD_PX_H + GAP) + GAP) * scale;
@@ -36,8 +37,13 @@ for (const id of CARD_PALETTE_IDS) {
     }
   };
   order.forEach((suit, r) => {
-    ranks.forEach((rank, c) => put(renderCard(suit, rank, id), GAP + c * (CARD_PX_W + GAP), GAP + r * (CARD_PX_H + GAP)));
-    put(renderCardBack(0x5b3fa8), GAP + ranks.length * (CARD_PX_W + GAP), GAP + r * (CARD_PX_H + GAP));
+    list.forEach((rank, c) => put(renderCard(suit, rank as never, id), GAP + c * (CARD_PX_W + GAP), GAP + r * (CARD_PX_H + GAP)));
+    if (withBack) put(renderCardBack(0x5b3fa8), GAP + list.length * (CARD_PX_W + GAP), GAP + r * (CARD_PX_H + GAP));
   });
-  writeFileSync(join(out, `cards-${id}.png`), encodePng(W, H, rgba));
+  writeFileSync(join(out, `${name}-${id}.png`), encodePng(W, H, rgba));
+}
+
+for (const id of CARD_PALETTE_IDS) {
+  sheet(id, ranks, true, 'cards');
+  sheet(id, faceRanks, false, 'faces');
 }
