@@ -49,6 +49,7 @@ import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { playPackOpen, type FanTarget } from './packFx';
 import { trayLayout } from './consumableTray';
 import { OPEN_FX } from '../data/artFx';
+import { BACKUP_H, BACKUP_W, buildBackup } from './BackupView';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { buildHome } from './HomeView';
@@ -1790,7 +1791,7 @@ export class Game {
   /** Optionen: werden sofort gespeichert und angewendet */
   private showOptions() {
     const W = 660;
-    const { box } = this.modal(W, 890, C.panelDark);
+    const { box } = this.modal(W, 960, C.panelDark);
     const head = label('Optionen', 44, C.text);
     head.position.set(W / 2, 56);
     box.addChild(head);
@@ -1868,11 +1869,20 @@ export class Game {
         render();
       }, 22);
       cardPal.position.set(W - 170, cpy);
+      const bky = row(10, 'Spielstand', 'Sichern, auf ein anderes Gerät übertragen und zurückladen');
+      const backup = new Button('Sichern', 230, 56, C.chips, () => this.showBackup(), 22);
+      backup.position.set(W - 170, bky);
       const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
-      back.position.set(W / 2, 800);
-      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, back);
+      back.position.set(W / 2, 870);
+      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, backup, back);
     };
     render();
+  }
+
+  /** Spielstand sichern und laden, Zurück führt in die Optionen */
+  private showBackup() {
+    const { box } = this.modal(BACKUP_W, BACKUP_H, C.panelDark);
+    buildBackup(box, () => this.showOptions());
   }
 
   /** Sammlung aller gesehenen Inhalte, Zurück führt ins Hauptmenü */

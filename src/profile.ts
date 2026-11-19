@@ -251,6 +251,12 @@ export function saveProfile() {
   }
 }
 
+/** Ersetzt das Profil im Speicher und im Browser (nach Import oder Sync) */
+export function replaceProfile(p: Profile) {
+  current = p;
+  saveProfile();
+}
+
 /** Nur für Tests: Profil im Speicher ersetzen */
 export function setProfileForTest(p: Profile | null) {
   current = p;

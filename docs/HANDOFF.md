@@ -2,6 +2,13 @@
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
+## Geräte Sync (in Arbeit)
+
+Plan: Kopplungscode ohne Konto, Supabase als Speicher, Daten Ende zu Ende verschlüsselt. Fertig sind S1 (Export und Import in den Optionen) und S2 (Kern ohne Netz: `src/syncBundle.ts`, `src/syncCrypto.ts`, `src/syncStorage.ts`, Zahlen `src/data/sync.ts`, Tests `src/sync.test.ts`). Offene Entscheidungen: `AUDIT.md` O95 bis O98.
+
+* **Als Nächstes:** S3 Supabase (neues, eigenes Projekt anlegen, SQL mit Tabelle `saves` und den Funktionen `sync_pull` und `sync_push`, Client mit `fetch`), S4 Oberfläche "Geräte koppeln" mit Statusanzeige und Konfliktdialog, S5 Test auf dem iPad.
+* **Wichtig:** Das bestehende Supabase Projekt des Eigentümers nicht anfassen, alles in ein zweites Projekt.
+
 ## Wo wir stehen
 
 | Meilenstein | Status |

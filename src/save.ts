@@ -4,13 +4,19 @@ import { enterAnte } from './core/game';
 import { RngStreams } from './core/rng';
 
 const KEY = 'alatro.run.v1';
+/** Zeitpunkt der letzten Speicherung des Runs (ms), für den Abgleich zwischen Geräten */
+const AT_KEY = 'alatro.run.at.v1';
 
 export function saveRun(run: RunState | null) {
   try {
     if (run) {
       localStorage.setItem(KEY, JSON.stringify(run));
+      localStorage.setItem(AT_KEY, String(Date.now()));
       recordRun(run);
-    } else localStorage.removeItem(KEY);
+    } else {
+      localStorage.removeItem(KEY);
+      localStorage.removeItem(AT_KEY);
+    }
   } catch {
     /* Speicher nicht verfügbar */
   }
@@ -84,5 +90,24 @@ export function loadRun(): RunState | null {
     return raw ? migrateRun(JSON.parse(raw)) : null;
   } catch {
     return null;
+  }
+}
+
+/** Zeitpunkt der letzten Run Speicherung, 0 wenn unbekannt */
+export function loadRunAt(): number {
+  try {
+    const n = Number(localStorage.getItem(AT_KEY));
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Setzt den Zeitpunkt (nach einem Import oder Sync, damit der Abgleich den fremden Stand kennt) */
+export function setRunAt(at: number) {
+  try {
+    localStorage.setItem(AT_KEY, String(at));
+  } catch {
+    /* Speicher nicht verfügbar */
   }
 }
