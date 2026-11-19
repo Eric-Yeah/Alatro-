@@ -1,4 +1,4 @@
-# Übergabe: Stand nach Sternenatlas, Siegeln und Rückschau (Version 0.6.2)
+# Übergabe: Stand nach Pixel Art für Karten, Jokers, Consumables und Packs (Version 0.8.0)
 
 Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
 
@@ -18,16 +18,23 @@ Teststand: `npm test` grün (siehe `AUDIT.md`), `npm run test:spec` 87 von 87 gr
 
 Das Briefing `balatro_briefing.md` liegt **nicht** im Repo (es wurde nur im Chat hochgeladen). Den Originalkatalog aus Abschnitt 4 nicht verwenden, alle Inhalte sind eigene Entwürfe.
 
+## Version 0.7.1: Hintergrundmusik im Mix
+
+Drei mystische Stücke ohne Beat und Bass (Sternenglas, Mondlabor, Sphärenklang), live synthetisiert. Standard ist **Mix**: die Stücke wechseln sich ab (je etwa zwei Minuten, weiche Überblendung), in den Optionen auch einzeln wählbar, mit eigener Lautstärke. Große Effekte ziehen die Musik kurz leiser (Ducking), Sparsam spielt eine leichtere Variante. Daten `src/data/music.ts`, Komposition `src/ui/musicScore.ts`, Klang und Player `src/ui/music.ts`, Einbindung in `src/ui/audio.ts` (`syncMusic`). Einzelheiten und offene Punkte: `AUDIT.md`, Abschnitt "Hintergrundmusik" und O88.
+
+* **Neues Stück anlegen:** Eintrag in `TRACKS` (Akkorde, Pad, Glocken, Hall), Kurzbeschreibung höchstens `MUSIC.infoMax` Zeichen. Danach `level` so einstellen, dass alle Stücke etwa gleich laut sind (Hörprobe mit `scheduleMusic` im `OfflineAudioContext` rendern und Lautheit messen). Ein neues Stück kommt automatisch in den Mix.
+* **Als Nächstes:** Auf dem iPad anhören: Gefällt der Mix, ist das Ducking zu stark oder zu schwach (`MUSIC.duck`), ist zwei Minuten pro Stück gut (`MUSIC.mixChords`). Akku und Bildrate mit Musik prüfen.
+
 ## Version 0.6.2: Titel aus Karten
 
 Der Titel ALATRO im Home Bildschirm besteht aus sechs Karten (`src/ui/TitleCards.ts`, Zahlen in `src/data/homeTitle.ts`): Hinwerfen beim Öffnen, Anheben beim Berühren, Umdrehen per Tipp. Die Buchstaben stehen in der eigenen Schrift `Alatro Karte` (`tools/titlefont.py`, nur A L T R O). Auf dem iPad prüfen: Tippgefühl der Karten, Abstand zum Untertitel. Siehe `AUDIT.md` O86.
 
-## Pixel Art Spielkarten (Branch `claude/confident-hawking-9wzkrq`, nicht live)
+## Version 0.8.0: Pixel Art für Karten, Jokers, Consumables und Packs
 
 Neues Kartendesign (Details und offene Punkte O88 bis O92 in `AUDIT.md`). Karten sind Pixel Raster im Code: Daten in `src/data/cardArt/`, Renderer ohne DOM in `src/ui/cardArt/`, `CardView` zeigt sie als Sprite mit nearest Skalierung. Zwei Paletten (Standard, Hoher Kontrast), Wahl in den Optionen, gespeichert in `settings.cardPalette` (keine Save Migration).
 
 * **Karten ändern:** Pips und Symbole in `cardGlyphs.ts`, Figuren in `courtSprites.ts` (zwölf Einträge in `FIGURES`: Kopf und Körper als halbe Zeilen, die gespiegelt werden, dazu Gegenstand und Hautton), Farben in `cardPalettes.ts`. Vorschau neu erzeugen: `node tools/cardPreview.cjs` (Playwright nötig), Ergebnis in `preview/`.
-* **Live stellen:** erst nach Freigabe des Eigentümers. Dann diesen Branch nach `main` mergen (löst den Pages Deploy aus). Bis dahin nicht auf `main` oder `claude/funny-brahmagupta-ic0bpe` pushen.
+* **Weitere Grafiken:** Jokers (`src/ui/jokerSprites*.ts`, `docs/joker-art.md`), Consumables und Packs (`src/ui/consumable*.ts`, `src/ui/packArt*.ts`, `src/ui/consumableTray.ts`, Zahlen in `src/data/consumableArt.ts`, `packArt.ts`, `voucherArt.ts`, `artFx.ts`, Notizen in `docs/consumable-pack-art.md`). Vorschau Bilder liegen in `preview/`.
 * **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit von Rang und Farbe bei dreifacher Vergrößerung, Schärfe der Karten im Hand Fächer (leichte Drehung).
 
 ## Version 0.6.0: Sternenatlas, Siegel, Rückschau

@@ -8,6 +8,39 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.8.0',
+    date: '19.11.2026',
+    title: 'Pixel Art für alles',
+    items: [
+      'Neu: Alle 52 Spielkarten im Pixel Art Stil. Bube, Dame und König sind zwölf eigene Figuren aus der Sternwarte der Alchemisten, die Asse leuchten mit Glanz und Funken, die Pips sind größer. In den Optionen wählst du die Kartenfarben: Standard oder Hoher Kontrast.',
+      'Neu: Alle 79 Jokers haben ein eigenes Pixel Art Bild. Die Editionen Schimmer, Prisma, Aura und Schatten bleiben sichtbar.',
+      'Neu: Alle 42 Consumables sind eigene Karten mit Rahmen und Titelband, Sternbilder in Mitternachtsblau, Elixiere in Smaragd, Omen in Violett.',
+      'Neu: Neue Booster Packs als Siegelhüllen, fünf Arten in Normal, Jumbo und Mega, dazu ein Voucher Ticket. Packs und seltene Karten funkeln, beim Antippen springen sie auf, und das Öffnen eines Packs platzt mit Blitz und Funken auf. Die Option Sparsam und Screen Shake aus dämpfen die Effekte.',
+      'Besser: Die Consumable Leiste zeigt bei drei oder mehr Karten alle Motive und Namen, in zwei Reihen. Der Sternenatlas zeigt entdeckte Einträge jetzt mit ihrem Bild.',
+    ],
+  },
+  {
+    version: '0.7.1',
+    date: '19.11.2026',
+    title: 'Musik im Wechsel',
+    items: [
+      'Neu: Mix ist jetzt die Standard Musik. Die drei Stücke wechseln sich ab, jedes bleibt etwa zwei Minuten und wird weich ins nächste überblendet. Du kannst in den Optionen weiterhin ein einzelnes Stück wählen.',
+      'Neu: Bei großen Effekten (Aufschlag der Punkte, Fanfaren, Erfolge, Pack öffnen) wird die Musik kurz leiser gezogen, damit der Effekt frei steht.',
+      'Besser: Die Flächen klingen breiter im Stereobild, es gibt ruhigere Akkorde mit wenigen Glocken, und ein Hochpass nimmt jedes Dröhnen aus Hall und Echo. Alle Stücke sind gleich laut.',
+      'Besser: In der Grafikstufe Sparsam läuft die Musik in einer leichteren Variante, das schont Akku und Rechenleistung.',
+    ],
+  },
+  {
+    version: '0.7.0',
+    date: '19.11.2026',
+    title: 'Hintergrundmusik',
+    items: [
+      'Neu: Ruhige, mystische Hintergrundmusik ohne Beat und ohne Bass. Weiche Flächen, vereinzelte Glockenklänge und ein leiser Hauch, alles live im Spiel erzeugt und endlos.',
+      'Drei Stücke zur Wahl in den Optionen: Sternenglas (hell, Glasklänge), Mondlabor (dunkel, ferne Spieluhr) und Sphärenklang (tief, Klangschalen). Die Musik hat eine eigene Lautstärke und lässt sich ausschalten.',
+      'Die Musik pausiert, wenn die App im Hintergrund ist.',
+    ],
+  },
+  {
     version: '0.6.2',
     date: '19.11.2026',
     title: 'Neuer Titel',

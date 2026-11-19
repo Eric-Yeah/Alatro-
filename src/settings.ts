@@ -1,11 +1,14 @@
 import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
 import { CARD_PALETTE_IDS, type CardPaletteId } from './data/cardArt/cardPalettes';
+import { MUSIC_MIX, MUSIC_OFF, TRACK_IDS } from './data/music';
 import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
 
 export interface Settings {
   crt: boolean;
   shake: boolean;
   volume: number;
+  music: string;
+  musicVolume: number;
   speed: string;
   quality: Quality;
   fps: boolean;
@@ -21,10 +24,13 @@ const OLD_KEY = 'alatro.settings.v1';
 export function parseSettings(raw: unknown): Settings {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const vol = typeof o.volume === 'number' && Number.isFinite(o.volume) ? o.volume : DEFAULT_SETTINGS.volume;
+  const mvol = typeof o.musicVolume === 'number' && Number.isFinite(o.musicVolume) ? o.musicVolume : DEFAULT_SETTINGS.musicVolume;
   return {
     crt: typeof o.crt === 'boolean' ? o.crt : DEFAULT_SETTINGS.crt,
     shake: typeof o.shake === 'boolean' ? o.shake : DEFAULT_SETTINGS.shake,
     volume: clampVolume(vol),
+    music: typeof o.music === 'string' && (o.music === MUSIC_OFF || o.music === MUSIC_MIX || TRACK_IDS.includes(o.music)) ? o.music : DEFAULT_SETTINGS.music,
+    musicVolume: clampVolume(mvol),
     speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
     quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,

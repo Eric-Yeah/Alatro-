@@ -24,6 +24,7 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
+import { MUSIC_MIX, MUSIC_MIX_INFO, MUSIC_MIX_NAME, MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
 import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
 import { CARD_PALETTES, CARD_PALETTE_IDS } from '../data/cardArt/cardPalettes';
 import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
@@ -1755,7 +1756,7 @@ export class Game {
     const render = () => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
-      const gap = 78;
+      const gap = 64;
       const row = (i: number, name: string, desc: string) => {
         const y = 140 + i * gap;
         const n = label(name, 28, C.text);
@@ -1783,26 +1784,41 @@ export class Game {
       minus.position.set(W - 175, vy);
       const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       plus.position.set(W - 95, vy);
-      const sy = row(3, 'Animationstempo', 'Zählen, Karten und Übergänge');
+      const musicIds = [MUSIC_MIX, ...TRACK_IDS, MUSIC_OFF];
+      const mi = Math.max(0, musicIds.indexOf(st.music));
+      const mt = getTrack(st.music);
+      const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : 'Aus';
+      const my = row(3, 'Musik', st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : 'Ruhige Hintergrundmusik, aus');
+      const music = new Button(musicName, 230, 56, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
+        updateSettings({ music: musicIds[(mi + 1) % musicIds.length] });
+        render();
+      }, 22);
+      music.position.set(W - 170, my);
+      const muy = row(4, 'Musiklautstärke', `${Math.round(st.musicVolume * 100)} Prozent`);
+      const mMinus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume - VOLUME_STEP) }); render(); }, 30);
+      mMinus.position.set(W - 175, muy);
+      const mPlus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume + VOLUME_STEP) }); render(); }, 30);
+      mPlus.position.set(W - 95, muy);
+      const sy = row(5, 'Animationstempo', 'Zählen, Karten und Übergänge');
       const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
       const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x3b5068, () => {
         updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
         render();
       }, 22);
       speed.position.set(W - 150, sy);
-      const qy = row(4, 'Grafik', st.quality === 'sparsam' ? '30 FPS, ohne CRT und Edition Glanz' : 'Volle Effekte');
+      const qy = row(6, 'Grafik', st.quality === 'sparsam' ? '30 FPS, ohne CRT und Edition Glanz' : 'Volle Effekte');
       const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
         updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
         render();
       }, 22);
       quality.position.set(W - 150, qy);
-      onOff(5, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
-      onOff(6, 'Vibration', haptics.supported ? 'Rückmeldung bei Berührung und Punkten' : 'Auf diesem Gerät nicht verfügbar (z. B. iPad)', st.haptics, () => {
+      onOff(7, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
+      onOff(8, 'Vibration', haptics.supported ? 'Rückmeldung bei Berührung und Punkten' : 'Auf diesem Gerät nicht verfügbar (z. B. iPad)', st.haptics, () => {
         updateSettings({ haptics: !st.haptics });
         if (st.haptics) haptics.stop();
         else haptics.victory();
       });
-      const cpy = row(7, 'Kartenfarben', CARD_PALETTES[st.cardPalette].description);
+      const cpy = row(9, 'Kartenfarben', CARD_PALETTES[st.cardPalette].description);
       const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, 56, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
         const at = Math.max(0, CARD_PALETTE_IDS.indexOf(st.cardPalette));
         updateSettings({ cardPalette: CARD_PALETTE_IDS[(at + 1) % CARD_PALETTE_IDS.length] });
@@ -1811,7 +1827,7 @@ export class Game {
       cardPal.position.set(W - 170, cpy);
       const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
       back.position.set(W / 2, 800);
-      dyn.addChild(minus, plus, speed, quality, cardPal, back);
+      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, back);
     };
     render();
   }

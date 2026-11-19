@@ -1,6 +1,8 @@
 import { getSettings, onSettings } from '../settings';
 import { BLIND_FANFARE } from '../data/report';
+import { MUSIC, tracksFor } from '../data/music';
 import { scaleFreq } from './juiceMath';
+import { MusicPlayer } from './music';
 
 // Eigene Klänge per WebAudio Synthese, keine Audiodateien.
 // Der AudioContext startet erst nach der ersten Berührung (iPad Regel).
@@ -11,9 +13,44 @@ class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
+  private music: MusicPlayer | null = null;
+  private musicOut: GainNode | null = null;
+  private duckGain: GainNode | null = null;
 
   constructor() {
-    onSettings((s) => { if (this.master) this.master.gain.value = s.volume; });
+    onSettings((s) => {
+      if (this.master) this.master.gain.value = s.volume;
+      this.syncMusic();
+    });
+    // Im Hintergrund pausiert die Musik (spart Akku), beim Zurückkehren geht es weiter
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!this.ctx || !this.music?.playing) return;
+        if (document.hidden) void this.ctx.suspend().catch(() => {});
+        else void this.ctx.resume().catch(() => {});
+      });
+    }
+  }
+
+  /** Startet, wechselt oder beendet die Hintergrundmusik passend zu den Optionen */
+  private syncMusic() {
+    if (!this.ctx || !this.music || !this.musicOut) return;
+    const s = getSettings();
+    const tracks = s.volume <= 0 || s.musicVolume <= 0 ? [] : tracksFor(s.music);
+    this.musicOut.gain.setTargetAtTime(s.musicVolume * MUSIC.gainScale, this.ctx.currentTime, 0.05);
+    if (tracks.length) this.music.play(s.music, tracks, s.quality === 'sparsam');
+    else this.music.stop();
+  }
+
+  /** Zieht die Musik kurz leiser, damit große Effekte (Aufschlag, Fanfare) frei stehen */
+  private duck() {
+    if (!this.ctx || !this.duckGain || !this.music?.playing) return;
+    const d = MUSIC.duck;
+    const g = this.duckGain.gain;
+    const now = this.ctx.currentTime;
+    g.cancelScheduledValues(now);
+    g.setTargetAtTime(1 - d.amount, now, d.attackSec);
+    g.setTargetAtTime(1, now + d.holdSec, d.releaseSec / 3);
   }
 
   /** Muss aus einer Benutzergeste aufgerufen werden, ist danach unschädlich. */
@@ -28,6 +65,13 @@ class Sfx {
         const comp = this.ctx.createDynamicsCompressor();
         this.master.connect(comp);
         comp.connect(this.ctx.destination);
+        this.musicOut = this.ctx.createGain();
+        this.musicOut.gain.value = getSettings().musicVolume * MUSIC.gainScale;
+        this.musicOut.connect(this.master);
+        this.duckGain = this.ctx.createGain();
+        this.duckGain.connect(this.musicOut);
+        this.music = new MusicPlayer(this.ctx, this.duckGain);
+        this.syncMusic();
       }
       // iOS meldet nach einer Unterbrechung (Appwechsel, Anruf) den Zustand "interrupted", nicht nur "suspended"
       if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});
@@ -115,6 +159,7 @@ class Sfx {
   mult(step: number) { this.tone(scaleFreq(step), 0.2, 'sawtooth', 0.12, { lowpass: 1800 }); }
   /** X Mult: Akkord mit Schlag */
   xmult(step: number) {
+    this.duck();
     const f = scaleFreq(step);
     this.tone(f, 0.34, 'sawtooth', 0.14, { lowpass: 2200 });
     this.tone(f * 1.5, 0.34, 'square', 0.07, { lowpass: 2200 });
@@ -130,6 +175,7 @@ class Sfx {
 
   /** Aufschlag der Gesamtpunkte, tiefer und lauter je höher die Stufe (0 bis 1) */
   total(boom: number) {
+    this.duck();
     this.tone(150, 0.45, 'sine', 0.35 * (0.5 + boom * 0.5), { slideTo: 42 });
     this.noise(0.25 + boom * 0.3, 0.12 + boom * 0.14, { freq: 300, q: 0.5 });
     if (boom > 0.6) {
@@ -142,6 +188,7 @@ class Sfx {
   // ───────────────────────────────────────────── Spielfluss
 
   win(kind: 'small' | 'big' | 'boss' = 'small', big = false) {
+    this.duck();
     const steps = BLIND_FANFARE[kind];
     steps.forEach((semi, i) => this.tone(523 * Math.pow(2, semi / 12), 0.28, 'triangle', 0.2, { delay: i * 0.11 }));
     const top = 523 * Math.pow(2, steps[steps.length - 1] / 12);
@@ -151,18 +198,22 @@ class Sfx {
   }
   /** Ziel des Blinds beim Hochzählen erreicht: kurzer, heller Zweiklang */
   goal() {
+    this.duck();
     this.tone(880, 0.12, 'triangle', 0.16);
     this.tone(1318, 0.3, 'triangle', 0.16, { delay: 0.09 });
   }
   lose() {
+    this.duck();
     [392, 330, 262, 196].forEach((f, i) => this.tone(f, 0.4, 'sawtooth', 0.12, { delay: i * 0.18, lowpass: 900 }));
   }
   victory() {
+    this.duck();
     [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => this.tone(f, 0.32, 'triangle', 0.2, { delay: i * 0.1 }));
     this.tone(1568, 1, 'sine', 0.16, { delay: 0.6 });
   }
   /** Erfolg freigeschaltet: kurzer, heller Dreiklang mit Nachklang */
   achievement() {
+    this.duck();
     [784, 988, 1319].forEach((f, i) => this.tone(f, 0.2, 'triangle', 0.16, { delay: i * 0.09 }));
     this.tone(1976, 0.7, 'sine', 0.1, { delay: 0.3 });
   }
@@ -190,6 +241,7 @@ class Sfx {
     for (let i = 0; i < 4; i++) this.tone(300 + Math.random() * 500, 0.04, 'square', 0.06, { delay: i * 0.05 });
   }
   packOpen() {
+    this.duck();
     this.noise(0.5, 0.14, { freq: 400, sweepTo: 5000, q: 0.7 });
     [659, 880, 1175].forEach((f, i) => this.tone(f, 0.4, 'triangle', 0.12, { delay: 0.25 + i * 0.07 }));
   }
