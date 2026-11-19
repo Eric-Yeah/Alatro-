@@ -59,8 +59,10 @@ void main(void) {
   // scharfe Sterne: ein Zellpixel, langsames Funkeln in zwei Stufen
   float h = hash(cellId);
   float tw = step(0.5, fract(h * 17.0 + uTime * 0.15));
-  float star = step(0.9965, h) * (0.55 + 0.45 * tw);
-  col = mix(col, vec3(1.0), star);
+  float star = step(0.9955, h) * (0.55 + 0.45 * tw);
+  // ein Teil der Sterne leuchtet warm wie Kerzenlicht, die übrigen kühl
+  vec3 starCol = fract(h * 91.0) > 0.78 ? vec3(1.0, 0.86, 0.55) : vec3(0.88, 0.94, 1.0);
+  col = mix(col, starCol, star);
   finalColor = vec4(col, 1.0);
 }
 `;

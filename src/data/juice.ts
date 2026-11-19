@@ -48,11 +48,11 @@ export interface MoodDef {
 }
 
 export const MOODS: Record<BgMood, MoodDef> = {
-  menu: { deep: [0.07, 0.07, 0.24], mid: [0.17, 0.16, 0.52], accent: [0.1, 0.46, 0.62], speed: 1, contrast: 1, vignette: 0.6, pulse: 0 },
-  small: { deep: [0.05, 0.11, 0.3], mid: [0.1, 0.26, 0.56], accent: [0.08, 0.5, 0.62], speed: 0.8, contrast: 1, vignette: 0.6, pulse: 0 },
+  menu: { deep: [0.04, 0.04, 0.17], mid: [0.13, 0.11, 0.42], accent: [0.62, 0.36, 0.22], speed: 1, contrast: 1, vignette: 0.7, pulse: 0 },
+  small: { deep: [0.03, 0.07, 0.22], mid: [0.07, 0.17, 0.44], accent: [0.09, 0.44, 0.58], speed: 0.8, contrast: 1, vignette: 0.7, pulse: 0 },
   big: { deep: [0.2, 0.09, 0.1], mid: [0.5, 0.24, 0.1], accent: [0.78, 0.4, 0.2], speed: 1.2, contrast: 1.05, vignette: 0.7, pulse: 0 },
   boss: { deep: [0.17, 0.04, 0.12], mid: [0.44, 0.08, 0.2], accent: [0.62, 0.14, 0.4], speed: 1.6, contrast: 1.1, vignette: 0.8, pulse: 0.03 },
-  shop: { deep: [0.06, 0.11, 0.27], mid: [0.1, 0.22, 0.46], accent: [0.2, 0.5, 0.52], speed: 0.8, contrast: 1, vignette: 0.6, pulse: 0 },
+  shop: { deep: [0.07, 0.06, 0.16], mid: [0.15, 0.14, 0.34], accent: [0.62, 0.42, 0.18], speed: 0.8, contrast: 1, vignette: 0.7, pulse: 0 },
 };
 
 /** Wie stark die Bossfarbe die Boss Stimmung färbt (0 bis 1) */
