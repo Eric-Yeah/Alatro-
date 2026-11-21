@@ -2,8 +2,8 @@ import { Container, Graphics, Text, Ticker, type FederatedPointerEvent } from 'p
 import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, blindTarget, type BlindKind } from '../core/blinds';
 import { SUIT_NAMES, sortByRank, sortBySuit, type Card } from '../core/cards';
 import {
-  TAG_BY_ID, PACK_BY_ID, afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canPick, canUseConsumable, cashOut, closePack, createRun,
-  discardHand, leaveShop, pickFromPack, playHand, reroll, selectBlind, sellConsumable, sellJoker as sellJokerAction, skipBlind,
+  TAG_BY_ID, PACK_BY_ID, afterHand, buyAndUse, buyCard, buyPack, buyVoucher, canPick, canSwapJoker, canUseConsumable, cashOut, closePack, createRun,
+  discardHand, leaveShop, pickFromPack, playHand, reroll, selectBlind, sellConsumable, sellJoker as sellJokerAction, skipBlind, swapJokerFromPack,
   useConsumable,
 } from '../core/game';
 import { consumableCapacity, consumableSellValue, type UseResult } from '../core/consumables';
@@ -13,6 +13,7 @@ import type { HandType } from '../core/types';
 import { getJoker, jokerDescription, jokerRules } from '../core/jokers';
 import { effectTags, triggerLabel } from './jokerInfo';
 import { richText } from './richText';
+import { t } from '../i18n';
 import { hashString, normalizeSeed, randomSeed, SEED_LENGTH } from '../core/rng';
 import { TIPS } from '../data/tips';
 import {
@@ -2257,9 +2258,63 @@ export class Game {
     box.addChild(dyn);
     /** gewählte Ziel Karten der Pack Hand (Reihenfolge der Wahl) */
     const targets: number[] = [];
+    /** Tauschen: Index des Pack Jokers, der einen eigenen Joker ersetzen soll (null: normale Ansicht) */
+    let swapFor: number | null = null;
+    let swapUid: number | null = null;
 
-    const render = (animate = false) => {
+    /** Auswahl, welcher eigene Joker bei vollen Slots ersetzt (also verkauft) wird */
+    const renderSwap = (index: number): void => {
+      const o = p.options[index];
+      if (!o || o.kind !== 'joker') { swapFor = null; return render(); }
+      const jd = getJoker(o.defId)!;
+      const sub = label(t('Joker Slots voll: Welchen Joker ersetzen? Er wird verkauft.'), 20, C.textDim);
+      sub.position.set(W / 2, 92);
+      dyn.addChild(sub);
+      const incoming = new JokerView({ uid: -1, defId: o.defId, vars: {}, edition: o.edition });
+      incoming.eventMode = 'none';
+      incoming.scale.set(0.8);
+      incoming.position.set(W / 2 - 330, 215);
+      const txt = richText(`${jd.name}\n${jokerDescription(jd)}` + (o.edition ? `\n${EDITIONS[o.edition].name}: ${EDITIONS[o.edition].description}` : ''), 560, { size: 17, theme: 'dark', align: 'left' });
+      txt.position.set(W / 2 - 230, 150);
+      const arrow = label('\u2193', 40, C.money);
+      arrow.position.set(W / 2, 330);
+      dyn.addChild(incoming, txt, arrow);
+      const own = run.jokers;
+      const n = own.length;
+      const spacing = Math.min(160, 960 / Math.max(n, 1));
+      own.forEach((j, i) => {
+        const x = W / 2 + (i - (n - 1) / 2) * spacing;
+        const on = swapUid === j.uid;
+        const v = new JokerView(j);
+        v.scale.set(0.8);
+        v.position.set(x, 460 - (on ? 14 : 0));
+        v.on('pointertap', () => { swapUid = on ? null : j.uid; sfx.select(!on); renderAgain(); });
+        dyn.addChild(v);
+        if (on) dyn.addChild(new Graphics().roundRect(x - 62, 460 - 14 - 84, 124, 168, 10).stroke({ width: 4, color: C.money }));
+      });
+      const back = new Button(t('Zurück'), 200, 56, 0xf2711c, () => { swapFor = null; swapUid = null; render(); }, 22);
+      back.position.set(W / 2 - 150, H - 52);
+      const chosen = own.find((j) => j.uid === swapUid);
+      const ok = !!chosen && canSwapJoker(run, index, chosen.uid);
+      const go = new Button(chosen ? t('Ersetzen, +${n}', { n: jokerSellValue(chosen) }) : t('Ersetzen'), 260, 56, C.green, () => {
+        if (!chosen || !swapJokerFromPack(run, index, chosen.uid)) return;
+        sfx.pick();
+        haptics.pick();
+        this.syncJokers();
+        this.persist();
+        this.refreshInfo();
+        if (run.phase === 'pack') { swapFor = null; swapUid = null; this.showPack(); }
+        else { this.clearOverlay(); this.showPhase(); }
+      }, 22);
+      go.position.set(W / 2 + 150, H - 52);
+      go.enabled = ok;
+      dyn.addChild(back, go);
+    };
+    const renderAgain = () => render();
+
+    const render = (animate = false): void => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
+      if (swapFor !== null) return renderSwap(swapFor);
       const fanTargets: FanTarget[] = [];
       const sub = label(`Wähle noch ${p.picksLeft}`, 20, C.textDim);
       sub.position.set(W / 2, 92);
@@ -2290,13 +2345,17 @@ export class Game {
         }
         view.eventMode = 'none';
         view.position.set(x, 200);
-        const t = richText(text, spacing - 14, { size: withHand ? 15 : 17, theme: 'dark' });
-        t.position.set(x, 295);
-        const pick = new Button('Wählen', 140, 56, C.green, () => this.pickPackOption(i, targets), 20);
+        const info = richText(text, spacing - 14, { size: withHand ? 15 : 17, theme: 'dark' });
+        info.position.set(x, 295);
+        // Joker Pack bei vollen Slots: statt Wählen gibt es Tauschen gegen einen eigenen Joker
+        const swap = o.kind === 'joker' && !canPick(run, i, targets) && p.picksLeft > 0 && run.jokers.some((j) => canSwapJoker(run, i, j.uid));
+        const pick = swap
+          ? new Button(t('Tauschen'), 140, 56, C.green, () => { swapFor = i; swapUid = null; render(); }, 20)
+          : new Button('Wählen', 140, 56, C.green, () => this.pickPackOption(i, targets), 20);
         pick.position.set(x, withHand ? 460 : 470);
-        pick.enabled = canPick(run, i, targets);
-        dyn.addChild(view, t, pick);
-        fanTargets.push({ view, x, y: 200, extras: [t, pick] });
+        pick.enabled = swap || canPick(run, i, targets);
+        dyn.addChild(view, info, pick);
+        fanTargets.push({ view, x, y: 200, extras: [info, pick] });
       });
 
       if (p.handIds) {

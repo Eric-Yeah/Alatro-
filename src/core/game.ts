@@ -482,6 +482,31 @@ export function canPick(run: RunState, index: number, targetIds: number[] = []):
   return o.kind === 'card' || canAddJoker(run, o.edition);
 }
 
+/**
+ * Sind die Joker Slots voll, darf ein Joker aus dem Pack einen eigenen Joker ersetzen: der alte
+ * Joker wird verkauft (Geld wie beim normalen Verkaufen). Geprüft wird mit dem Stand NACH dem Verkauf,
+ * denn der alte Joker kann selbst Slots geben (Schatten Edition, Joker mit Slot Passiv).
+ */
+export function canSwapJoker(run: RunState, index: number, replaceUid: number): boolean {
+  const o = run.pack?.options[index];
+  if (!o || o.kind !== 'joker' || !run.pack || run.pack.picksLeft <= 0) return false;
+  const at = run.jokers.findIndex((j) => j.uid === replaceUid);
+  if (at < 0) return false;
+  const [removed] = run.jokers.splice(at, 1);
+  try {
+    return canAddJoker(run, o.edition);
+  } finally {
+    run.jokers.splice(at, 0, removed);
+  }
+}
+
+/** Ersetzt einen eigenen Joker durch den gewählten Joker des Packs (verkauft den alten, nimmt den neuen). */
+export function swapJokerFromPack(run: RunState, index: number, replaceUid: number): boolean {
+  if (!canSwapJoker(run, index, replaceUid)) return false;
+  if (!sellJoker(run, replaceUid)) return false;
+  return pickFromPack(run, index) === true;
+}
+
 /** Wählt eine Karte. Consumables aus Packs werden sofort benutzt, targetIds sind die Ziel Karten. */
 export function pickFromPack(run: RunState, index: number, targetIds: number[] = []): UseResult | boolean {
   if (!canPick(run, index, targetIds)) return false;
