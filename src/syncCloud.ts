@@ -7,6 +7,7 @@
 import { loadDiscovered, saveDiscovered } from './collection';
 import { SAVE_VERSION } from './core/run';
 import { SYNC } from './data/sync';
+import { t } from './i18n';
 import { getProfile, replaceProfile } from './profile';
 import { loadRun, loadRunAt, migrateRun, saveRun, setRunAt } from './save';
 import { mergeCollections, mergeProfiles, parseBundle, pickRun, describeRun } from './syncBundle';
@@ -76,11 +77,11 @@ async function rpc(name: string, body: unknown, f: Fetcher): Promise<unknown> {
       body: JSON.stringify(body),
       signal: ctl.signal,
     });
-    if (!res.ok) throw new CloudError('server', `Server antwortet mit ${res.status}`);
+    if (!res.ok) throw new CloudError('server', t('Server antwortet mit {status}', { status: res.status }));
     return await res.json();
   } catch (e) {
     if (e instanceof CloudError) throw e;
-    throw new CloudError('netz', 'Keine Verbindung');
+    throw new CloudError('netz', t('Keine Verbindung'));
   } finally {
     clearTimeout(timer);
   }
@@ -97,7 +98,7 @@ export async function cloudPush(id: string, key: string, payload: string, versio
   const r = (await rpc('sync_push', { p_id: id, p_key: key, p_payload: payload, p_version: version, p_base_rev: baseRev }, f)) as { ok?: boolean; rev?: number; error?: string };
   if (r?.ok) return { ok: true, rev: Number(r.rev) };
   if (r?.error === 'conflict') return { ok: false, rev: Number(r.rev) };
-  throw new CloudError('server', 'Server hat den Stand abgelehnt');
+  throw new CloudError('server', t('Server hat den Stand abgelehnt'));
 }
 
 // ─────────────────────────────────────────────── Abgleich
@@ -126,11 +127,11 @@ interface RunPart {
 async function readPart<T>(code: string, row: CloudRow | undefined): Promise<T | null> {
   if (!row || row.payload === '') return null;
   const text = await decryptText(code, row.payload);
-  if (text === null) throw new CloudError('code', 'Der Code passt nicht zu den Daten');
+  if (text === null) throw new CloudError('code', t('Der Code passt nicht zu den Daten'));
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new CloudError('server', 'Cloud Daten sind beschädigt');
+    throw new CloudError('server', t('Cloud Daten sind beschädigt'));
   }
 }
 
@@ -142,7 +143,7 @@ async function readPart<T>(code: string, row: CloudRow | undefined): Promise<T |
 export async function syncOnce(opts: { fetcher?: Fetcher; onConflict?: 'ask' | 'local' | 'remote'; state?: SyncState; allowRunReplace?: boolean } = {}): Promise<SyncResult> {
   const f: Fetcher = opts.fetcher ?? ((i, o) => fetch(i, o));
   const state = opts.state ?? loadSyncState();
-  if (!state) throw new CloudError('code', 'Nicht gekoppelt');
+  if (!state) throw new CloudError('code', t('Nicht gekoppelt'));
   const id = await syncId(state.code);
   let changedLocal = false;
   let pushed = false;
@@ -235,7 +236,7 @@ export async function syncOnce(opts: { fetcher?: Fetcher; onConflict?: 'ask' | '
       return { status: 'ok', changedLocal, pushed, runReplaced, runBlocked };
     }
   }
-  throw new CloudError('server', 'Zu viele gleichzeitige Änderungen, bitte später erneut versuchen');
+  throw new CloudError('server', t('Zu viele gleichzeitige Änderungen, bitte später erneut versuchen'));
 }
 
 function summary(run: unknown): RunSummary | null {

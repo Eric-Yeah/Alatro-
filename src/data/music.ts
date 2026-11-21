@@ -5,6 +5,8 @@
  * der tiefste Ton liegt über `MUSIC.minFreq`.
  */
 
+import { t } from '../i18n';
+
 export const MUSIC = {
   /** Wie weit im Voraus der nächste Abschnitt geplant wird (Sekunden) */
   lookaheadSec: 3,
@@ -180,8 +182,9 @@ export function getTrack(id: string): TrackDef | undefined {
 export const MUSIC_OFF = 'aus';
 /** Wert der Option "Musik" für alle Stücke im Wechsel */
 export const MUSIC_MIX = 'mix';
-export const MUSIC_MIX_NAME = 'Mix';
-export const MUSIC_MIX_INFO = 'Alle drei Stücke im Wechsel';
+// Die Sprache steht beim Laden dieser Datei schon fest (Wechsel lädt die App neu), daher genügt `t` hier.
+export const MUSIC_MIX_NAME = t('Mix');
+export const MUSIC_MIX_INFO = t('Alle drei Stücke im Wechsel');
 
 /** Stücke für eine Auswahl der Option: Mix gibt alle zurück, sonst das eine, sonst nichts */
 export function tracksFor(choice: string): TrackDef[] {
