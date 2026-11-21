@@ -8,6 +8,14 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.0': {
+    title: '150 Jokers, More Consumables',
+    items: [
+      'New: 71 new Jokers, bringing the total to 150. They have their own pictures and cover new ideas: hand types, suits, money, Boss Blinds, growing values, echoes and four new Legendary Jokers.',
+      'New: 23 new Consumables, 13 Elixirs and 10 Omens. They change ranks, suits, Editions, Jokers, Tags and more. Strong cards show up a little less often.',
+      'New: Some Jokers now know the Ante and the Blind, for example Trial of Courage, Tide Calendar and World Wanderer.',
+    ],
+  },
   '0.10.2': {
     title: 'Coin Sound, Chosen Anew',
     items: [

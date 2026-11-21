@@ -1,6 +1,13 @@
-# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.2)
+# Übergabe: Stand nach 150 Jokers und neuen Consumables (Version 0.11.0)
 
-Stand: 21.11.2026. Arbeitsbranch `claude/wonderful-euler-rqq4w3`, live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.11.0: 150 Jokers und 23 neue Consumables
+
+* **Jokers (71 neu, gesamt 150):** Entwurf mit Balance Leitplanken und Motiv Anregungen in `docs/joker-design-150.md`. Logik in `src/data/jokersMore.ts`, gemeinsame Hilfen in `src/data/jokerHelpers.ts`, `jokers.ts` führt beide Listen zu `JOKER_DEFS` zusammen. Verteilung: 79 Common, 44 Uncommon, 20 Rare, 7 Legendary. Englisch in `src/i18n/patch/jokers.ts`, Tests in `src/core/jokersMore.test.ts` (inklusive Katalog Prüfung: Anzahl, Preise, keine unbedingten X Mult über 1,25 unterhalb Legendary). Das Scoring kennt jetzt `ante` und `blind` (`ScoreInput`, `JokerContext`).
+* **Joker Grafiken:** `src/ui/jokerSpritesG.ts` bis `J.ts` (71 Motive), Vorschau `preview/jokers-new.png` und `preview/jokers-150.png`. Notizen und Feinschliff Kandidaten: `docs/joker-art.md`.
+* **Consumables (23 neu, gesamt 65):** 13 Elixiere, 10 Omen, Sternbilder bleiben 12. Entwurf und Balance: `docs/consumable-design.md`. Neue Effekt Arten in `ConsumableEffect`, neues optionales Feld `weight` (starke Karten erscheinen seltener, `rollConsumable` zieht gewichtet). Grafiken `consumableSpritesElixierC.ts`, `consumableSpritesOmenB.ts`. Tests `src/core/consumablesNew.test.ts`. Keine neue `SAVE_VERSION`.
+* **Als Nächstes:** Auf dem iPad prüfen: Lesbarkeit der neuen Motive (schwächere: Viererkette, Echokammer, Goldquelle, Meilenstein, Glücksspieler, Zwillingsflamme, Kometenschweif), Balance im Spiel (siehe `AUDIT.md` O103 bis O112), Dither Flächen der Texturen.
 
 ## Version 0.10.2: Münzklang als Aufnahme, einmalig
 
@@ -29,7 +36,7 @@ Kopplungscode ohne Konto, Supabase als Speicher, Daten Ende zu Ende verschlüsse
 | Schritt 1 Audit (`AUDIT.md`, `tests/spec/`) | erledigt |
 | M1 Engine Kern (Daten, Erkennung, Scoring Pipeline, Blinds, Zinsen) | erledigt |
 | M2 Spielfluss (Zustandsautomat, Skip und Tags, Bosse, Shop, Packs, Vouchers, Decks, Stakes) | erledigt |
-| M3 Eigener Joker Katalog (79 Jokers, gruppenweise mit Tests) | erledigt |
+| M3 Eigener Joker Katalog (150 Jokers, gruppenweise mit Tests) | erledigt |
 | M4 Consumables, Pack Abläufe für Consumables, Collection, Run Info, Seed Eingabe | erledigt |
 | M5 UI, UX, Juice (CRT, Farbstimmung pro Blind, Sound, Shake, Edition Shader, Joker Grafiken, Optionen) | erledigt |
 | M6 Politur, Performance, Optionen | **teilweise**: Tempo, Grafikstufe, FPS Anzeige, Optionen fertig. Offen: iPad Messung, eigene Schrift (O55), Feinschliff nach Test |
@@ -139,11 +146,11 @@ Einzelheiten und Entscheidungen: `AUDIT.md`, Abschnitt "Erfolge, Einführung und
 
 ## Joker Katalog (M3, erledigt)
 
-79 Jokers in `src/data/jokers.ts`, gruppiert nach Mechanik, Tests in `src/core/m3.test.ts`. Einzelheiten und Entscheidungen stehen in `AUDIT.md` (Abschnitt M3, O43 bis O50).
+150 Jokers (79 in `src/data/jokers.ts`, 71 in `src/data/jokersMore.ts`), gruppiert nach Mechanik, Tests in `src/core/m3.test.ts` und `src/core/jokersMore.test.ts`. Einzelheiten und Entscheidungen stehen in `AUDIT.md` (Abschnitt M3, O43 bis O50).
 
 Einen neuen Joker anlegen:
 
-* Eintrag in `JOKER_DEFS` mit eindeutiger ID (nie ändern), `config` für alle Zahlen und `description` mit Platzhaltern wie `{mult}`. Skalierende Jokers legen ihre Startwerte in `init(cfg)` ab (veränderliche Werte stehen in `self.vars`, config bleibt fest, die Namen dürfen sich nicht überschneiden).
+* Eintrag in `JOKER_DEFS_BASE` (`jokers.ts`) oder `JOKER_DEFS_MORE` (`jokersMore.ts`) mit eindeutiger ID (nie ändern), `config` für alle Zahlen und `description` mit Platzhaltern wie `{mult}`. Skalierende Jokers legen ihre Startwerte in `init(cfg)` ab (veränderliche Werte stehen in `self.vars`, config bleibt fest, die Namen dürfen sich nicht überschneiden).
 * Phasen für `calculate(ctx, self, cfg)`: Scoring `before`, `scored`, `held`, `retrigger`, `main`, `after`, `other`. Außerhalb des Scorings `discard`, `blindSelected`, `roundEnd` (ohne Zufall, die Anzeige rechnet vorab), `sell`. Rückgabe ist ein `Effect` (chips, mult, xMult, money, retrigger, consumables, destroySelf, cardChips, enhanceFirst).
 * Dauerhafte Wirkungen über `passive(cfg)` (Hands, Discards, Hand Size, Slots, Zinsdeckel, Shop Slots, gratis Rerolls, Rabatt, Wahrscheinlichkeit), Erkennungsregeln über `rules`, Kopien über `copies`, Rettung über `rescue` (mit `config.fraction`), Spawn Bedingung über `minAnte`.
 * `copyCompat: false` für alles, was sich nicht sinnvoll kopieren lässt.

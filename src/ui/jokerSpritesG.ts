@@ -249,20 +249,21 @@ export const SPRITES_G: Record<string, Sprite> = {
     // kleiner Stein weiter hinten am Weg
     p.fig((q) => { q.poly([30, 36, 31, 31, 36, 29, 37, 36], P.stone[2]); q.poly([30, 36, 31, 31, 33, 30, 33, 36], P.stone[3]); });
     p.rect(33, 32, 3, 1, P.stone[0]);
-    // Meilenstein vorn: breiter Block mit schräger Kopffläche
+    // Wegweiser mit Pfeilbrett rechts am Weg
+    p.fig((q) => { q.rect(40, 18, 2, 24, P.wood[2]); q.poly([28, 20, 38, 18, 45, 21, 38, 25, 28, 24], P.wood[3]); });
+    p.line(30, 21, 36, 21, P.wood[0]);
+    // Meilenstein vorn: niedriger Block mit schräger Kopffläche
     p.fig((q) => {
-      q.poly([2, 50, 3, 28, 6, 22, 18, 20, 22, 25, 23, 50], P.stone[2]);
-      q.poly([2, 50, 3, 28, 6, 22, 11, 21, 11, 50], P.stone[3]);
-      q.poly([6, 22, 18, 20, 22, 25, 8, 27], P.stone[4]);
-      q.poly([19, 26, 22, 25, 23, 50, 19, 50], P.stone[1]);
-      q.rect(22, 27, 1, 23, P.stone[0]);
+      q.poly([2, 50, 3, 34, 6, 29, 18, 27, 22, 32, 23, 50], P.stone[2]);
+      q.poly([2, 50, 3, 34, 6, 29, 11, 28, 11, 50], P.stone[3]);
+      q.poly([6, 29, 18, 27, 22, 32, 8, 33], P.stone[4]);
+      q.poly([19, 33, 22, 32, 23, 50, 19, 50], P.stone[1]);
+      q.rect(22, 34, 1, 16, P.stone[0]);
     });
-    // Sternzeichen in den Stein gemeißelt und Kerben am Rand
-    p.poly(starPts(12, 34.5, 5.5, 2.4, 5), P.stone[0]);
-    p.poly(starPts(12, 33.5, 5, 2.2, 5), 0xf2b92c);
-    p.poly(starPts(12, 33.5, 2.6, 1.2, 5), 0xfff0a0);
-    for (let i = 0; i < 5; i++) { p.rect(5, 41 + i * 2, i % 2 ? 7 : 11, 1, P.stone[0]); }
-    for (let i = 0; i < 4; i++) { p.rect(17, 29 + i * 5, 3, 1, P.stone[0]); p.rect(17, 30 + i * 5, 3, 1, P.stone[4]); }
+    // Pfeil und Kerben in den Stein gemeißelt
+    p.line(7, 40, 17, 40, P.stone[0], 2); p.poly([17, 36, 21, 40, 17, 44], P.stone[0]);
+    p.line(7, 39, 16, 39, 0xf2b92c); p.poly([17, 37, 20, 40, 17, 42], 0xf2b92c);
+    for (let i = 0; i < 4; i++) { p.rect(5, 45 + i * 1.6, i % 2 ? 7 : 11, 1, P.stone[0]); }
     // Moos und Stern
     for (const [x, y] of [[4, 46], [5, 47], [9, 49], [20, 48], [21, 49], [3, 44]] as [number, number][]) p.set(x, y, P.forest[2]);
     p.poly(starPts(38, 8, 4, 1.6, 5), 0xffe27a);

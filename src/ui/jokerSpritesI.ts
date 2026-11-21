@@ -63,7 +63,7 @@ export const SPRITES_I: Record<string, Sprite> = {
     p.speckle(0, 24, 46, 28, 0x24446a, 0.2, rng(4));
     p.rect(0, 24, 46, 1, 0x3a6a8a);
     // Trittsteine im Zickzack, nach hinten kleiner
-    const stones: [number, number, number][] = [[14, 46, 9], [29, 40, 7.5], [16, 34, 6], [28, 29, 4.5], [20, 25.5, 3.5], [29, 23, 2.6]];
+    const stones: [number, number, number][] = [[15, 46, 11], [31, 40, 9], [15, 33, 7], [29, 28, 5.5], [19, 24.5, 4], [28, 22, 3]];
     stones.forEach(([x, y, rx], i) => {
       const ry = Math.max(2, rx * 0.5);
       p.fig((q) => { q.shadedEll(x, y, rx, ry, P.stone, 0.1); q.rect(x - rx, y, rx * 2 + 1, 2, P.stone[1]); });

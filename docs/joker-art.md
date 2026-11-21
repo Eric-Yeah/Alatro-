@@ -1,6 +1,6 @@
 # Joker Grafiken (Pixel Art)
 
-Alle 79 Jokers haben ein eigenes, von Hand im Code gezeichnetes Pixel Art Motiv. Die Motive sind eigene Entwürfe im Thema Sternwarte der Alchemisten und passen zu Namen und Effekt des Jokers. Es wurden keine Bilder als Vorlage eingelesen, nachgezeichnet oder kopiert, die Referenzbilder dienten nur als Stilanregung (kleine Hochformat Kacheln mit farbigen, detailreichen Szenen).
+Alle 150 Jokers haben ein eigenes, von Hand im Code gezeichnetes Pixel Art Motiv. Die Motive sind eigene Entwürfe im Thema Sternwarte der Alchemisten und passen zu Namen und Effekt des Jokers. Es wurden keine Bilder als Vorlage eingelesen, nachgezeichnet oder kopiert, die Referenzbilder dienten nur als Stilanregung (kleine Hochformat Kacheln mit farbigen, detailreichen Szenen).
 
 ## Aufbau
 
@@ -9,13 +9,17 @@ Alle 79 Jokers haben ein eigenes, von Hand im Code gezeichnetes Pixel Art Motiv.
 | `src/data/jokerArt.ts` | Zahlen: Kachelmaße (52 mal 70 Bildpunkte, Vergrößerung 2 auf 104 mal 140), Motivfläche 46 mal 52, Namensband, Rahmenfarben je Seltenheit |
 | `src/ui/jokerPix.ts` | Pixel Zeichenbibliothek ohne DOM: Raster, Linien, Kreise, Ellipsen, Polygone, Kugeln mit Licht von links oben, Farbverläufe mit geordnetem Dithering, Konturen, 3x5 Ziffern. Farbleitern (`ramp`) mit kühlen Schatten und warmem Licht |
 | `src/ui/jokerKit.ts` | Gemeinsame Bauteile: Farbleitern `PAL`, Himmel, Leuchten, Hügel, Mond, Flamme, Sternform. Das sind nur Kulissen und Werkzeuge, kein Motiv wird eingefärbt wiederverwendet |
-| `src/ui/jokerSpritesA.ts` bis `F.ts` | Die 79 Motive, je eine eigene Zeichenfunktion pro Joker ID (A einfache Hand Bedingungen, B Farben und Ränge, C Echo und wachsend, D Geld und Shop, E Regeln und Passive, F Handwerk, Gefolge, Legendäre) |
+| `src/ui/jokerSpritesA.ts` bis `F.ts` | Die ersten 79 Motive, je eine eigene Zeichenfunktion pro Joker ID (A einfache Hand Bedingungen, B Farben und Ränge, C Echo und wachsend, D Geld und Shop, E Regeln und Passive, F Handwerk, Gefolge, Legendäre) |
+| `src/ui/jokerSpritesG.ts` | 18 Motive der zweiten Welle: Hand Bedingungen, Suit und Rang Commons (Wetterhahn, Drillbohrer, Viererbund, Kleiner Kessel, Meilenstein, Dreiklang, Viertakt, Rotwein, Bernstein, Schiefer, Moos, Zehnkampf, Warme Stube, Kalter Keller, Zwillingsmond, Hausmusik, Einsiedler, Notnagel). Enthält auch die gemeinsamen Helfer `suit` (Herz, Pik, Karo, Kreuz mit Licht von links oben) und `coinG` |
+| `src/ui/jokerSpritesH.ts` | 16 Motive: Geld, Wege, Handwerk und Alltag als Commons (Sparfuchs, Vorsprung, Sparstrumpf, Spardose, Kleiner Zoll, Mautbrücke, Flohmarkt, Sedimente, Zweitschlag, Mutprobe, Federkiel, Perlenschnur, Gasthaus, Sternschnuppe, Kräuterbeet, Staubwolke) |
+| `src/ui/jokerSpritesI.ts` | 19 Motive: Uncommons der zweiten Welle (Sternenpfad, Zwillingspaar, Viererkette, Duo, Bettelmann, Herzecho, Nachtecho, Glückszahl, Kreidestriche, Verzauberer, Siegelwart, Zehntner, Glücksspieler, Vierlicht, Gezeitenkalender, Elixierbrauer, Orakel, Himmelsscheibe, Weiter Mantel) |
+| `src/ui/jokerSpritesJ.ts` | 18 Motive: Windhose, Regenbogen, alle Rares (Trophäensammler bis Weltenwanderer) und die vier Legendarys der zweiten Welle (Weltenesche, Goldquelle, Urecho, Kometenschauer). Enthält den Helfer `comet` |
 | `src/ui/jokerSprites.ts` | Register aller Motive nach Joker ID |
 | `src/ui/jokerTile.ts` | Setzt Motiv, Rahmen in Farbe der Seltenheit, abgerundete Ecken und Namensband zur ganzen Kachel zusammen (rein, testbar). Jokers ohne Motiv bekommen eine Platzhalter Sternkarte |
 | `src/ui/jokerArt.ts` | Baut daraus je Joker einmal eine Textur (Canvas, `scaleMode = 'nearest'`) und speichert sie zwischen |
 | `src/ui/JokerView.ts` | Zeigt die Kachel als Sprite, Name im Band, Wirkungs Marken am unteren Motivrand, Edition Rahmen und Shader wie bisher |
 | `src/jokerArt.test.ts` | Prüft: jeder Joker hat ein Motiv, keine verwaisten Motive, keine Lücken im Bild, mindestens 10 Farben, keine zwei Motive zu mehr als 50 Prozent gleich, Rahmen und Ecken |
-| `tools/jokersheet.ts`, `tools/jokersheet-named.cjs` | Vorschaublätter (`preview/jokers.png`, `preview/jokers-named.png`) |
+| `tools/jokersheet.ts`, `tools/jokersheet-named.cjs` | Vorschaublätter (`preview/jokers.png`, `preview/jokers-named.png`). Neu: `preview/jokers-new.png` (die 71 Motive der zweiten Welle) und `preview/jokers-150.png` (alle 150, 15 Spalten) |
 
 Es gibt keine Bilddateien, die Grafik entsteht beim Start aus dem Zeichencode. Deshalb ist für die PWA nichts im Precache zu ergänzen, Offline funktioniert wie bisher. Die Gesamtgröße im Bundle ist klein, die Texturen entstehen erst, wenn ein Joker zum ersten Mal gezeigt wird.
 
@@ -23,7 +27,7 @@ Es gibt keine Bilddateien, die Grafik entsteht beim Start aus dem Zeichencode. D
 
 1. Joker in `src/data/jokers.ts` anlegen.
 2. In einer der Dateien `jokerSprites*.ts` einen Eintrag mit derselben ID ergänzen. Die Funktion bekommt eine Fläche `p` (46 mal 52) und muss sie ganz füllen (zuerst `sky`, `vgrad` oder `wall` als Hintergrund). Wichtige Teile in die oberen zwei Drittel setzen, im unteren Streifen liegen die Wirkungs Marken.
-3. Vorschau erzeugen: `npx vite-node tools/jokersheet.ts --ids meine_id --scale 6`, Test `npm test` läuft über alle Jokers.
+3. Vorschau erzeugen: `npx vite-node tools/jokersheet.ts --ids meine_id --scale 6`, Test `npx vitest run src/jokerArt.test.ts` läuft über alle Jokers. Alle 150 Motive auf einmal: `npx vite-node tools/jokersheet.ts --per 150 --cols 15 --scale 3`.
 
 ## Editions
 
@@ -35,9 +39,16 @@ Die Edition Overlays (Schimmer, Aura, Prisma, Schatten) liegen weiter als Shader
 * Der Name steht weiter als Text (Systemschrift) im dunklen Namensband, damit er scharf und lesbar bleibt. Sehr lange Namen werden verkleinert.
 * Die Seltenheit zeigt jetzt der Kartenrahmen (Blau, Grün, Rot, Violett wie bisher), nicht mehr die ganze Fläche.
 
+## Notizen zur zweiten Welle (71 Motive)
+
+* Die Motive G bis J folgen dem Entwurf `docs/joker-design-150.md` (Spalte Motive). Zeichenweise wie A bis F: Hintergrund zuerst (`sky`, `vgrad`, `wall`), Figuren mit Kontur über `fig`, Licht von links oben, kühle Schatten, warme Glut.
+* Kartenzeichen werden mit `suit` aus `jokerSpritesG.ts` gezeichnet und in H, I und J wiederverwendet. Das ist ein Werkzeug, kein eingefärbtes Motiv.
+* Größtenteils liegen die wichtigen Bildteile in den oberen zwei Dritteln, der untere Streifen bleibt ruhig für die Wirkungs Marken.
+* Ähnlichkeit zweier Motive liegt höchstens bei rund 27 Prozent (Grenze im Test 50 Prozent).
+
 ## Offene Punkte
 
 * **O-J1:** Auf dem iPad prüfen, ob die 2 fache Vergrößerung (ein Bildpunkt ist 2 logische Punkte, auf dem iPad nicht immer ganzzahlig) scharf genug aussieht. Falls nicht, Auflösung der Kachel anpassen oder Vergrößerung ganzzahlig auf die Anzeigegröße abstimmen.
-* **O-J2:** Einige Motive sind schlicht geblieben (Haltegriff, Schleifstein, Gefolgschaft, Adlerauge). Feinschliff nach dem Test auf dem Gerät.
+* **O-J2:** Einige Motive sind schlicht geblieben (Haltegriff, Schleifstein, Gefolgschaft, Adlerauge, aus der zweiten Welle Viererkette, Echokammer, Goldquelle, Notnagel, Sedimente). Feinschliff nach dem Test auf dem Gerät.
 * **O-J3:** Jokers im Sammlungs Atlas und in Packs nutzen `JokerView` und zeigen damit automatisch die neue Grafik. Die Atlas Ansicht selbst wurde nicht angefasst.
 * **O-J4:** Der Eintrag O53 in `AUDIT.md` (Embleme aus Hash) ist überholt, jeder Joker hat jetzt ein eigenes Motiv. Bitte beim nächsten Pflegen von `AUDIT.md` übernehmen, ebenso den Abschnitt "Joker Grafiken" in `docs/HANDOFF.md`.

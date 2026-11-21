@@ -8,6 +8,16 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.0',
+    date: '21.11.2026',
+    title: '150 Jokers, mehr Consumables',
+    items: [
+      'Neu: 71 neue Jokers, jetzt gibt es 150. Sie haben eigene Bilder und decken neue Ideen ab: Handarten, Suits, Geld, Boss Blinds, wachsende Werte, Echo und vier neue Legendary.',
+      'Neu: 23 neue Consumables, 13 Elixiere und 10 Omen. Sie verändern Ränge, Suits, Editions, Jokers, Tags und mehr. Starke Karten erscheinen etwas seltener.',
+      'Neu: Einige Jokers kennen jetzt die Ante und den Blind, etwa Mutprobe, Gezeitenkalender und Weltenwanderer.',
+    ],
+  },
+  {
     version: '0.10.2',
     date: '21.11.2026',
     title: 'Münzklang, neu gewählt',

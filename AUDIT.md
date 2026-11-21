@@ -79,7 +79,7 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 |---|---|---|---|---|---|
 | J1 | Mehrere Hook Funktionen pro Joker, Zahlen direkt im Code | `JokerDef` mit `config` (Zahlen als Daten) und einem `calculate(ctx)` Hook mit Phase im Kontext, Adapter für die 9 vorhandenen Jokers (8.2) | Architektur | mittel | erledigt |
 | J2 | Keine Kompatibilitätsfelder | `copyCompat`, Sticker Kompatibilität, `spawnCondition` (4.2, 8.2) | Feature | klein | erledigt (`copyCompat` und `minAnte` als Spawn Bedingung, Sticker gibt es nicht, siehe O47) |
-| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | erledigt (79 Jokers) |
+| J3 | 9 eigene Jokers | Eigener Katalog in Mechanik Gruppen analog 10.1 M3 (einfach, Karte, Held, Retrigger, Skalierend, Geld, Blind und Shop, Passiv, Spezial), jede Gruppe mit Tests | Feature | groß | erledigt (79 Jokers, später auf 150 erweitert, siehe Abschnitt "150 Jokers") |
 | J4 | Joker Editions fehlen | Eigene Editions mit Phase vor bzw. nach dem Joker (3.4, 6.4) | Feature | mittel | erledigt |
 
 ### Consumables, Vouchers, Tags, Bosse, Decks, Stakes (4.3 bis 4.9)
@@ -223,6 +223,12 @@ Schweregrad: **Zahl** (falsche Zahl), **Reihenfolge** (falsche Reihenfolge), **F
 * **Optionen** (Menü): jetzt CRT, Screen Shake, Lautstärke, Tempo, Grafik, FPS Anzeige. Gespeichert unter `alatro.settings.v2` (früher v1), fehlende Felder alter Spielstände werden mit Standardwerten ergänzt.
 * **Seed Tastatur:** Die Taste O entfällt (O gilt ohnehin als 0). Damit ist O40 in der Praxis gelöst, ohne eigene Schrift.
 * **Browser Test** (Chromium, Software WebGL): Optionen mit allen Schaltern, Wechsel auf Sparsam und Blitz zur Laufzeit, FPS Anzeige, Seed Tastatur, Run mit Blitz bis zur gespielten Hand. Keine Konsolenfehler. Die FPS Werte der Software Darstellung (10 FPS) sagen nichts über das iPad. **Die echte Leistung muss auf dem iPad gemessen werden** (Option FPS Anzeige an).
+
+### 150 Jokers und neue Consumables (Version 0.11.0)
+
+* **Jokers:** 71 neue (`data/jokersMore.ts`), gesamt 150: 79 Common, 44 Uncommon, 20 Rare, 7 Legendary. Entwurf: `docs/joker-design-150.md`. Alle IDs, Namen und Effekte sind eigene Entwürfe. Neue Engine Fähigkeit: `ante` und `blind` im Scoring Kontext (nur Daten, keine Regeländerung). Grafiken: `docs/joker-art.md`.
+* **Consumables:** 23 neue (13 Elixiere, 10 Omen), gesamt 65. Entwurf und Balance: `docs/consumable-design.md`. Neues Feld `weight` für die gewichtete Ziehung.
+* **Tests:** `npm test` 660 grün, `npm run test:spec` 87 von 87, `npm run build` grün. Neue Tests: `src/core/jokersMore.test.ts` (65), `src/core/consumablesNew.test.ts` (39).
 
 ### Neuer Shop (Version 0.3.2)
 
@@ -507,3 +513,13 @@ Stellen aus dem Briefing, die als [UNSICHER] markiert sind. Umgesetzt wird jewei
 | O100 | Grenzen des Sync | Nicht getestet gegen den echten Server aus dem Container (Netzwerk gesperrt), stattdessen: SQL Logik direkt in der Datenbank, Protokoll mit Server Nachbau (`src/syncCloud.test.ts`), und Ende zu Ende im Browser mit abgefangenen Anfragen. Ungeprüft: CORS Antwort von Supabase im Browser (üblicherweise offen), Verhalten der Home Screen PWA im Hintergrund auf dem iPad. Das Supabase Gratis Projekt wird nach etwa einer Woche Inaktivität pausiert, der lokale Stand bleibt dabei die Wahrheit, Wiederherstellen per Klick im Dashboard |
 | O101 | Englisch Teil B: Begriffe und Knopfnamen | Die englischen Texte der Einführung und Anleitung nennen Knöpfe so: Play Hand, Discard, Cash Out, Next Round, Reroll, Buy, Atlas, Tutorial, How to Play, What's New, Pair devices, Save data. Weichen die englischen Beschriftungen in `src/ui` davon ab, müssen entweder die Texte in `patch/guide.ts`, `patch/tutorial.ts`, `patch/patchnotes.ts` oder die Beschriftungen angepasst werden. Der Spielstand und das Tutorial Szenario sind sprachunabhängig |
 | O102 | Texte in `src/ui` und `src/core` | Datumsformat (`toLocaleDateString('de-DE')` in `AchievementsView` und `Game`), Zahlenformat (`fmt` in `ui/theme.ts`) und die Konstanten `Aus` und `Ruhige Hintergrundmusik, aus` in `Game.ts` sind Sache des Oberflächen Teils. Die Patch Notes zeigen ihr Datum bereits englisch |
+| O103 | Balance der neuen Jokers ungeprüft im Spiel | Zahlen sind nach den Leitplanken in `docs/joker-design-150.md` gewählt und mit Unit Tests gesichert, aber nicht im echten Run gespielt. Verdächtige Kandidaten: Alles oder Nichts (X2,5), Konstellation, Weltenwanderer, Kometenschauer (X1,15 je Karte), Sparstrumpf und Spardose neben dem Zins |
+| O104 | Vierlicht und Wild Karten | Eine Wild Karte füllt genau eine fehlende Suit. Echte Suits zählen natürlich, Smeared (Farbwechsel) wird dabei nicht berücksichtigt |
+| O105 | Konstellation zählt enthaltene Handarten | Die Handart High Card zählt nicht, jede weitere enthaltene Handart gibt X0,25 (Full House enthält Pair, Two Pair, Three of a Kind, Full House, also X2) |
+| O106 | Legendary nicht kopierbar | Weltenesche, Goldquelle und Urecho haben `copyCompat: false`, damit Spiegelbild und Urbild sie nicht verdoppeln. Kometenschauer ist kopierbar (wie Sternenkönig) |
+| O107 | Orakel erzeugt Omen im Slot | Das Orakel legt bei jedem Boss Blind ein Omen in einen freien Slot (nur wenn Platz ist). Omen haben Nachteile, der Spieler muss sie nicht nutzen |
+| O108 | Gewichte der neuen starken Consumables | `weight` 0,6 bis 0,8 für starke Karten ist eine eigene Entscheidung (siehe `docs/consumable-design.md`) |
+| O109 | Gleichstand bei meistgespielter Hand | Es gewinnt die bessere Handart (`HAND_ORDER`). Spektralglas bei Gleichstand der Suits: Spades, Hearts, Diamonds, Clubs |
+| O110 | Zwillingsflamme und Wandlung | Zwillingsflamme wählt nur Jokers mit `copyCompat`, die Kopie hat keine Edition, bei Misserfolg (1 in 3, über `runChance`) stirbt das Original. Wandlung wertet nur Common oder Uncommon um eine Stufe auf, ohne freien Ersatzjoker ist das Omen verbraucht ohne Wirkung |
+| O111 | Hand Size der neuen Omen wirkt sofort | Hand Size Änderungen der neuen Omen gelten schon in der laufenden Runde, das ältere Kometenstaub erst ab der nächsten |
+| O112 | Tag Elixiere stapeln sich | Gleiche Tags aus Tag Elixieren und Kometenschweif werden zusammen eingelöst |
