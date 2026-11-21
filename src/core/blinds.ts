@@ -55,9 +55,9 @@ export function blindReward(ante: number, kind: BlindKind, smallOverride: number
 
 /** Kompatibilität für die UI */
 export const BLIND_INFO: Record<BlindKind, { name: string; reward: number }> = {
-  small: { name: BLIND_NAMES.small, reward: BLIND_REWARD.small },
-  big: { name: BLIND_NAMES.big, reward: BLIND_REWARD.big },
-  boss: { name: BLIND_NAMES.boss, reward: BLIND_REWARD.boss },
+  small: { get name() { return BLIND_NAMES.small; }, reward: BLIND_REWARD.small },
+  big: { get name() { return BLIND_NAMES.big; }, reward: BLIND_REWARD.big },
+  boss: { get name() { return BLIND_NAMES.boss; }, reward: BLIND_REWARD.boss },
 };
 
 export { FINAL_ANTE as LAST_ANTE };

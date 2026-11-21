@@ -1,4 +1,5 @@
 import { richText } from './richText';
+import { t } from '../i18n';
 import { Container, Graphics } from 'pixi.js';
 import { BLIND_NAMES, blindReward, blindTarget } from '../core/blinds';
 import { SUIT_SYMBOLS, rankLabel } from '../core/cards';
@@ -11,11 +12,12 @@ import { C, SUIT_COLORS, fmt, fmtMult } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
 export type RunInfoTab = 'hands' | 'blinds' | 'vouchers' | 'deck';
-const TABS: { id: RunInfoTab; name: string }[] = [
-  { id: 'hands', name: 'Hände' },
-  { id: 'blinds', name: 'Blinds' },
-  { id: 'vouchers', name: 'Vouchers und Tags' },
-  { id: 'deck', name: 'Deck' },
+/** Reiter, zur Laufzeit übersetzt */
+const tabs = (): { id: RunInfoTab; name: string }[] => [
+  { id: 'hands', name: t('Hände') },
+  { id: 'blinds', name: t('Blinds') },
+  { id: 'vouchers', name: t('Vouchers und Tags') },
+  { id: 'deck', name: t('Deck') },
 ];
 
 export const RUN_INFO_W = 1100;
@@ -24,7 +26,7 @@ export const RUN_INFO_H = 820;
 /** Run Info (Briefing 9.1): Hände mit Level, Blinds und Ziele, Vouchers, Deck. Baut in das gegebene Modal. */
 export function buildRunInfo(box: Container, run: RunState, close: () => void, startTab: RunInfoTab = 'hands') {
   const W = RUN_INFO_W;
-  const head = label('Run Info', 38);
+  const head = label(t('Run Info'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
   const content = new Container();
@@ -34,7 +36,7 @@ export function buildRunInfo(box: Container, run: RunState, close: () => void, s
 
   const show = (tab: RunInfoTab) => {
     bar?.destroy({ children: true });
-    bar = tabBar(TABS, W - 80, tab, show);
+    bar = tabBar(tabs(), W - 80, tab, show);
     bar.position.set(40, 82);
     box.addChild(bar);
     for (const c of [...content.children]) c.destroy({ children: true });
@@ -45,14 +47,14 @@ export function buildRunInfo(box: Container, run: RunState, close: () => void, s
   };
   show(startTab);
 
-  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, close, 24);
+  const closeBtn = new Button(t('Schließen'), 260, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W / 2, RUN_INFO_H - 50);
   box.addChild(closeBtn);
 }
 
 function hands(c: Container, run: RunState) {
   const colX = { level: 30, name: 130, score: 560, played: 990 };
-  const heads: [string, number, number][] = [['Level', colX.level, 0], ['Hand', colX.name, 0], ['Chips × Mult', colX.score, 0.5], ['Gespielt', colX.played, 1]];
+  const heads: [string, number, number][] = [[t('Level'), colX.level, 0], [t('Hand'), colX.name, 0], [t('Chips × Mult'), colX.score, 0.5], [t('Gespielt'), colX.played, 1]];
   for (const [text, x, anchor] of heads) {
     const l = label(text, 17, C.textDim);
     l.anchor.set(anchor, 0.5);
@@ -62,7 +64,7 @@ function hands(c: Container, run: RunState) {
   handRows(run).forEach((r, i) => {
     const y = 26 + i * 43;
     const bg = new Graphics().roundRect(0, y, 1020, 38, 10).fill({ color: r.hidden ? 0x141d29 : C.panel, alpha: 0.9 });
-    const lv = label(r.hidden ? '?' : `Lv ${r.level}`, 22, r.level > 1 ? C.money : C.text);
+    const lv = label(r.hidden ? '?' : t('Lv {n}', { n: r.level }), 22, r.level > 1 ? C.money : C.text);
     lv.anchor.set(0, 0.5);
     lv.position.set(colX.level, y + 19);
     const nm = label(r.name, 24, r.hidden ? C.textDim : C.text);
@@ -89,10 +91,10 @@ function hands(c: Container, run: RunState) {
 
 function blinds(c: Container, run: RunState) {
   const rows = blindRows(run);
-  const t = label(`Ante ${run.ante}${run.ante > FINAL_ANTE ? ' · Endless' : ''}`, 26, C.money);
-  t.anchor.set(0, 0.5);
-  t.position.set(0, 10);
-  c.addChild(t);
+  const at = label(t('Ante {n}', { n: run.ante }) + (run.ante > FINAL_ANTE ? ' · Endless' : ''), 26, C.money);
+  at.anchor.set(0, 0.5);
+  at.position.set(0, 10);
+  c.addChild(at);
   rows.forEach((r, i) => {
     const x = i * 345;
     const boss = r.bossId ? BOSS_BY_ID[r.bossId] : undefined;
@@ -104,20 +106,20 @@ function blinds(c: Container, run: RunState) {
     if (nm.width > 300) nm.scale.set(300 / nm.width);
     const tg = label(fmt(r.target), 36, C.mult);
     tg.position.set(x + 165, 108);
-    const rw = label(r.reward > 0 ? 'Belohnung ' + '$'.repeat(r.reward) : 'Keine Belohnung', 18, C.money);
+    const rw = label(r.reward > 0 ? t('Belohnung {money}', { money: '$'.repeat(r.reward) }) : t('Keine Belohnung'), 18, C.money);
     rw.position.set(x + 165, 140);
-    const info = boss ? boss.description : r.tagId ? `Skip Tag: ${TAG_BY_ID[r.tagId].name}\n${TAG_BY_ID[r.tagId].description}` : '';
+    const info = boss ? boss.description : r.tagId ? `${t('Skip Tag: {name}', { name: TAG_BY_ID[r.tagId].name })}\n${TAG_BY_ID[r.tagId].description}` : '';
     const d = wrapText(info, 300, 15);
     d.position.set(x + 165, 160);
     c.addChild(bg, nm, tg, rw, d);
     if (r.state === 'done') bg.alpha = 0.5;
   });
   // Ziele aller Antes bis zum Final Ante
-  const th = label('Ziele je Ante', 20, C.textDim);
+  const th = label(t('Ziele je Ante'), 20, C.textDim);
   th.anchor.set(0, 0.5);
   th.position.set(0, 250);
   c.addChild(th);
-  [' Ante', BLIND_NAMES.small, BLIND_NAMES.big, BLIND_NAMES.boss].forEach((n, i) => {
+  [t('Ante'), BLIND_NAMES.small, BLIND_NAMES.big, BLIND_NAMES.boss].forEach((n, i) => {
     const l = label(n.trim(), 17, C.textDim);
     l.position.set(80 + i * 250, 278);
     c.addChild(l);
@@ -133,19 +135,19 @@ function blinds(c: Container, run: RunState) {
       c.addChild(l);
     });
   }
-  const note = label(`Boss Ziele ohne Boss Faktor. Belohnung: Small $${blindReward(run.ante, 'small', run.rules.smallBlindReward)}, Big $${blindReward(run.ante, 'big', null)}, Boss $${blindReward(run.ante, 'boss', null)}`, 14, C.textDim);
+  const note = label(t('Boss Ziele ohne Boss Faktor. Belohnung: Small {small}, Big {big}, Boss {boss}', { small: '$' + blindReward(run.ante, 'small', run.rules.smallBlindReward), big: '$' + blindReward(run.ante, 'big', null), boss: '$' + blindReward(run.ante, 'boss', null) }), 14, C.textDim);
   note.anchor.set(0, 0.5);
   note.position.set(0, 294 + FINAL_ANTE * 32 + 10);
   c.addChild(note);
 }
 
 function vouchers(c: Container, run: RunState) {
-  const h1 = label(`Vouchers (${run.vouchers.length})`, 24, C.money);
+  const h1 = label(t('Vouchers ({n})', { n: run.vouchers.length }), 24, C.money);
   h1.anchor.set(0, 0.5);
   h1.position.set(0, 10);
   c.addChild(h1);
   if (!run.vouchers.length) {
-    const none = label('Noch keine Vouchers eingelöst', 20, C.textDim);
+    const none = label(t('Noch keine Vouchers eingelöst'), 20, C.textDim);
     none.anchor.set(0, 0.5);
     none.position.set(0, 60);
     c.addChild(none);
@@ -163,19 +165,19 @@ function vouchers(c: Container, run: RunState) {
     c.addChild(n, d);
   });
   const ty = 36 + Math.ceil(Math.max(run.vouchers.length, 1) / 2) * 78 + 24;
-  const h2 = label(`Offene Tags (${run.pendingTags.length})`, 24, C.accent);
+  const h2 = label(t('Offene Tags ({n})', { n: run.pendingTags.length }), 24, C.accent);
   h2.anchor.set(0, 0.5);
   h2.position.set(0, ty);
   c.addChild(h2);
   if (!run.pendingTags.length) {
-    const none = label('Keine offenen Tags', 20, C.textDim);
+    const none = label(t('Keine offenen Tags'), 20, C.textDim);
     none.anchor.set(0, 0.5);
     none.position.set(0, ty + 44);
     c.addChild(none);
   }
   run.pendingTags.forEach((id, i) => {
-    const t = TAG_BY_ID[id];
-    const l = label(`${t.name}: ${t.description}`, 18, C.text);
+    const tag = TAG_BY_ID[id];
+    const l = label(`${tag.name}: ${tag.description}`, 18, C.text);
     l.anchor.set(0, 0.5);
     l.position.set(0, ty + 42 + i * 34);
     c.addChild(l);
@@ -184,10 +186,13 @@ function vouchers(c: Container, run: RunState) {
 
 function deck(c: Container, run: RunState) {
   const s = deckStats(run);
-  const t = label(`${s.total} Karten im Deck${s.remaining !== null ? `, ${s.remaining} im Nachziehstapel` : ''}, ${s.modified} mit Modifikator`, 22, C.text);
-  t.anchor.set(0, 0.5);
-  t.position.set(0, 10);
-  c.addChild(t);
+  const head = label(
+    t('{n} Karte im Deck|{n} Karten im Deck', { n: s.total })
+    + (s.remaining !== null ? t(', {n} im Nachziehstapel', { n: s.remaining }) : '')
+    + t(', {n} mit Modifikator', { n: s.modified }), 22, C.text);
+  head.anchor.set(0, 0.5);
+  head.position.set(0, 10);
+  c.addChild(head);
   const max = Math.max(1, ...Object.values(s.byRank));
   const barH = 220;
   RANKS.forEach((r, i) => {

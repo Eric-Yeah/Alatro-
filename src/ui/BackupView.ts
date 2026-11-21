@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 import { SYNC } from '../data/sync';
 import { decodeBundle, describeRun, encodeBundle, type SyncBundle } from '../syncBundle';
 import { applyBundle, currentBundle, previewRun } from '../syncStorage';
+import { t } from '../i18n';
 import { C } from './theme';
 import { Button, label, wrapText } from './widgets';
 
@@ -41,7 +42,7 @@ function pickTextFile(): Promise<string | null> {
  */
 export function buildBackup(box: Container, onBack: () => void) {
   const W = BACKUP_W;
-  const head = label('Spielstand sichern', 44, C.text);
+  const head = label(t('Spielstand sichern'), 44, C.text);
   head.position.set(W / 2, 56);
   box.addChild(head);
   const dyn = new Container();
@@ -58,14 +59,14 @@ export function buildBackup(box: Container, onBack: () => void) {
 
   const finish = (remote: SyncBundle, choice: 'local' | 'remote') => {
     applyBundle(remote, choice);
-    say('Fertig. Das Spiel lädt neu.', C.green);
+    say(t('Fertig. Das Spiel lädt neu.'), C.green);
     setTimeout(() => location.reload(), 1200);
   };
 
   const importText = (text: string | null) => {
-    if (text === null) return say('Nichts gelesen.', C.mult);
+    if (text === null) return say(t('Nichts gelesen.'), C.mult);
     const bundle = decodeBundle(text);
-    if (!bundle) return say('Das ist kein Alatro Spielstand (oder aus einer neueren Version).', C.mult);
+    if (!bundle) return say(t('Das ist kein Alatro Spielstand (oder aus einer neueren Version).'), C.mult);
     if (previewRun(bundle).kind === 'conflict') {
       pending = bundle;
       return say('', C.textDim);
@@ -79,23 +80,23 @@ export function buildBackup(box: Container, onBack: () => void) {
       const remote = pending;
       const mine = describeRun(currentBundle().run);
       const theirs = describeRun(remote.run);
-      const fmt = (r: ReturnType<typeof describeRun>) => (r ? `Ante ${r.ante}, Blind ${r.blindIndex + 1}, $${r.money}` : 'kein Run');
-      const t = wrapText(
-        `Auf diesem Gerät läuft ein anderer Run als im Import. Profil und Sammlung werden in jedem Fall zusammengeführt.\n\nDieses Gerät: ${fmt(mine)}\nImport: ${fmt(theirs)}`,
+      const fmt = (r: ReturnType<typeof describeRun>) => (r ? t('Ante {ante}, Blind {blind}, ${money}', { ante: r.ante, blind: r.blindIndex + 1, money: r.money }) : t('kein Run'));
+      const info = wrapText(
+        t('Auf diesem Gerät läuft ein anderer Run als im Import. Profil und Sammlung werden in jedem Fall zusammengeführt.\n\nDieses Gerät: {mine}\nImport: {theirs}', { mine: fmt(mine), theirs: fmt(theirs) }),
         W - 100, 24, C.text, 'left',
       );
-      t.position.set(50, 130);
-      const keep = new Button('Run dieses Geräts behalten', 600, 70, C.chips, () => { pending = null; finish(remote, 'local'); }, 26);
+      info.position.set(50, 130);
+      const keep = new Button(t('Run dieses Geräts behalten'), 600, 70, C.chips, () => { pending = null; finish(remote, 'local'); }, 26);
       keep.position.set(W / 2, 400);
-      const take = new Button('Importierten Run nehmen', 600, 70, C.mult, () => { pending = null; finish(remote, 'remote'); }, 26);
+      const take = new Button(t('Importierten Run nehmen'), 600, 70, C.mult, () => { pending = null; finish(remote, 'remote'); }, 26);
       take.position.set(W / 2, 490);
-      const cancel = new Button('Abbrechen', 300, 62, 0x3b5068, () => { pending = null; say(''); }, 24);
+      const cancel = new Button(t('Abbrechen'), 300, 62, 0x3b5068, () => { pending = null; say(''); }, 24);
       cancel.position.set(W / 2, 580);
-      dyn.addChild(t, keep, take, cancel);
+      dyn.addChild(info, keep, take, cancel);
       return;
     }
     const intro = wrapText(
-      'Sichere Profil, Sammlung und laufenden Run als Datei oder Text und lade ihn auf einem anderen Gerät wieder ein. Beim Laden wird nichts gelöscht, sondern zusammengeführt.',
+      t('Sichere Profil, Sammlung und laufenden Run als Datei oder Text und lade ihn auf einem anderen Gerät wieder ein. Beim Laden wird nichts gelöscht, sondern zusammengeführt.'),
       W - 100, 22, C.textDim, 'left',
     );
     intro.position.set(50, 110);
@@ -105,35 +106,35 @@ export function buildBackup(box: Container, onBack: () => void) {
       l.position.set(50, y);
       dyn.addChild(l);
     };
-    section(250, 'Sichern');
-    const file = new Button('Als Datei', 300, 64, C.chips, () => {
+    section(250, t('Sichern'));
+    const file = new Button(t('Als Datei'), 300, 64, C.chips, () => {
       downloadText(SYNC.exportFileName, JSON.stringify(currentBundle()));
-      say('Datei erzeugt. Auf dem iPad im Teilen Menü sichern.', C.green);
+      say(t('Datei erzeugt. Auf dem iPad im Teilen Menü sichern.'), C.green);
     }, 24);
     file.position.set(W / 2 - 170, 310);
-    const copy = new Button('Text kopieren', 300, 64, C.chips, async () => {
+    const copy = new Button(t('Text kopieren'), 300, 64, C.chips, async () => {
       try {
         await navigator.clipboard.writeText(encodeBundle(currentBundle()));
-        say('Text kopiert. Auf dem anderen Gerät einfügen.', C.green);
+        say(t('Text kopiert. Auf dem anderen Gerät einfügen.'), C.green);
       } catch {
-        say('Kopieren nicht erlaubt. Nutze die Datei.', C.mult);
+        say(t('Kopieren nicht erlaubt. Nutze die Datei.'), C.mult);
       }
     }, 24);
     copy.position.set(W / 2 + 170, 310);
-    section(390, 'Laden');
-    const open = new Button('Aus Datei', 300, 64, C.money, async () => importText(await pickTextFile()), 24);
+    section(390, t('Laden'));
+    const open = new Button(t('Aus Datei'), 300, 64, C.money, async () => importText(await pickTextFile()), 24);
     open.position.set(W / 2 - 170, 450);
-    const paste = new Button('Text einfügen', 300, 64, C.money, async () => {
+    const paste = new Button(t('Text einfügen'), 300, 64, C.money, async () => {
       try {
         importText(await navigator.clipboard.readText());
       } catch {
-        say('Einfügen nicht erlaubt. Nutze die Datei.', C.mult);
+        say(t('Einfügen nicht erlaubt. Nutze die Datei.'), C.mult);
       }
     }, 24);
     paste.position.set(W / 2 + 170, 450);
     const msg = wrapText(status || ' ', W - 100, 22, statusColor, 'center');
     msg.position.set(W / 2, 505);
-    const back = new Button('Zurück', 300, 62, 0x3b5068, onBack, 26);
+    const back = new Button(t('Zurück'), 300, 62, 0x3b5068, onBack, 26);
     back.position.set(W / 2, 580);
     dyn.addChild(intro, file, copy, open, paste, msg, back);
   };

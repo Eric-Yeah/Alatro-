@@ -4,7 +4,8 @@ import { collectionProgress } from '../collection';
 import { ACHIEVEMENTS, CATEGORY_NAMES, CATEGORY_ORDER, TOTAL_STARS, type AchievementCategory, type AchievementDef } from '../data/achievements';
 import { DECKS } from '../data/decks';
 import { getProfile } from '../profile';
-import { C, fmt } from './theme';
+import { t } from '../i18n';
+import { C, fmt, numLocale } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
 export const ACH_W = 1280;
@@ -40,7 +41,7 @@ export function buildAchievements(box: Container, close: () => void) {
   let tab: Tab = 'einstieg';
   let page = 0;
 
-  const head = label('Erfolge', 38);
+  const head = label(t('Erfolge'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
   const dyn = new Container();
@@ -52,13 +53,13 @@ export function buildAchievements(box: Container, close: () => void) {
     const name = label(rank.name, 30, rank.color);
     name.anchor.set(0, 0.5);
     name.position.set(48, 108);
-    const sub = label(`${unlockedCount(p)} von ${ACHIEVEMENTS.length} Erfolgen · ${stars} von ${TOTAL_STARS} Sternen`, 18, C.textDim);
+    const sub = label(t('{a} von {b} Erfolgen · {c} von {d} Sternen', { a: unlockedCount(p), b: ACHIEVEMENTS.length, c: stars, d: TOTAL_STARS }), 18, C.textDim);
     sub.anchor.set(0, 0.5);
     sub.position.set(48, 142);
     dyn.addChild(name, sub);
     const next = rank.next
-      ? `Noch ${rank.starsToNext} ${rank.starsToNext === 1 ? 'Stern' : 'Sterne'} bis ${rank.next}`
-      : 'Höchster Rang erreicht';
+      ? t('Noch {n} Stern bis {rank}|Noch {n} Sterne bis {rank}', { n: rank.starsToNext ?? 0, rank: rank.next })
+      : t('Höchster Rang erreicht');
     const nl = label(next, 18, C.textDim);
     nl.anchor.set(1, 0.5);
     nl.position.set(W - 48, 108);
@@ -73,33 +74,33 @@ export function buildAchievements(box: Container, close: () => void) {
       .roundRect(x, y, CELL_W, CELL_H, 14).fill(got ? C.panel : 0x141d29).stroke({ width: 3, color: got ? C.money : C.panelLine });
     dyn.addChild(g);
     if (got) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 6, 3).fill(C.money));
-    const name = label(hidden ? 'Geheimer Erfolg' : a.name, 24, got ? C.text : C.textDim);
+    const name = label(hidden ? t('Geheimer Erfolg') : a.name, 24, got ? C.text : C.textDim);
     name.anchor.set(0, 0.5);
     name.position.set(x + 20, y + 38);
     if (name.width > CELL_W - 190) name.scale.set((CELL_W - 190) / name.width);
     for (let i = 0; i < 3; i++) dyn.addChild(starShape(x + CELL_W - 30 - i * 30, y + 38, 12, i < a.stars && got));
-    const desc = wrapText(hidden ? 'Wird nicht verraten. Spiel einfach weiter.' : a.description, CELL_W - 40, 17, got ? C.text : C.textDim, 'left');
+    const desc = wrapText(hidden ? t('Wird nicht verraten. Spiel einfach weiter.') : a.description, CELL_W - 40, 17, got ? C.text : C.textDim, 'left');
     desc.position.set(x + 20, y + 60);
     dyn.addChild(name, desc);
     if (got) {
       const d = new Date(p.unlocked[a.id]);
-      const t = label(`Freigeschaltet am ${d.toLocaleDateString('de-DE')}`, 14, C.green, { fontWeight: '600' });
-      t.anchor.set(0, 0.5);
-      t.position.set(x + 20, y + CELL_H - 18);
-      dyn.addChild(t);
+      const ut = label(t('Freigeschaltet am {date}', { date: d.toLocaleDateString(numLocale()) }), 14, C.green, { fontWeight: '600' });
+      ut.anchor.set(0, 0.5);
+      ut.position.set(x + 20, y + CELL_H - 18);
+      dyn.addChild(ut);
     } else if (!hidden) {
       const pr = condProgress(a.cond, p, null, ctx);
       if (pr) {
         dyn.addChild(bar(x + 20, y + CELL_H - 26, CELL_W - 190, pr.cur / pr.max, C.chips));
-        const t = label(`${fmt(pr.cur)} / ${fmt(pr.max)}`, 16, C.textDim);
-        t.anchor.set(1, 0.5);
-        t.position.set(x + CELL_W - 20, y + CELL_H - 19);
-        dyn.addChild(t);
+        const pt = label(`${fmt(pr.cur)} / ${fmt(pr.max)}`, 16, C.textDim);
+        pt.anchor.set(1, 0.5);
+        pt.position.set(x + CELL_W - 20, y + CELL_H - 19);
+        dyn.addChild(pt);
       } else {
-        const t = label('Gesperrt', 15, C.textDim, { fontWeight: '600' });
-        t.anchor.set(0, 0.5);
-        t.position.set(x + 20, y + CELL_H - 18);
-        dyn.addChild(t);
+        const lk = label(t('Gesperrt'), 15, C.textDim, { fontWeight: '600' });
+        lk.anchor.set(0, 0.5);
+        lk.position.set(x + 20, y + CELL_H - 18);
+        dyn.addChild(lk);
       }
     }
   };
@@ -108,22 +109,22 @@ export function buildAchievements(box: Container, close: () => void) {
     const s = p.stats;
     const days = Object.keys(p.daily).length;
     const rows: [string, string][] = [
-      ['Runs gespielt', fmt(s.runs)],
-      ['Runs gewonnen', fmt(s.wins)],
-      ['Runs verloren', fmt(s.losses)],
-      ['Höchstes Ante', fmt(s.bestAnte)],
-      ['Beste Hand', fmt(s.bestHand)],
-      ['Hands gespielt', fmt(s.hands)],
-      ['Discards genutzt', fmt(s.discards)],
-      ['Blinds gewonnen', fmt(s.blindsWon)],
-      ['Bosse besiegt', fmt(s.bossesBeaten)],
-      ['Blinds übersprungen', fmt(s.skips)],
-      ['Jokers gekauft', fmt(s.jokersBought)],
-      ['Rerolls', fmt(s.rerolls)],
-      ['Höchster Geldstand', '$' + fmt(s.moneyPeak)],
-      ['Beste Siegstufe (skalierend)', p.bestScale ? `Stufe ${p.bestScale}` : 'noch keine'],
-      ['Tageslauf Tage', fmt(days)],
-      ['Sammlung entdeckt', `${Math.round(ctx.collection * 100)}%`],
+      [t('Runs gespielt'), fmt(s.runs)],
+      [t('Runs gewonnen'), fmt(s.wins)],
+      [t('Runs verloren'), fmt(s.losses)],
+      [t('Höchstes Ante'), fmt(s.bestAnte)],
+      [t('Beste Hand'), fmt(s.bestHand)],
+      [t('Hands gespielt'), fmt(s.hands)],
+      [t('Discards genutzt'), fmt(s.discards)],
+      [t('Blinds gewonnen'), fmt(s.blindsWon)],
+      [t('Bosse besiegt'), fmt(s.bossesBeaten)],
+      [t('Blinds übersprungen'), fmt(s.skips)],
+      [t('Jokers gekauft'), fmt(s.jokersBought)],
+      [t('Rerolls'), fmt(s.rerolls)],
+      [t('Höchster Geldstand'), '$' + fmt(s.moneyPeak)],
+      [t('Beste Siegstufe (skalierend)'), p.bestScale ? t('Stufe {n}', { n: p.bestScale }) : t('noch keine')],
+      [t('Tageslauf Tage'), fmt(days)],
+      [t('Sammlung entdeckt'), `${Math.round(ctx.collection * 100)}%`],
     ];
     rows.forEach(([k, v], i) => {
       const col = i % 2;
@@ -140,7 +141,7 @@ export function buildAchievements(box: Container, close: () => void) {
       dyn.addChild(kl, vl);
     });
     const wins = DECKS.map((d) => `${d.name} ${p.winsByDeck[d.id] ?? 0}`).join('   ');
-    const wl = wrapText(`Siege je Deck:  ${wins}`, W - 96, 17, C.textDim, 'left');
+    const wl = wrapText(t('Siege je Deck:  {wins}', { wins }), W - 96, 17, C.textDim, 'left');
     wl.position.set(48, GRID_Y + 6 + 8 * 50 + 14);
     dyn.addChild(wl);
   };
@@ -150,7 +151,7 @@ export function buildAchievements(box: Container, close: () => void) {
     renderRank();
     const tabs = [
       ...CATEGORY_ORDER.map((id) => ({ id: id as Tab, name: CATEGORY_NAMES[id] })),
-      { id: 'statistik' as Tab, name: 'Statistik' },
+      { id: 'statistik' as Tab, name: t('Statistik') },
     ];
     const bar2 = tabBar(tabs, W - 96, tab, (id) => { tab = id; page = 0; render(); }, 16);
     bar2.position.set(48, 160);
@@ -167,7 +168,7 @@ export function buildAchievements(box: Container, close: () => void) {
     list.slice(page * PER_PAGE, (page + 1) * PER_PAGE).forEach((a, i) => {
       cell(a, 48 + (i % COLS) * (CELL_W + GAP_X), GRID_Y + Math.floor(i / COLS) * (CELL_H + GAP_Y));
     });
-    const info = label(`${CATEGORY_NAMES[tab]}: ${got} von ${list.length}`, 20, C.textDim);
+    const info = label(t('{name}: {a} von {b}', { name: CATEGORY_NAMES[tab], a: got, b: list.length }), 20, C.textDim);
     info.anchor.set(0, 0.5);
     info.position.set(48, ACH_H - 52);
     dyn.addChild(info);
@@ -176,14 +177,14 @@ export function buildAchievements(box: Container, close: () => void) {
       prev.position.set(W / 2 - 140, ACH_H - 52);
       const next = new Button('›', 70, 56, 0x3b5068, () => { page = (page + 1) % pages; render(); }, 30);
       next.position.set(W / 2 + 140, ACH_H - 52);
-      const pl = label(`Seite ${page + 1} von ${pages}`, 16, C.textDim);
+      const pl = label(t('Seite {a} von {b}', { a: page + 1, b: pages }), 16, C.textDim);
       pl.position.set(W / 2, ACH_H - 52);
       dyn.addChild(prev, next, pl);
     }
   };
   render();
 
-  const closeBtn = new Button('Schließen', 220, 60, 0xf2711c, close, 24);
+  const closeBtn = new Button(t('Schließen'), 220, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 150, ACH_H - 50);
   box.addChild(closeBtn);
 }

@@ -1,6 +1,7 @@
 import { Container } from 'pixi.js';
 import { PATCH_NOTES } from '../data/patchnotes';
 import { TUTORIAL } from '../data/tutorial';
+import { t } from '../i18n';
 import { C } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
@@ -34,7 +35,7 @@ function addLines(parent: Container, lines: string[], x: number, y: number, widt
 export function buildTutorial(box: Container, close: () => void, startId?: string) {
   const W = TUTORIAL_W;
   let idx = Math.max(0, TUTORIAL.findIndex((p) => p.id === startId));
-  const head = label('Anleitung', 38);
+  const head = label(t('Anleitung'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
   const dyn = new Container();
@@ -55,13 +56,13 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
     prev.position.set(W / 2 - 150, TUTORIAL_H - 50);
     const next = new Button('›', 70, 56, 0x3b5068, () => { idx = (idx + 1) % TUTORIAL.length; render(); }, 30);
     next.position.set(W / 2 + 150, TUTORIAL_H - 50);
-    const pl = label(`Seite ${idx + 1} von ${TUTORIAL.length}`, 20, C.text);
+    const pl = label(t('Seite {a} von {b}', { a: idx + 1, b: TUTORIAL.length }), 20, C.text);
     pl.position.set(W / 2, TUTORIAL_H - 50);
     dyn.addChild(prev, next, pl);
   };
   render();
 
-  const closeBtn = new Button('Schließen', 220, 60, 0xf2711c, close, 24);
+  const closeBtn = new Button(t('Schließen'), 220, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 150, TUTORIAL_H - 50);
   box.addChild(closeBtn);
 }
@@ -70,7 +71,7 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
 export function buildPatchNotes(box: Container, close: () => void) {
   const W = PATCH_W;
   let idx = 0;
-  const head = label('Patch Notes', 38);
+  const head = label(t('Patch Notes'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
   const dyn = new Container();
@@ -79,17 +80,17 @@ export function buildPatchNotes(box: Container, close: () => void) {
   const render = () => {
     clear(dyn);
     const n = PATCH_NOTES[idx];
-    const ver = label(`Version ${n.version}${idx === 0 ? ' (neu)' : ''}`, 30, C.money);
+    const ver = label(t('Version {version}', { version: n.version }) + (idx === 0 ? t(' (neu)') : ''), 30, C.money);
     ver.position.set(W / 2, 110);
     const sub = label(`${n.title} · ${n.date}`, 20, C.textDim);
     sub.position.set(W / 2, 148);
     dyn.addChild(ver, sub);
     addLines(dyn, n.items.map((i) => `* ${i}`), 60, 190, W - 120, 20);
     if (PATCH_NOTES.length > 1) {
-      const newer = new Button('‹ Neuer', 150, 56, 0x3b5068, () => { idx = Math.max(0, idx - 1); render(); }, 22);
+      const newer = new Button(t('‹ Neuer'), 150, 56, 0x3b5068, () => { idx = Math.max(0, idx - 1); render(); }, 22);
       newer.position.set(120, PATCH_H - 50);
       newer.enabled = idx > 0;
-      const older = new Button('Älter ›', 150, 56, 0x3b5068, () => { idx = Math.min(PATCH_NOTES.length - 1, idx + 1); render(); }, 22);
+      const older = new Button(t('Älter ›'), 150, 56, 0x3b5068, () => { idx = Math.min(PATCH_NOTES.length - 1, idx + 1); render(); }, 22);
       older.position.set(290, PATCH_H - 50);
       older.enabled = idx < PATCH_NOTES.length - 1;
       dyn.addChild(newer, older);
@@ -97,7 +98,7 @@ export function buildPatchNotes(box: Container, close: () => void) {
   };
   render();
 
-  const closeBtn = new Button('Schließen', 220, 60, 0xf2711c, close, 24);
+  const closeBtn = new Button(t('Schließen'), 220, 60, 0xf2711c, close, 24);
   closeBtn.position.set(W - 150, PATCH_H - 50);
   box.addChild(closeBtn);
 }

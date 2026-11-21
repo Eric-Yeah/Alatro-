@@ -39,6 +39,7 @@ export class Button extends Container {
     super();
     this.txt = label(text, size, C.text, { align: 'center' });
     this.txt.position.set(w / 2, h / 2);
+    this.fit();
     this.addChild(this.bg, this.txt);
     this.pivot.set(w / 2, h / 2);
     this.draw();
@@ -53,7 +54,14 @@ export class Button extends Container {
     });
   }
 
-  setText(t: string) { this.txt.text = t; }
+  setText(text: string) { this.txt.text = text; this.fit(); }
+
+  /** Schrumpft die Beschriftung, wenn sie breiter als der Knopf ist (englische Texte sind oft länger) */
+  private fit() {
+    this.txt.scale.set(1);
+    const maxW = this.w - 2 * STYLE.outline - 14;
+    if (this.txt.width > maxW) this.txt.scale.set(Math.max(0.55, maxW / this.txt.width));
+  }
 
   /** Aktuelle Beschriftung (für die Einführung, die Knöpfe in fremden Ansichten findet) */
   get caption(): string { return this.txt.text; }

@@ -1,6 +1,7 @@
 import type { Suit } from '../core/cards';
 import type { Rarity } from '../core/jokers';
 import type { ConsumableType } from '../data/consumables';
+import { getLang } from '../i18n';
 
 export const VIEW_W = 1440;
 export const VIEW_H = 1000;
@@ -70,15 +71,20 @@ export const FONT_BODY = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-ser
 export const FONT_TITLE = '"Alatro Karte", "Alatro Pixel", system-ui, sans-serif';
 export const FONT = '"Alatro Pixel", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
+/** Zahlen und Datumsformat der gewählten Sprache: Deutsch mit Tausenderpunkt und Dezimalkomma, Englisch umgekehrt */
+export function numLocale(): string {
+  return getLang() === 'en' ? 'en-US' : 'de-DE';
+}
+
 export function fmt(n: number): string {
   if (n >= 1e11) return n.toExponential(2).replace('+', '');
-  return Math.floor(n).toLocaleString('de-DE');
+  return Math.floor(n).toLocaleString(numLocale());
 }
 
 export function fmtMult(n: number): string {
   if (Number.isInteger(n)) return fmt(n);
   if (n >= 1000) return fmt(n);
-  return n.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+  return n.toLocaleString(numLocale(), { maximumFractionDigits: 1 });
 }
 
 /** Eigene Farben der Modifikatoren */
