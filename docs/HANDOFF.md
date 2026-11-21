@@ -1,6 +1,15 @@
-# Übergabe: Stand nach Geräte Sync (Version 0.9.0)
+# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.0)
 
-Stand: 19.11.2026. Branch `claude/sharp-hawking-l5t1cm`. Befunde und Änderungen des Reviews 0.4.0: `docs/PLAYTEST.md`.
+Stand: 21.11.2026. Arbeitsbranch `claude/wonderful-euler-rqq4w3`, live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.10.0
+
+* **Deutsch und Englisch:** Wechsel in den Optionen ("Sprache"), die App lädt neu. Konzept: der deutsche Text ist der Schlüssel, `t('Text')` aus `src/i18n/index.ts`, Wörterbücher in `src/i18n/en/*.ts` (werden automatisch geladen). Inhalte aus `src/data/` (Jokers, Consumables, Erfolge, Einführung, Patch Notes usw.) werden bei Englisch beim Start durch Dateien in `src/i18n/patch/*.ts` an Ort und Stelle umgeschrieben (`applyDataLanguage`, `boot.ts`). Tests: `i18n.test.ts` (jeder `t()` Aufruf hat einen Eintrag), `dups.test.ts`, `contentEnA.test.ts`, `contentEnB.test.ts`. **Neuer sichtbarer Text:** immer `t('...')` und Eintrag in `src/i18n/en/`, neue Inhalte mit ID in den passenden Patch ergänzen. Einzelheiten, Begriffe und offene Punkte: `AUDIT.md`, Abschnitte "Mehrsprachigkeit".
+* **Karten schweben, Austeilen und Einziehen:** `src/ui/cardMotion.ts`, `cardMotionMath.ts`, `dealAnim.ts`, Zahlen `src/data/cardMotion.ts`. Feintuning auf dem iPad (siehe `AUDIT.md`, "Kartenbewegung").
+* **Deck Ansicht und Level up Vorschau:** `src/ui/DeckView.ts`, `levelUpView.ts`, reine Daten `deckLayout` und `levelUpPreview` in `src/core/runInfo.ts`. Zugang: Stapel antippen, Knopf "Deck" in der Seitenleiste, Blind Auswahl, Run Info.
+* **Münzklang:** `sfx.coin` und `sfx.coins` (`audio.ts`, Zahlen `src/data/coinSound.ts`), beim Einkassieren, Auszahlungszeilen, Joker Geld und Verkaufen.
+* **Joker Tausch im Pack:** bei vollen Slots bietet ein Joker Pack "Tauschen" (`canSwapJoker`, `swapJokerFromPack` in `core/game.ts`, Ansicht in `Game.showPack`). Der alte Joker wird verkauft.
+* **Als Nächstes:** Auf dem iPad prüfen: Gefühl und Bildrate des Schwebens und der Austeil Animation, Lesbarkeit der englischen Texte, Münzklang Lautstärke. Offen: Kaufen im Shop bei vollen Joker Slots (dort muss man weiter erst verkaufen), Browsersprache als Standard.
 
 ## Geräte Sync
 

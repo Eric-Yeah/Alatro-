@@ -8,6 +8,20 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.10.0',
+    date: '21.11.2026',
+    title: 'Schwebende Karten, Deck, Englisch',
+    items: [
+      'Neu: Das Spiel gibt es jetzt komplett auf Deutsch und auf Englisch. In den Optionen unter "Sprache" wechseln, das Spiel lädt dabei neu. Das gilt auch für alle Jokers, Consumables, Erfolge, die Einführung und die Patch Notes.',
+      'Neu: Die Karten schweben ganz leicht auf dem Tisch. In der Grafikstufe Sparsam ist das abgeschaltet.',
+      'Besser: Karten werden mit einem Bogenflug und Umdrehen ausgeteilt und beim Rundenende, Spielen und Verwerfen wieder eingezogen. Der Stapel zuckt dabei mit.',
+      'Neu: Deck ansehen. Tippe auf den Stapel, auf den Knopf "Deck" in der Seitenleiste oder in der Run Info. Du siehst alle Karten mit Modifikatoren und, was noch im Nachziehstapel liegt.',
+      'Neu: Sternbilder zeigen, was das Level up bringt: neues Level, Chips und Mult davor und danach. Im Slot, im Pack, im Shop und im Atlas.',
+      'Neu: Münzklang beim Einkassieren, bei Auszahlungen, Geld von Jokers und beim Verkaufen.',
+      'Neu: Ein Joker Pack bei vollen Joker Slots bietet jetzt "Tauschen". Du ersetzt einen eigenen Joker, der alte wird verkauft.',
+    ],
+  },
+  {
     version: '0.9.0',
     date: '19.11.2026',
     title: 'Geräte koppeln',

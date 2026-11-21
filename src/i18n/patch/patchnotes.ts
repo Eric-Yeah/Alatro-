@@ -8,6 +8,18 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.10.0': {
+    title: 'Floating Cards, Deck, English',
+    items: [
+      'New: The game is now fully available in German and English. Switch under "Language" in the options, the game reloads when you do. This covers all Jokers, Consumables, achievements, the tutorial and the patch notes.',
+      'New: The cards float very gently on the table. This is switched off in the Lite graphics setting.',
+      'Improved: Cards are dealt with an arcing flight and a flip, and are gathered back at the end of a round and when playing or discarding. The deck twitches along.',
+      'New: View your deck. Tap the pile, the "Deck" button in the sidebar, or use Run Info. You see every card with its modifiers and what is still left in the draw pile.',
+      'New: Constellations show what the level up brings: new level, Chips and Mult before and after. In the slot, in the pack, in the shop and in the atlas.',
+      'New: Coin sound when you cash out, on payouts, on money from Jokers and when selling.',
+      'New: A Joker Pack with full Joker slots now offers "Swap". You replace one of your Jokers, and the old one is sold.',
+    ],
+  },
   '0.9.0': {
     title: 'Pairing Devices',
     items: [
