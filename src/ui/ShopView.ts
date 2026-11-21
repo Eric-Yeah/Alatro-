@@ -5,6 +5,9 @@ import { getJoker, jokerDescription } from '../core/jokers';
 import { richText } from './richText';
 import type { RunState } from '../core/run';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
+import { consumableDescription, levelUpPreview } from '../core/runInfo';
+import { LEVEL_UP_VIEW } from '../data/deckView';
+import { levelUpBlock } from './levelUpView';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { sfx } from './audio';
 import { haptics } from './haptics';
@@ -162,6 +165,8 @@ interface Detail {
   badgeColor: number;
   badgeText?: number;
   desc: string;
+  /** Zusatzblock unter der Beschreibung (z. B. Level up der Sternbilder), als Fabrik, weil die Karte mehrfach gebaut wird */
+  extra?: () => Container;
   /** Hinweis, warum nicht gekauft werden kann */
   hint?: string;
   actions: Action[];
@@ -183,10 +188,13 @@ function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; 
   const w = L.calloutW;
   const box = new Container();
   const desc = richText(d.desc, w - 36, { size: 18, theme: 'light' });
+  const extra = d.extra ? d.extra() : null;
   const hint = d.hint ? wrapText(d.hint, w - 36, 15, 0xa8324a) : null;
   desc.position.set(0, 82);
-  if (hint) hint.position.set(0, 82 + desc.height + 8);
-  const h = 82 + desc.height + (hint ? hint.height + 16 : 8) + 78;
+  const below = 82 + desc.height + (extra ? LEVEL_UP_VIEW.gap + extra.height : 0);
+  if (extra) extra.position.set(0, 82 + desc.height + LEVEL_UP_VIEW.gap);
+  if (hint) hint.position.set(0, below + 8);
+  const h = below + (hint ? hint.height + 16 : 8) + 78;
   const bg = new Graphics()
     .poly(up ? [tailX - 14, h, tailX, h + 14, tailX + 14, h] : [tailX - 14, 0, tailX, -14, tailX + 14, 0]).fill(C.text).stroke({ width: 3, color: C.cardEdge })
     .roundRect(-w / 2, 5, w, h, 14).fill({ color: 0x000000, alpha: 0.4 })
@@ -200,6 +208,7 @@ function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; 
   const pill = new Graphics().roundRect(-bw / 2, 46, bw, 24, 12).fill(d.badgeColor);
   badge.position.set(0, 58);
   box.addChild(bg, name, pill, badge, desc);
+  if (extra) box.addChild(extra);
   if (hint) box.addChild(hint);
   const n = d.actions.length;
   const gap = 8;
@@ -368,13 +377,15 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       const def = CONSUMABLE_BY_ID[item.defId];
       const view = new ConsumableView(item.defId);
       view.scale.set(unit);
+      const lvl = levelUpPreview(run, item.defId);
       const actions: Action[] = [buy];
       if (!def.targets) actions.push({ text: 'Nutzen', color: C.chips, enabled: canBuyAndUse(run, i), run: () => cb.buyAndUse(i) });
       addSlot(view, x, cardsCy, w, h, item, 'below', {
         name: def.name,
         badge: CONSUMABLE_TYPE_NAMES[def.type],
         badgeColor: CONSUMABLE_COLORS[def.type],
-        desc: def.description,
+        desc: consumableDescription(run, def.id),
+        extra: lvl ? () => levelUpBlock(lvl, L.calloutW - 36, { size: 17, theme: 'light' }) : undefined,
         hint: can ? undefined : why,
         actions,
       });

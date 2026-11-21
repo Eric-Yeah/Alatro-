@@ -3,7 +3,7 @@ import { toWords, tokenizeRich, type RichKind } from './richTokens';
 import { C, FONT_BODY } from './theme';
 
 /** Textfarben pro Art, getrennt für hellen (Karten, Tooltips) und dunklen Untergrund (Panels, Shop). */
-const COLORS: Record<'light' | 'dark', Record<RichKind, number>> = {
+export const COLORS: Record<'light' | 'dark', Record<RichKind, number>> = {
   dark: {
     plain: C.text, chips: 0x5cb8ff, mult: 0xff7a6e, xmult: 0xffffff, money: 0xffc94d, hands: 0x58e0b4, discards: 0xff9a5c,
     suitRed: 0xff6b7a, suitDark: 0x9aa8ff, handType: 0xffb347, cond: 0xc7b2ff, now: 0x6fe39c, rank: 0xffe08a,
