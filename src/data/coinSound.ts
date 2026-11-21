@@ -1,11 +1,15 @@
 /**
- * Münzklang (Einkassieren, Geld verdienen). Ein Klirren besteht aus einem kurzen Anschlag (Rauschen)
- * und drei unharmonischen Teiltönen wie bei Metall. Bei mehreren Münzen rieseln die Klirren
- * gestaffelt mit leicht schwankender Tonhöhe.
+ * Münzklang (Einkassieren, Geld verdienen). Hauptquelle ist die Aufnahme `src/assets/coin.mp3`
+ * (eigene Aufnahme, um 14 Halbtöne abgesenkt, Höhen beschnitten, auf 0,84 s gekürzt).
+ * Die Synthese darunter dient nur als Ersatz, solange die Aufnahme noch lädt oder nicht lesbar ist:
+ * Ein Klirren besteht dort aus einem kurzen Anschlag (Rauschen) und drei unharmonischen Teiltönen
+ * wie bei Metall. Bei mehreren Münzen rieseln die Klirren gestaffelt mit leicht schwankender Tonhöhe.
  */
 export const COIN_SOUND = {
+  /** Aufnahme: Lautstärke relativ zu den anderen Klängen */
+  sampleGain: 0.9,
   /** Grundton eines Klirrens in Hz */
-  baseHz: 1760,
+  baseHz: 880,
   /** Verhältnisse der Teiltöne zum Grundton (unharmonisch, klingt nach Metall) */
   partials: [1, 2.76, 5.4],
   /** Lautstärke je Teilton (leiser nach oben) */

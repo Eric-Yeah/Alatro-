@@ -4,8 +4,9 @@ import { BLIND_FANFARE } from '../data/report';
 import { MUSIC, tracksFor } from '../data/music';
 import { scaleFreq } from './juiceMath';
 import { MusicPlayer } from './music';
+import coinUrl from '../assets/coin.mp3';
 
-// Eigene Klänge per WebAudio Synthese, keine Audiodateien.
+// Eigene Klänge per WebAudio Synthese. Einzige Audiodatei ist die Münzaufnahme (src/assets/coin.mp3).
 // Der AudioContext startet erst nach der ersten Berührung (iPad Regel).
 
 type Wave = OscillatorType;
@@ -14,6 +15,7 @@ class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private noiseBuf: AudioBuffer | null = null;
+  private coinBuf: AudioBuffer | null = null;
   private music: MusicPlayer | null = null;
   private musicOut: GainNode | null = null;
   private duckGain: GainNode | null = null;
@@ -73,11 +75,24 @@ class Sfx {
         this.duckGain.connect(this.musicOut);
         this.music = new MusicPlayer(this.ctx, this.duckGain);
         this.syncMusic();
+        void this.loadCoin();
       }
       // iOS meldet nach einer Unterbrechung (Appwechsel, Anruf) den Zustand "interrupted", nicht nur "suspended"
       if (this.ctx.state !== 'running') void this.ctx.resume().catch(() => {});
     } catch {
       this.ctx = null;
+    }
+  }
+
+  /** Lädt und dekodiert die Münzaufnahme einmal, bis dahin klingt die Synthese */
+  private async loadCoin() {
+    try {
+      const ctx = this.ctx;
+      if (!ctx) return;
+      const res = await fetch(coinUrl);
+      this.coinBuf = await ctx.decodeAudioData(await res.arrayBuffer());
+    } catch {
+      this.coinBuf = null;
     }
   }
 
@@ -174,6 +189,18 @@ class Sfx {
   /** Ein Münzklirren (Geld einkassieren). `pitch` verstimmt leicht (1 ist Grundton), `gain` skaliert die Lautstärke. */
   coin(pitch = 1, gain = 1, delay = 0) {
     const c = COIN_SOUND;
+    if (this.coinBuf && this.ready) {
+      const ctx = this.ctx!;
+      const src = ctx.createBufferSource();
+      src.buffer = this.coinBuf;
+      src.playbackRate.value = pitch;
+      const g = ctx.createGain();
+      g.gain.value = c.sampleGain * gain;
+      src.connect(g);
+      g.connect(this.master!);
+      src.start(ctx.currentTime + delay);
+      return;
+    }
     const base = c.baseHz * pitch;
     this.noise(c.click.dur, c.click.gain * gain, { freq: c.click.freq, q: 1.5, delay });
     const ring = (hz: number, vol: number, d: number) => {
