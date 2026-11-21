@@ -827,6 +827,7 @@ export class Game {
     if (this.guardGuide()) return;
     if (this.busy || !sellJokerAction(run, uid)) return;
     sfx.sell();
+    sfx.coin(1, 0.9, 0.12);
     haptics.sell();
     this.closeTooltip();
     this.syncJokers();
@@ -926,6 +927,7 @@ export class Game {
     const run = this.run!;
     if (this.busy || !sellConsumable(run, uid)) return;
     sfx.sell();
+    sfx.coin(1, 0.9, 0.12);
     haptics.sell();
     this.closeTooltip();
     this.syncConsumables();
@@ -1134,7 +1136,7 @@ export class Game {
       if (ev.chips || ev.mult) haptics.step();
       if (!ev.chips && !ev.mult && !ev.money && ev.message) sfx.message(step);
     }
-    if (ev.money) { sfx.money(); haptics.money(); }
+    if (ev.money) { sfx.coins(ev.money); haptics.money(); }
   }
 
   private async countUp(set: (v: number) => void, from: number, to: number, ms: number) {
@@ -2160,11 +2162,12 @@ export class Game {
       r.anchor.set(1, 0.5);
       r.position.set(540, 150 + overH + i * 58);
       l.alpha = r.alpha = 0;
-      wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
+      wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); sfx.coins(v); });
       box.addChild(l, r);
     });
     const btn = new Button(`Einkassieren $${e.total}`, 360, 76, C.money, async () => {
       btn.enabled = false;
+      sfx.coins(e.total);
       const remaining = run.round!.hand.map((c) => this.cardViews.get(c.id)!).filter(Boolean);
       const pileBefore = run.round!.drawPile.length;
       const paid = cashOut(run);
