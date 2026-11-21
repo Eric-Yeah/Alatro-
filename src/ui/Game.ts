@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Ticker, type FederatedPointerEvent } from 'pixi.js';
+import { Container, Graphics, Rectangle, Text, Ticker, type FederatedPointerEvent } from 'pixi.js';
 import { BLIND_KINDS, BLIND_NAMES, FINAL_ANTE, blindReward, blindTarget, type BlindKind } from '../core/blinds';
 import { SUIT_NAMES, sortByRank, sortBySuit, type Card } from '../core/cards';
 import {
@@ -45,7 +45,7 @@ import { ACH_H, ACH_W, buildAchievements } from './AchievementsView';
 import { Guide } from './Guide';
 import { sfx } from './audio';
 import { haptics } from './haptics';
-import { CARD_H, CardView, cardBack } from './CardView';
+import { CARD_H, CARD_W, CardView, cardBack } from './CardView';
 import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
 import { playPackOpen, type FanTarget } from './packFx';
 import { trayLayout } from './consumableTray';
@@ -59,6 +59,10 @@ import { buildHome } from './HomeView';
 import { ScreenTransition } from './ScreenTransition';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
+import { buildDeckView, deckButton, deckCaption, DECK_VIEW_H, DECK_VIEW_W } from './DeckView';
+import { levelUpBlock } from './levelUpView';
+import { LEVEL_UP_VIEW } from '../data/deckView';
+import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
 import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
@@ -349,10 +353,13 @@ export class Game {
     const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
     t.addChild(menuBtn, infoBtn);
-    this.speedBtn = new Button('', 330, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
+    this.speedBtn = new Button('', 200, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
     this.refreshSpeedBtn();
-    this.speedBtn.position.set(185, 872);
-    t.addChild(this.speedBtn);
+    this.speedBtn.position.set(120, 872);
+    // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
+    const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
+    deckBtn.position.set(290, 872);
+    t.addChild(this.speedBtn, deckBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -384,7 +391,12 @@ export class Game {
     deck2.position.set(DECK_X - 4, DECK_Y - 4);
     this.deckCount = label('', 20, C.text);
     this.deckCount.position.set(DECK_X, DECK_Y + CARD_H / 2 + 22);
-    this.deckPile.addChild(deck, deck2, this.deckCount);
+    this.deckPile.addChild(deck, deck2, this.deckCount, deckCaption(DECK_X, DECK_Y + CARD_H / 2 + 44));
+    // Antippen des Stapels öffnet die Deck Ansicht
+    this.deckPile.hitArea = new Rectangle(DECK_X - CARD_W / 2 - 10, DECK_Y - CARD_H / 2 - 10, CARD_W + 20, CARD_H + 70);
+    this.deckPile.eventMode = 'static';
+    this.deckPile.cursor = 'pointer';
+    this.deckPile.on('pointertap', () => this.openDeck(() => this.clearOverlay()));
     t.addChild(this.deckPile);
     this.deckFx = new DeckFx(this.deckPile, this.deckCount, DECK_X, DECK_Y);
 
@@ -868,7 +880,7 @@ export class Game {
     const tip = new Container() as Container & { consumableUid?: number };
     tip.consumableUid = uid;
     const w = 300;
-    const desc = richText(def.description, w - 30, { size: 19, theme: 'light' });
+    const desc = richText(consumableDescription(run, def.id), w - 30, { size: 19, theme: 'light' });
     const targets = this.selected().map((c) => c.card.id);
     const usable = canUseConsumable(run, inst.defId, targets, 'slot');
     let hint = '';
@@ -878,9 +890,14 @@ export class Game {
       else hint = 'Gerade nicht benutzbar';
     }
     const hintText = hint ? wrapText(hint, w - 30, 15, 0xa8324a) : null;
+    // Sternbild und Omen: was das Level up an Chips und Mult bringt
+    const lvl = levelUpPreview(run, inst.defId);
+    const lvlBlock = lvl ? levelUpBlock(lvl, w - 30, { size: 17, theme: 'light', slot: true }) : null;
     desc.position.set(0, 84);
-    if (hintText) hintText.position.set(0, 84 + desc.height + 8);
-    const h = 84 + desc.height + (hintText ? hintText.height + 16 : 8) + 144;
+    const below = 84 + desc.height + (lvlBlock ? LEVEL_UP_VIEW.gap + lvlBlock.height : 0);
+    if (lvlBlock) lvlBlock.position.set(0, 84 + desc.height + LEVEL_UP_VIEW.gap);
+    if (hintText) hintText.position.set(0, below + 8);
+    const h = below + (hintText ? hintText.height + 16 : 8) + 144;
     const bg = new Graphics()
       .roundRect(-w / 2, 4, w, h, 14).fill({ color: 0, alpha: 0.4 })
       .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
@@ -896,6 +913,7 @@ export class Game {
     const sell = new Button(`Verkaufen $${consumableSellValue(inst)}`, 230, 56, C.green, () => this.sellConsumableUI(uid), 20);
     sell.position.set(0, h - 40);
     tip.addChild(bg, name, badge, badgeT, desc, use, sell);
+    if (lvlBlock) tip.addChild(lvlBlock);
     if (hintText) tip.addChild(hintText);
     tip.position.set(Math.min(v.x, VIEW_W - w / 2 - 10), JOKER_Y + CONSUMABLE_H / 2 + 20);
     tip.scale.set(0.8);
@@ -1921,7 +1939,15 @@ export class Game {
     const run = this.run;
     if (!run) return;
     const { box } = this.modal(RUN_INFO_W, RUN_INFO_H, C.panelDark);
-    buildRunInfo(box, run, () => this.clearOverlay(), tab);
+    buildRunInfo(box, run, () => this.clearOverlay(), tab, () => this.openDeck(() => this.showRunInfo('deck')));
+  }
+
+  /** Öffnet die Deck Ansicht, sofern gerade keine Animation läuft und keine Einführung. `back` stellt danach den vorigen Zustand wieder her. */
+  private openDeck(back: () => void) {
+    if (!this.run || this.guardGuide() || this.busy) return;
+    const run = this.run;
+    const { box } = this.modal(DECK_VIEW_W, DECK_VIEW_H, C.panelDark);
+    buildDeckView(box, run, back);
   }
 
   /** Seed Eingabe mit eigener Tastatur: 0 bis 8 Zeichen, O gilt als 0, leer = zufällig */
@@ -1979,6 +2005,11 @@ export class Game {
     const head = label(`Ante ${run.ante}${run.ante > FINAL_ANTE ? ' · Endless' : ''}`, 40, C.text);
     head.position.set(500, 46);
     box.addChild(head);
+    if (!this.tut) {
+      const deckBtn = deckButton(150, 52, 22, () => this.openDeck(() => this.showBlindSelect()));
+      deckBtn.position.set(110, 46);
+      box.addChild(deckBtn);
+    }
 
     BLIND_KINDS.forEach((kind, i) => {
       const col = new Container();
@@ -2339,7 +2370,7 @@ export class Game {
         } else if (o.kind === 'consumable') {
           view = new ConsumableView(o.defId);
           const cd = CONSUMABLE_BY_ID[o.defId];
-          text = `${cd.name}\n${cd.description}`;
+          text = `${cd.name}\n${consumableDescription(run, cd.id)}`;
           if (cd.targets) text += `\nZiele: ${targets.length} von ${cd.targets.min === cd.targets.max ? cd.targets.min : `${cd.targets.min} bis ${cd.targets.max}`}`;
         } else {
           view = new CardView(o.card);
@@ -2353,6 +2384,10 @@ export class Game {
         view.position.set(x, 200);
         const info = richText(text, spacing - 14, { size: withHand ? 15 : 17, theme: 'dark' });
         info.position.set(x, 295);
+        // Sternbild und Omen: Level up mit Zahlen unter der Beschreibung
+        const lvl = o.kind === 'consumable' ? levelUpPreview(run, o.defId) : null;
+        const lvlBlock = lvl ? levelUpBlock(lvl, spacing - 14, { size: withHand ? 14 : 16, theme: 'dark' }) : null;
+        if (lvlBlock) lvlBlock.position.set(x, 295 + info.height + LEVEL_UP_VIEW.gap);
         // Joker Pack bei vollen Slots: statt Wählen gibt es Tauschen gegen einen eigenen Joker
         const swap = o.kind === 'joker' && !canPick(run, i, targets) && p.picksLeft > 0 && run.jokers.some((j) => canSwapJoker(run, i, j.uid));
         const pick = swap
@@ -2361,7 +2396,8 @@ export class Game {
         pick.position.set(x, withHand ? 460 : 470);
         pick.enabled = swap || canPick(run, i, targets);
         dyn.addChild(view, info, pick);
-        fanTargets.push({ view, x, y: 200, extras: [info, pick] });
+        if (lvlBlock) dyn.addChild(lvlBlock);
+        fanTargets.push({ view, x, y: 200, extras: lvlBlock ? [info, lvlBlock, pick] : [info, pick] });
       });
 
       if (p.handIds) {

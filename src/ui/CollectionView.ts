@@ -2,13 +2,14 @@ import { richText } from './richText';
 import { t } from '../i18n';
 import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult } from './theme';
 import { Button, label, tabBar } from './widgets';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
 import { VoucherView } from './VoucherView';
 import { CONSUMABLE_BY_ID } from '../data/consumables';
 import { COLLECTION_TILE } from '../data/consumableArt';
+import { levelUpGain } from '../core/runInfo';
 
 export const COLLECTION_W = 1280;
 export const COLLECTION_H = 860;
@@ -42,6 +43,13 @@ function tileFor(e: CollectionEntry): { view: Container; w: number; h: number } 
   view.eventMode = 'none';
   view.interactiveChildren = false;
   return { view, w: w * k, h: h * k };
+}
+
+/** Zusatzzeile bei Sternbildern: was ein Level up an Chips und Mult bringt (Zahlen aus den Handdaten) */
+function gainLine(e: CollectionEntry): string {
+  const [kind, id] = e.key.split(':');
+  const g = kind === 'consumable' ? levelUpGain(id) : null;
+  return g ? '\n' + t('+{chips} Chips, +{mult} Mult', { chips: fmt(g.chips), mult: fmtMult(g.mult) }) : '';
 }
 
 /** Sammlung: alle Inhalte nach Reitern, nicht gesehene Einträge bleiben verdeckt. */
@@ -115,7 +123,7 @@ export function buildCollection(box: Container, close: () => void) {
         dyn.addChild(hint);
       }
       if (known) {
-        const d = richText(e.description, tw - 12, { size: tile ? 14 : 15, theme: 'dark' });
+        const d = richText(e.description + gainLine(e), tw - 12, { size: tile ? 14 : 15, theme: 'dark' });
         d.position.set(cx, y + (tile ? 76 : 92));
         const maxH = CELL_H - (tile ? 76 : 92) - 10;
         if (d.height > maxH) d.scale.set(maxH / d.height);

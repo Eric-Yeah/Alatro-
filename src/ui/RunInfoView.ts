@@ -24,7 +24,7 @@ export const RUN_INFO_W = 1100;
 export const RUN_INFO_H = 820;
 
 /** Run Info (Briefing 9.1): Hände mit Level, Blinds und Ziele, Vouchers, Deck. Baut in das gegebene Modal. */
-export function buildRunInfo(box: Container, run: RunState, close: () => void, startTab: RunInfoTab = 'hands') {
+export function buildRunInfo(box: Container, run: RunState, close: () => void, startTab: RunInfoTab = 'hands', openDeck?: () => void) {
   const W = RUN_INFO_W;
   const head = label(t('Run Info'), 38);
   head.position.set(W / 2, 40);
@@ -43,7 +43,7 @@ export function buildRunInfo(box: Container, run: RunState, close: () => void, s
     if (tab === 'hands') hands(content, run);
     else if (tab === 'blinds') blinds(content, run);
     else if (tab === 'vouchers') vouchers(content, run);
-    else deck(content, run);
+    else deck(content, run, openDeck);
   };
   show(startTab);
 
@@ -184,7 +184,7 @@ function vouchers(c: Container, run: RunState) {
   });
 }
 
-function deck(c: Container, run: RunState) {
+function deck(c: Container, run: RunState, openDeck?: () => void) {
   const s = deckStats(run);
   const head = label(
     t('{n} Karte im Deck|{n} Karten im Deck', { n: s.total })
@@ -215,4 +215,9 @@ function deck(c: Container, run: RunState) {
     n.position.set(x + 70, 402);
     c.addChild(sym, n);
   });
+  if (openDeck) {
+    const btn = new Button(t('Deck ansehen'), 320, 60, C.chips, openDeck, 24);
+    btn.position.set(510, 520);
+    c.addChild(btn);
+  }
 }

@@ -1,12 +1,15 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { CONSUMABLE_BY_ID } from '../data/consumables';
-import { CBAND_H, CBAND_Y, CONS_TRAY, CT_BAND_TEXT, CT_H, CT_SCALE, CT_W, RARE_CONSUMABLE_IDS, RARE_CONSUMABLE_TYPES } from '../data/consumableArt';
+import { CBAND_H, CBAND_Y, CFOOT_H, CFOOT_Y, CONS_TRAY, CT_BAND_TEXT, CT_H, CT_SCALE, CT_W, RARE_CONSUMABLE_IDS, RARE_CONSUMABLE_TYPES, CONSUMABLE_FRAMES } from '../data/consumableArt';
 import { IDLE_FX } from '../data/artFx';
 import { hashString } from '../core/rng';
 import { addShimmer, attachPop } from './artFx';
 import { attachFloat } from './cardMotion';
 import { consumableTexture } from './consumableArt';
-import { C, FONT_BODY } from './theme';
+import { C, FONT_BODY, fmt, fmtMult } from './theme';
+import { COLORS } from './richText';
+import { levelUpGain } from '../core/runInfo';
+import { LEVEL_UP_CARD } from '../data/deckView';
 import { tween, easeOutBack } from './tween';
 
 export const CONSUMABLE_W = CT_W * CT_SCALE;
@@ -27,6 +30,8 @@ export class ConsumableView extends Container {
   private compact = 1;
   private hovering = false;
   private restZ = 0;
+  /** Zuwachs eines Sternbilds in der Fußleiste (Chips blau, Mult rot), nur bei ausreichendem Maßstab sichtbar */
+  private foot: Container | null = null;
 
   /** float: leichtes Schweben, 'shop': etwas ruhiger (Shop und Pack Auswahl) */
   constructor(public readonly defId: string, float: boolean | 'shop' = true) {
@@ -52,6 +57,8 @@ export class ConsumableView extends Container {
     this.nameText.y = -h / 2 + (CBAND_Y + CBAND_H / 2) * CT_SCALE;
     this.fitName();
     this.body.addChild(shadow, tile, this.nameText);
+    this.foot = this.buildFoot(defId);
+    if (this.foot) this.body.addChild(this.foot);
     // seltene Karten funkeln leicht und bekommen Glanzstreifen
     if (RARE_CONSUMABLE_TYPES.has(def.type) || RARE_CONSUMABLE_IDS.has(defId)) {
       addShimmer(this.body, w - 8, h - 8, IDLE_FX.sparksCard, hashString(defId), true, 0xffffff, 8);
@@ -68,10 +75,39 @@ export class ConsumableView extends Container {
       onHover: (on) => {
         if (this.compact >= 1) return;
         this.hovering = on;
+        this.showFoot();
         if (on) { this.restZ = this.zIndex; this.zIndex = 100; } else this.zIndex = this.restZ;
         this.fitName();
       },
     });
+  }
+
+  /** Zeile "+15 | +1" in der Fußleiste eines Sternbilds, links Chips, rechts Mult, das Zeichen der Art bleibt in der Mitte. */
+  private buildFoot(defId: string): Container | null {
+    const gain = levelUpGain(defId);
+    if (!gain) return null;
+    const c = new Container();
+    const y = -CONSUMABLE_H / 2 + (CFOOT_Y + CFOOT_H / 2) * CT_SCALE;
+    const mk = (text: string, color: number, side: -1 | 1) => {
+      const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: LEVEL_UP_CARD.font, fontWeight: '900', fill: color } });
+      t.anchor.set(side < 0 ? 1 : 0, 0.5);
+      t.position.set(side * LEVEL_UP_CARD.gap, y);
+      return t;
+    };
+    // Dunkler Grund unter den Zahlen, damit die Zierlinien der Fußleiste sie nicht stören
+    const back = new Graphics();
+    const band = CONSUMABLE_FRAMES[CONSUMABLE_BY_ID[defId].type].band;
+    for (const side of [-1, 1]) {
+      const x0 = side < 0 ? -LEVEL_UP_CARD.backW - LEVEL_UP_CARD.backGap : LEVEL_UP_CARD.backGap;
+      back.rect(x0, y - LEVEL_UP_CARD.backH / 2, LEVEL_UP_CARD.backW, LEVEL_UP_CARD.backH).fill(band);
+    }
+    c.addChild(back, mk(`+${fmt(gain.chips)}`, COLORS.dark.chips, -1), mk(`+${fmtMult(gain.mult)}`, COLORS.dark.mult, 1));
+    return c;
+  }
+
+  /** Fußzeile nur zeigen, wenn die Karte groß genug ist (in der verkleinerten Leiste nur beim Berühren) */
+  private showFoot() {
+    if (this.foot) this.foot.visible = this.compact >= LEVEL_UP_CARD.minScale || this.hovering;
   }
 
   /** Name im Titelband: voll in voller Größe, in der Leiste gekürzt und mit fester scheinbarer Schriftgröße. */
@@ -102,6 +138,7 @@ export class ConsumableView extends Container {
   setCompact(scale: number, ms = 220) {
     this.compact = scale;
     this.fitName();
+    this.showFoot();
     void tween(this, { 'scale.x': scale, 'scale.y': scale }, ms, easeOutBack);
   }
 
