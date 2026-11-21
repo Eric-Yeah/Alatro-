@@ -450,6 +450,8 @@ export function playCards(run: RunState, ids: number[]): ScoreResult {
     money: run.money,
     handsLeft: r.handsLeft,
     discardsLeft: r.discardsLeft,
+    ante: run.ante,
+    blind: r.blind,
     rules,
     boss: boss ? { levelDown: boss.levelDown, halveBase: boss.halveBase, nullify } : undefined,
     balance: run.rules.balance,

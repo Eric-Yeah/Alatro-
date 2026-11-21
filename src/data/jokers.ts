@@ -1,6 +1,7 @@
-import { hasSuit, isRankless } from '../core/cards';
-import type { JokerContext, JokerDef } from '../core/jokers';
-import type { Card } from '../core/types';
+import { hasSuit } from '../core/cards';
+import type { JokerDef } from '../core/jokers';
+import { heldCard, isEven, isOdd, main, retriggerCard, scoredCard } from './jokerHelpers';
+import { JOKER_DEFS_MORE } from './jokersMore';
 
 /**
  * Eigene Jokers (Thema: Sternwarte der Alchemisten), gruppiert nach Mechanik.
@@ -13,24 +14,7 @@ import type { Card } from '../core/types';
 /** Enhancement, das der Kupferschmied vergibt */
 const SMITH_ENHANCEMENT = 'kupfer';
 
-// ─────────────────────────────────────────────── Hilfen
-
-/** Gewertete Karte mit Rang (ranglose Karten lösen keine Rang Bedingungen aus) */
-const scoredCard = (ctx: JokerContext): Card | undefined => (ctx.phase === 'scored' && ctx.card && !isRankless(ctx.card) ? ctx.card : undefined);
-/** Karte in der Hand mit Rang */
-const heldCard = (ctx: JokerContext): Card | undefined => (ctx.phase === 'held' && ctx.card && !isRankless(ctx.card) ? ctx.card : undefined);
-/** Karte, auf die sich ein Retrigger bezieht */
-const retriggerCard = (ctx: JokerContext, area: 'played' | 'held'): Card | undefined =>
-  ctx.phase === 'retrigger' && ctx.area === area && ctx.card && !isRankless(ctx.card) ? ctx.card : undefined;
-
-/** Gerade Ränge sind 2, 4, 6, 8, 10 */
-const isEven = (rank: number) => rank <= 10 && rank % 2 === 0;
-/** Ungerade Ränge sind 3, 5, 7, 9 und Ace (Offener Punkt O43) */
-const isOdd = (rank: number) => rank === 14 || (rank <= 9 && rank % 2 === 1);
-
-const main = (ctx: JokerContext) => ctx.phase === 'main';
-
-export const JOKER_DEFS: JokerDef[] = [
+const JOKER_DEFS_BASE: JokerDef[] = [
   // ═══════════════════════════════════════════ Gruppe 1: Einfache MAIN Jokers
   {
     id: 'funke', name: 'Funke', rarity: 'common', cost: 2, copyCompat: true,
@@ -503,3 +487,6 @@ export const JOKER_DEFS: JokerDef[] = [
     calculate: (ctx) => (ctx.phase === 'blindSelected' ? { consumables: ['elixier', 'sternbild'] } : undefined),
   },
 ];
+
+/** Alle Jokers: Grundkatalog (79) und Erweiterung (71, siehe docs/joker-design-150.md) */
+export const JOKER_DEFS: JokerDef[] = [...JOKER_DEFS_BASE, ...JOKER_DEFS_MORE];

@@ -4,7 +4,7 @@ import { chipValue, isFace, isRankless } from './cards';
 import { detectHand } from './handEval';
 import { handBase, type HandLevels } from './hands';
 import { copyTarget, getJoker, jokerRules, type JokerContext, type JokerDef, type JokerInstance, type JokerPhase } from './jokers';
-import type { Card, DetectRules, Effect, HandType } from './types';
+import type { BlindKind, Card, DetectRules, Effect, HandType } from './types';
 
 /** Boss Modifikatoren, die den Handwert verändern (Briefing 3.1 Schritt 0). */
 export interface BossScoreMods {
@@ -66,6 +66,9 @@ export interface ScoreInput {
   /** verbleibende Hands NACH dieser Hand */
   handsLeft: number;
   discardsLeft: number;
+  /** aktuelle Ante und Blind Art (für Jokers mit Ante oder Boss Bedingung) */
+  ante?: number;
+  blind?: BlindKind;
   /** zusätzliche Erkennungsregeln (die Regeln der Jokers kommen automatisch dazu) */
   rules?: DetectRules;
   boss?: BossScoreMods;
@@ -118,6 +121,8 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     money: input.money,
     handsLeft: input.handsLeft,
     discardsLeft: input.discardsLeft,
+    ante: input.ante,
+    blind: input.blind,
     chance,
     isFace: (card) => !!rules.allFace || isFace(card.rank),
   };

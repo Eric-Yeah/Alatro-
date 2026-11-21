@@ -78,7 +78,7 @@ const GROUPS: Group[] = [
 
 describe('Inhalte Englisch, Teil A', () => {
   it('Joker Zahl und Typnamen wie erwartet', () => {
-    expect(DE.jokers.length).toBe(79);
+    expect(DE.jokers.length).toBe(150);
     // die Schnappschüsse sind wirklich die deutschen Originale
     expect(DE.jokers.find((d) => d.id === 'funke')?.name).toBe('Funke');
     expect(DE.consumables.find((d) => d.id === 'sternbild_pair')?.description).toBe('Pair erhält +1 Level');
