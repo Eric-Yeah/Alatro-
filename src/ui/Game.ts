@@ -6,7 +6,7 @@ import {
   discardHand, leaveShop, pickFromPack, playHand, reroll, selectBlind, sellConsumable, sellJoker as sellJokerAction, skipBlind, swapJokerFromPack,
   useConsumable,
 } from '../core/game';
-import { consumableCapacity, consumableSellValue, type UseResult } from '../core/consumables';
+import { consumableCapacity, consumableSellValue, isRoundOnlyConsumable, type UseResult } from '../core/consumables';
 import { handDisplayName } from '../core/hands';
 import { HAND_DATA } from '../data/hands';
 import type { HandType } from '../core/types';
@@ -888,6 +888,7 @@ export class Game {
     let hint = '';
     if (!usable) {
       if (def.targets && run.phase !== 'round') hint = t('Braucht Karten in der Hand, nur in einer Runde');
+      else if (isRoundOnlyConsumable(def) && run.phase !== 'round') hint = t('Nur in einer Runde benutzbar');
       else if (def.targets) hint = def.targets.min === def.targets.max ? t('Wähle {n} Karte in der Hand|Wähle {n} Karten in der Hand', { n: def.targets.min }) : t('Wähle {a} bis {b} Karten in der Hand', { a: def.targets.min, b: def.targets.max });
       else hint = t('Gerade nicht benutzbar');
     }

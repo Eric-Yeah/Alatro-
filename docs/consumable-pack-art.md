@@ -1,6 +1,6 @@
 # Consumable und Pack Grafiken (Pixel Art)
 
-Alle 42 Consumables, alle 15 Booster Packs und der Voucher haben ein Pixel Art Aussehen im Stil der Joker Kacheln. Alles sind eigene Entwürfe im Thema Sternwarte der Alchemisten, es wurden keine Bilder als Vorlage eingelesen, nachgezeichnet oder kopiert. Namen und Effekte sind unverändert.
+Alle 65 Consumables, alle 15 Booster Packs und der Voucher haben ein Pixel Art Aussehen im Stil der Joker Kacheln. Alles sind eigene Entwürfe im Thema Sternwarte der Alchemisten, es wurden keine Bilder als Vorlage eingelesen, nachgezeichnet oder kopiert. Namen und Effekte sind unverändert.
 
 ## Aufbau
 
@@ -8,7 +8,7 @@ Alle 42 Consumables, alle 15 Booster Packs und der Voucher haben ein Pixel Art A
 |---|---|
 | `src/data/consumableArt.ts` | Zahlen: Kachel 52 mal 70 Bildpunkte (Vergrößerung 2, also 104 mal 140 wie die Joker), Motivfläche 40 mal 40, Titelband, Fußleiste, Farbwelt je Art, Liste der seltenen Karten |
 | `src/ui/consumableKit.ts` | Bauteile: Nachthimmel mit Nebelwolken, Sterne, Sternbild Linien, Blasen, Kartenzeichen, Schattierung `lit` |
-| `src/ui/consumableSpritesStern.ts` | 12 Sternbilder, `...ElixierA.ts` 8 Essenzen und 3 Wachssiegel, `...ElixierB.ts` 4 Farbwandler und 6 weitere Elixiere, `...Omen.ts` 9 Omen |
+| `src/ui/consumableSpritesStern.ts` | 12 Sternbilder, `...ElixierA.ts` 8 Essenzen und 3 Wachssiegel, `...ElixierB.ts` 4 Farbwandler und 6 weitere Elixiere, `...ElixierC.ts` 13 weitere Elixiere (Rang, Suit, Edition, Geld, Level, Tags, Ziehen), `...Omen.ts` 9 Omen, `...OmenB.ts` 10 weitere Omen |
 | `src/ui/consumableSprites.ts` | Register aller Motive nach Consumable ID |
 | `src/ui/consumableTile.ts` | Setzt Rahmen und Motiv zur ganzen Karte zusammen (rein, testbar) |
 | `src/ui/consumableArt.ts` | Textur Cache (Canvas, `scaleMode = 'nearest'`) |
@@ -34,7 +34,7 @@ Es gibt keine Bilddateien, die Grafik entsteht aus dem Zeichencode. Die Texturen
 
 ## Juice
 
-* **Funkeln:** Seltene Consumables (alle Omen, Fünfgestirn, Nebelhaus, Urnebel, Alchemistentisch, Erntemond), alle Packs (Jumbo und Mega mehr Funken) und der Voucher haben kleine Funkelkreuze und einen Glanzstreifen, der alle paar Sekunden über die Fläche läuft. Ein einziger Ticker bedient alle Objekte, nicht sichtbare werden übersprungen.
+* **Funkeln:** Seltene Consumables (alle Omen, Fünfgestirn, Nebelhaus, Urnebel, Alchemistentisch, Erntemond, Flammenfirnis, Bannwasser, Leitstern), alle Packs (Jumbo und Mega mehr Funken) und der Voucher haben kleine Funkelkreuze und einen Glanzstreifen, der alle paar Sekunden über die Fläche läuft. Ein einziger Ticker bedient alle Objekte, nicht sichtbare werden übersprungen.
 * **Aufprall:** Bei Maus über der Karte hebt sie sich (Faktor 1,12, 8 Punkte) und wird größer, beim Antippen sinkt sie ein und federt zurück. Im Shop fängt das Fach die Berührung auf (`addSlot` ruft `attachPop` mit dem `body` der Ansicht), die Preisfahne liegt darüber. Das wirkt nur auf einen inneren Container, Verschiebungen von außen (Shop, Leiste) bleiben unberührt.
 * **Pack öffnen:** Der Beutel erscheint, wackelt, glüht auf, bläht sich auf und platzt (Blitz, kleine Erschütterung, 28 Funken). Die Auswahlkarten fächern sich aus der Mitte auf, Texte und Knöpfe blenden danach ein. Bedienen ist erst danach möglich. Die Animation läuft nur einmal je Pack, nicht nach jeder Wahl.
 * **Optionen:** Grafikstufe Sparsam schaltet das Funkeln ab und halbiert die Funken beim Platzen. Ohne die Option Shake gibt es keinen Aufprall, kein Wackeln, keinen Blitz und keine Funken, die Karten erscheinen nur mit kurzem Einblenden. Das Tempo aus den Optionen wirkt auf Tweens und Funken.
@@ -60,3 +60,4 @@ Es gibt keine Bilddateien, die Grafik entsteht aus dem Zeichencode. Die Texturen
 * **O-C4 (erledigt):** Die Consumable Leiste legt ab drei Karten verkleinerte Karten (Maßstab 0,62) nebeneinander, ab vier in zwei Reihen (`src/ui/consumableTray.ts`, Zahlen `CONS_TRAY` in `src/data/consumableArt.ts`, Test `src/consumableTray.test.ts`). Der Name wird erst bis zur kleinsten Schrift verkleinert, dann gekürzt. Berührt man eine Karte, springt sie nach vorn und zeigt sich fast in voller Größe mit ganzem Namen. Tippen öffnet wie bisher die Karte mit Benutzen und Verkaufen. Gilt im Kampf und im Shop gleich.
 * **O-C5 (erledigt):** Der Sternenatlas zeigt entdeckte Jokers, Sternbilder, Elixiere, Omen und Vouchers mit den Pixel Art Kacheln (`tileFor` in `CollectionView.ts`, vorher gab es dort gar keine Bilder). Unentdeckte Einträge behalten das alte Aussehen (`???` mit Hinweis). Packs kommen im Atlas nicht vor. Screenshots entstehen mit `tools/atlasKeys.ts` und `tools/atlasShot.cjs`.
 * **O-C6:** `AUDIT.md` und `docs/HANDOFF.md` wurden auftragsgemäß nicht angefasst. Bitte beim nächsten Pflegen einen Abschnitt zu diesen Grafiken übernehmen.
+* **O-C7:** Die 23 Motive der Consumable Erweiterung (siehe `docs/consumable-design.md`) liegen in `consumableSpritesElixierC.ts` und `consumableSpritesOmenB.ts`. Schwächer geblieben: Zwillingsflamme (zwei kleine Narrenkappen, die rechte nur als Geisterbild), Lichtschleifer (Kappe am Schleifstein, wirkt gedrängt), Abendruhe (die gleitenden Karten sind klein) und Kometenschweif (die halbe Münze liest sich zuerst als Mondsichel). Auf dem iPad prüfen.

@@ -49,7 +49,7 @@ export const CONSUMABLE_FRAMES: Record<ConsumableType, ConsumableFrame> = {
 /** Seltene Consumables bekommen ein leichtes Funkeln und Glanzstreifen: alle Omen und einige besondere Karten. */
 export const RARE_CONSUMABLE_IDS = new Set<string>([
   'sternbild_fiveKind', 'sternbild_flushHouse', 'sternbild_flushFive',
-  'elixier_alchemistentisch', 'elixier_erntemond',
+  'elixier_alchemistentisch', 'elixier_erntemond', 'elixier_flammenfirnis', 'elixier_bannwasser', 'elixier_leitstern',
 ]);
 export const RARE_CONSUMABLE_TYPES = new Set<ConsumableType>(['omen']);
 

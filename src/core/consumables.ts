@@ -3,13 +3,23 @@
  * deklariert, hier werden sie angewendet. Karten Ziele stammen aus der Hand der Runde oder
  * aus der Hand eines Elixier oder Omen Packs.
  */
-import { CONSUMABLE_BY_ID, CONSUMABLES, MIN_HAND_SIZE, OMEN_EDITIONS, type ConsumableDef, type ConsumableType } from '../data/consumables';
+import {
+  CONSUMABLE_BY_ID, CONSUMABLES, JOKER_UPGRADE_CHAIN, MAX_CONSUMABLE_SLOTS, MAX_HAND_SIZE, MIN_HANDS, MIN_HAND_SIZE, OMEN_EDITIONS,
+  type ConsumableDef, type ConsumableType,
+} from '../data/consumables';
+import { SUITS } from '../data/cards';
+import { HAND_DATA, HAND_ORDER } from '../data/hands';
 import { SEALS } from '../data/modifiers';
+import { TAGS } from '../data/tags';
 import { rollConsumable, rollEnhancedCard, rollJoker } from './generate';
-import { levelUp, levelUpAll } from './hands';
-import { addJoker, isCardDebuffed, jokerCapacity, jokerPassive, modifyCardById as modifyCard, rngOf, type ConsumableInstance, type RunState } from './run';
+import { levelUp, levelUpAll, mostPlayedHand } from './hands';
+import { getJoker } from './jokers';
+import {
+  addJoker, isCardDebuffed, jokerCapacity, jokerPassive, modifyCardById as modifyCard, rngOf, runChance, type ConsumableInstance, type RunState,
+} from './run';
+import type { JokerInstance } from './jokers';
 import { sellValue } from './shop';
-import type { Card, HandType, Rank } from './types';
+import type { Card, HandType, Rank, Suit } from './types';
 
 export { CONSUMABLE_BY_ID } from '../data/consumables';
 
@@ -98,7 +108,50 @@ export type UseWhere = 'slot' | 'direct';
 
 function needsPool(def: ConsumableDef): boolean {
   const k = def.effect.kind;
-  return !!def.targets || k === 'sacrificeForCards' || k === 'destroyAndLevelAll';
+  return !!def.targets || k === 'sacrificeForCards' || k === 'destroyAndLevelAll' || k === 'handSizeUp' || k === 'monoSuit';
+}
+
+/** Hand Size ändern: dauerhaft im Run und in der laufenden Runde (die Hand wird erst beim Nachziehen kleiner oder größer) */
+function changeHandSize(run: RunState, delta: number) {
+  run.handSize = Math.min(MAX_HAND_SIZE, Math.max(MIN_HAND_SIZE, run.handSize + delta));
+  if (run.round) run.round.handSize = Math.min(MAX_HAND_SIZE, Math.max(MIN_HAND_SIZE, run.round.handSize + delta));
+}
+
+/** Jokers, die ein Omen kopieren oder aufwerten darf */
+function copyableJokers(run: RunState): JokerInstance[] {
+  return run.jokers.filter((j) => getJoker(j.defId)?.copyCompat !== false);
+}
+
+/** Jokers, die eine nächste Rarity haben */
+function upgradableJokers(run: RunState): JokerInstance[] {
+  return run.jokers.filter((j) => {
+    const r = getJoker(j.defId)?.rarity;
+    return !!r && JOKER_UPGRADE_CHAIN.indexOf(r) >= 0 && JOKER_UPGRADE_CHAIN.indexOf(r) < JOKER_UPGRADE_CHAIN.length - 1;
+  });
+}
+
+/** Wirkt nur mitten in einer Runde (Nachziehstapel oder Discards der Runde nötig) */
+export function isRoundOnlyConsumable(def: ConsumableDef): boolean {
+  return def.effect.kind === 'drawCards' || def.effect.kind === 'extraDiscards';
+}
+
+/** Ein Tag, das ein Consumable ablegen darf: es wartet auf ein Ereignis, wirkt nicht sofort */
+export function isWaitingTag(tagId: string): boolean {
+  const tag = TAGS.find((t) => t.id === tagId);
+  return !!tag && tag.when !== 'immediate';
+}
+
+/** Häufigste Suit unter Karten, bei Gleichstand die frühere in SUITS */
+export function commonestSuit(cards: Card[]): Suit {
+  const count = new Map<Suit, number>();
+  for (const c of cards) count.set(c.suit, (count.get(c.suit) ?? 0) + 1);
+  let best: Suit = SUITS[0];
+  let n = -1;
+  for (const s of SUITS) {
+    const k = count.get(s) ?? 0;
+    if (k > n) { best = s; n = k; }
+  }
+  return best;
 }
 
 /** Zufällige Karten aus dem Pool ohne die Ziele */
@@ -106,6 +159,9 @@ function randomCards(run: RunState, def: ConsumableDef, exclude: number[], n: nu
   const pool = poolCards(run).filter((c) => !exclude.includes(c.id));
   return rngOf(run).shuffle(`cons_${def.id}_a${run.ante}_pick`, [...pool]).slice(0, n);
 }
+
+/** Karte mit Enhancement, Seal oder Edition */
+const isModified = (c: Card) => !!(c.enhancement || c.seal || c.edition);
 
 export function canUseConsumable(run: RunState, defId: string, targetIds: number[] = [], where: UseWhere = 'slot'): boolean {
   const def = CONSUMABLE_BY_ID[defId];
@@ -131,6 +187,23 @@ export function canUseConsumable(run: RunState, defId: string, targetIds: number
     case 'cauldron': return run.jokers.length > 0;
     case 'tradeDiscardForHand': return run.discards >= 1;
     case 'randomEdition': return run.handSize + e.handSizeDelta >= MIN_HAND_SIZE;
+    case 'spreadEnhancement': {
+      const src = pool.find((c) => c.id === targetIds[0]);
+      return !!src?.enhancement && pool.length >= 2;
+    }
+    case 'edition': return pool.length >= 1 + e.destroyOthers;
+    case 'destroyForMoney': return true;
+    case 'levelMostPlayed': return mostPlayedHand(run.handsPlayed) !== null;
+    case 'addTag': return isWaitingTag(e.tagId);
+    case 'drawCards': return run.phase === 'round' && !!run.round && run.round.drawPile.length >= 1;
+    case 'extraDiscards': return run.phase === 'round' && !!run.round;
+    case 'jokerEdition': return run.jokers.some((j) => !j.edition) && run.handSize + e.handSizeDelta >= MIN_HAND_SIZE;
+    case 'jokerDuplicate': return run.jokers.length < jokerCapacity(run) && copyableJokers(run).length > 0;
+    case 'handSizeUp': return pool.length >= e.destroy && run.handSize + e.delta <= MAX_HAND_SIZE;
+    case 'slotUp': return run.consumableSlots + e.slots <= MAX_CONSUMABLE_SLOTS && run.handSize + e.handSizeDelta >= MIN_HAND_SIZE;
+    case 'tradeHandForDiscard': return run.hands + e.hands >= MIN_HANDS && (!run.round || run.round.handsLeft + e.hands >= MIN_HANDS);
+    case 'jokerUpgrade': return upgradableJokers(run).length > 0;
+    case 'monoSuit': return pool.length >= e.destroy + 1;
     default: return true;
   }
 }
@@ -247,6 +320,121 @@ export function applyConsumable(run: RunState, defId: string, targetIds: number[
         run.round.discardsLeft = Math.max(0, run.round.discardsLeft - 1);
       }
       break;
+    case 'setRank':
+      mark((c) => { c.rank = e.rank; });
+      break;
+    case 'matchRank': {
+      const top = Math.max(...poolCards(run).filter((c) => targetIds.includes(c.id)).map((c) => c.rank)) as Rank;
+      mark((c) => { c.rank = top; });
+      break;
+    }
+    case 'matchSuit': {
+      const suit = commonestSuit(poolCards(run).filter((c) => targetIds.includes(c.id)));
+      mark((c) => { c.suit = suit; });
+      break;
+    }
+    case 'spreadEnhancement': {
+      const src = poolCards(run).find((c) => c.id === targetIds[0])!;
+      // Karten, die das Enhancement noch nicht haben, werden bevorzugt
+      const others = poolCards(run).filter((c) => c.id !== src.id);
+      const shuffled = rng.shuffle(`${key}_spread`, [...others]);
+      const order = [...shuffled.filter((c) => c.enhancement !== src.enhancement), ...shuffled.filter((c) => c.enhancement === src.enhancement)];
+      for (const c of order.slice(0, e.copies)) {
+        modifyCard(run, c.id, (x) => { x.enhancement = src.enhancement; });
+        res.changed.push(c.id);
+      }
+      break;
+    }
+    case 'edition':
+      destroy(randomCards(run, def, targetIds, e.destroyOthers));
+      mark((c) => { c.edition = e.edition; });
+      break;
+    case 'destroyForMoney':
+      destroy(poolCards(run).filter((c) => targetIds.includes(c.id)));
+      run.money += e.money;
+      break;
+    case 'moneyPerModified':
+      run.money += Math.min(e.cap, e.per * run.deck.filter(isModified).length);
+      break;
+    case 'levelMostPlayed': {
+      const top = mostPlayedHand(run.handsPlayed)!;
+      for (const h of HAND_ORDER) run.handLevels = levelUp(run.handLevels, h, h === top ? e.amount : e.othersDelta);
+      res.message = `${def.name}: ${HAND_DATA[top].name}`;
+      break;
+    }
+    case 'addTag':
+      run.pendingTags.push(e.tagId);
+      if (e.halveMoney) run.money -= Math.floor(Math.max(run.money, 0) / 2);
+      break;
+    case 'drawCards': {
+      const r = run.round!;
+      for (let i = 0; i < e.count && r.drawPile.length > 0; i++) {
+        const c = r.drawPile.pop()!;
+        r.hand.push(c);
+        res.changed.push(c.id);
+      }
+      break;
+    }
+    case 'extraDiscards':
+      run.round!.discardsLeft += e.amount;
+      break;
+    case 'jokerEdition': {
+      const j = rng.pick(`${key}_joker`, run.jokers.filter((x) => !x.edition));
+      j.edition = rng.pick(`${key}_edition`, e.editions);
+      res.joker = j.defId;
+      changeHandSize(run, e.handSizeDelta);
+      break;
+    }
+    case 'jokerDuplicate': {
+      const j = rng.pick(`${key}_joker`, copyableJokers(run));
+      res.joker = j.defId;
+      if (runChance(run, e.num, e.den, `${key}_chance`)) {
+        const copy = addJoker(run, j.defId, { buyPrice: j.buyPrice });
+        if (copy) copy.vars = { ...j.vars };
+      } else {
+        run.jokers = run.jokers.filter((x) => x.uid !== j.uid);
+        res.destroyedJokers = 1;
+      }
+      break;
+    }
+    case 'handSizeUp':
+      destroy(randomCards(run, def, [], e.destroy));
+      changeHandSize(run, e.delta);
+      break;
+    case 'slotUp':
+      run.consumableSlots += e.slots;
+      changeHandSize(run, e.handSizeDelta);
+      break;
+    case 'tradeHandForDiscard':
+      run.hands += e.hands;
+      run.discards = Math.max(0, run.discards + e.discards);
+      if (run.round) {
+        run.round.handsLeft += e.hands;
+        run.round.discardsLeft = Math.max(0, run.round.discardsLeft + e.discards);
+      }
+      break;
+    case 'jokerUpgrade': {
+      const old = rng.pick(`${key}_joker`, upgradableJokers(run));
+      const rarity = JOKER_UPGRADE_CHAIN[JOKER_UPGRADE_CHAIN.indexOf(getJoker(old.defId)!.rarity) + 1];
+      const next = rollJoker(run, rng, `${key}_joker_new`, new Set(), rarity);
+      if (next) {
+        // an derselben Stelle, mit der Edition des alten Jokers (ohne Slot Prüfung, die Zahl ändert sich nicht)
+        const at = run.jokers.indexOf(old);
+        run.jokers[at] = { uid: run.nextUid++, defId: next.id, vars: { ...(next.init?.(next.config) ?? {}) }, ...(old.edition ? { edition: old.edition } : {}), buyPrice: next.cost };
+        res.joker = next.id;
+        run.handLevels = levelUpAll(run.handLevels, -e.levelLoss);
+      }
+      break;
+    }
+    case 'monoSuit': {
+      const suit = rng.pick(`${key}_suit`, SUITS);
+      destroy(randomCards(run, def, [], e.destroy));
+      for (const c of poolCards(run)) {
+        modifyCard(run, c.id, (x) => { x.suit = suit; });
+        res.changed.push(c.id);
+      }
+      break;
+    }
   }
   return res;
 }

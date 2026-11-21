@@ -59,6 +59,20 @@ export const EN: Record<string, { name: string; description: string }> = {
   elixier_erntemond: { name: 'Harvest Moon', description: 'Doubles your money (at most +$20)' },
   elixier_sternkarte: { name: 'Star Chart', description: 'Creates up to 2 Constellations' },
   elixier_alchemistentisch: { name: "Alchemist's Table", description: 'Creates up to 2 Elixirs' },
+  // Elixier: zweite Reihe
+  elixier_gipfelglanz: { name: 'Summit Glow', description: 'Up to 2 cards become Aces' },
+  elixier_gleichklang: { name: 'Unison', description: '2 to 3 cards take on the highest rank among them' },
+  elixier_spektralglas: { name: 'Spectral Glass', description: '2 to 4 cards take on the most common suit among them' },
+  elixier_abguss: { name: 'Casting', description: 'A card with an Enhancement passes it on to 2 random other cards in hand' },
+  elixier_glanzfirnis: { name: 'Gloss Varnish', description: 'One card gains the Shimmer Edition' },
+  elixier_flammenfirnis: { name: 'Flame Varnish', description: 'One card gains the Halo Edition' },
+  elixier_pfandsiegel: { name: 'Pawn Seal', description: 'One card is destroyed, you gain $3' },
+  elixier_goldwaage: { name: 'Gold Scale', description: '+$1 for each card in your deck with an Enhancement, Seal or Edition (at most $10)' },
+  elixier_leitstern: { name: 'Guiding Star', description: 'The most played hand gains +1 Level' },
+  elixier_nachtlicht: { name: 'Night Light', description: 'Tag Night Watch: +1 Hand in the next round' },
+  elixier_bannwasser: { name: 'Banishing Water', description: 'Tag Ward: Disables the effect of the next Boss Blind' },
+  elixier_aufwind: { name: 'Updraft', description: 'You draw 2 cards into your hand (only during a round)' },
+  elixier_stundenglas: { name: 'Hourglass', description: '+2 Discards this round (only during a round)' },
 
   // Omen
   omen_blutmond: { name: 'Blood Moon', description: 'Destroys 1 random card, adds 3 random cards with an Enhancement' },
@@ -70,6 +84,17 @@ export const EN: Record<string, { name: string; description: string }> = {
   omen_nachtpakt: { name: 'Night Pact', description: 'Permanently +1 Hand and -1 Discard per round' },
   omen_ahnenruf: { name: 'Ancestral Call', description: 'Creates a random Legendary Joker, your money drops to $0' },
   omen_spiegelsaal: { name: 'Hall of Mirrors', description: 'One card is copied 2 times, 2 random other cards are destroyed' },
+  // Omen: zweite Reihe
+  omen_gestirnsopfer: { name: 'Stellar Sacrifice', description: 'The most played hand gains +3 Levels, all other hands lose 1 Level' },
+  omen_lichtschleifer: { name: 'Light Grinder', description: 'A random Joker without an Edition gains a random Edition, permanently -1 Hand Size' },
+  omen_zwillingsflamme: { name: 'Twin Flame', description: 'A random Joker is copied (free slot needed), with a 1 in 3 chance it is destroyed instead' },
+  omen_kometenschweif: { name: 'Comet Tail', description: 'Tag Nova: The next Shop contains a free Rare Joker, your money drops to half' },
+  omen_nachtauge: { name: 'Night Eye', description: 'Permanently +1 Hand Size, 3 random cards are destroyed' },
+  omen_alchemistenbeutel: { name: "Alchemist's Satchel", description: 'Permanently +1 Consumable Slot and -1 Hand Size' },
+  omen_abendruhe: { name: 'Evening Rest', description: 'Permanently -1 Hand and +2 Discards per round' },
+  omen_prismenopfer: { name: 'Prism Sacrifice', description: 'One card gains the Prism Edition, 2 random other cards are destroyed' },
+  omen_wandlung: { name: 'Metamorphosis', description: 'A random Common or Uncommon Joker is replaced by a Joker of the next Rarity, all hands lose 1 Level' },
+  omen_farbsturm: { name: 'Color Storm', description: '2 random cards in hand are destroyed, all remaining cards become one random suit' },
 };
 
 /** Schreibt die Consumable Definitionen (dieselben Objekte wie in CONSUMABLE_BY_ID) und die Typnamen um */

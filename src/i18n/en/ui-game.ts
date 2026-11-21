@@ -10,6 +10,7 @@ const dict: Record<string, string> = {
   'Boss dieser Ante': 'Boss of this Ante',
   'Verkaufen {price}': 'Sell {price}',
   'Braucht Karten in der Hand, nur in einer Runde': 'Needs cards in hand, only during a round',
+  'Nur in einer Runde benutzbar': 'Only usable during a round',
   'Wähle {n} Karte in der Hand|Wähle {n} Karten in der Hand': 'Select {n} card in hand|Select {n} cards in hand',
   'Wähle {a} bis {b} Karten in der Hand': 'Select {a} to {b} cards in hand',
   'Gerade nicht benutzbar': 'Cannot be used right now',

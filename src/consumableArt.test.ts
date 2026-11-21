@@ -8,8 +8,8 @@ import { NONE, Pix } from './ui/jokerPix';
 // Prüft die Pixel Art der Consumables: jede Karte hat ein eigenes, vollständig gezeichnetes Motiv.
 
 describe('Consumable Pixel Art', () => {
-  it('es gibt 42 Consumables, jedes hat ein eigenes Motiv und es gibt keine verwaisten Motive', () => {
-    expect(CONSUMABLES.length).toBe(42);
+  it('es gibt 65 Consumables, jedes hat ein eigenes Motiv und es gibt keine verwaisten Motive', () => {
+    expect(CONSUMABLES.length).toBe(65);
     const ids = new Set(CONSUMABLES.map((d) => d.id));
     for (const d of CONSUMABLES) expect(hasConsumableSprite(d.id), `Motiv fehlt: ${d.id}`).toBe(true);
     for (const id of Object.keys(CONSUMABLE_SPRITES)) expect(ids.has(id), `Motiv ohne Consumable: ${id}`).toBe(true);

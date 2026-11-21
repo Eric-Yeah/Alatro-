@@ -59,7 +59,7 @@ export function rollEnhancedCard(run: RunState, rng: RngStreams, key: string): C
 
 /**
  * Zieht ein Consumable eines Typs. Sternbilder geheimer Hände erscheinen erst, nachdem die
- * Hand gespielt wurde (Briefing 2.2). Leerer Pool ergibt null.
+ * Hand gespielt wurde (Briefing 2.2). Leerer Pool ergibt null. Das Gewicht `weight` der Einträge zählt (Standard 1).
  */
 export function rollConsumable(run: RunState, rng: RngStreams, type: ConsumableType, key: string, exclude: Set<string> = new Set()): ConsumableDef | null {
   const pool = CONSUMABLES.filter((c) => {
@@ -67,7 +67,10 @@ export function rollConsumable(run: RunState, rng: RngStreams, type: ConsumableT
     if (c.effect.kind === 'levelHand') return !isSecretUnplayed(run, c.effect.hand);
     return true;
   });
-  return pool.length ? rng.pick(key, pool) : null;
+  if (!pool.length) return null;
+  // Gewicht je Eintrag (Standard 1): starke Elixiere und Omen erscheinen seltener
+  const picked = rng.weighted(key, Object.fromEntries(pool.map((c) => [c.id, c.weight ?? 1])));
+  return pool.find((c) => c.id === picked)!;
 }
 
 /** Geheime Hand, die noch nie gespielt wurde */

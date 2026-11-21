@@ -23,6 +23,16 @@ export function levelUp(levels: HandLevels, type: HandType, amount = 1): HandLev
   return { ...levels, [type]: Math.max(MIN_HAND_LEVEL, levels[type] + amount) };
 }
 
+/** Die am häufigsten gespielte Hand (bei Gleichstand die bessere), null wenn noch keine gespielt wurde */
+export function mostPlayedHand(played: Partial<Record<HandType, number>>): HandType | null {
+  let best: HandType | null = null;
+  for (const h of HAND_ORDER) {
+    const n = played[h] ?? 0;
+    if (n > 0 && (best === null || n > (played[best] ?? 0))) best = h;
+  }
+  return best;
+}
+
 export function levelUpAll(levels: HandLevels, amount = 1): HandLevels {
   const out = { ...levels };
   for (const h of HAND_ORDER) out[h] = Math.max(MIN_HAND_LEVEL, out[h] + amount);

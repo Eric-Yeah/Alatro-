@@ -5,7 +5,7 @@ import { CONSUMABLE_BY_ID } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { BLIND_KINDS, BLIND_NAMES, blindReward, type BlindKind } from './blinds';
 import { isRankless, sortByRank, sortBySuit } from './cards';
-import { handBase, levelUp, levelUpAll } from './hands';
+import { handBase, levelUp, levelUpAll, mostPlayedHand } from './hands';
 import { BOSS_BY_ID, currentTarget, type RunState } from './run';
 import type { Card, HandType, Rank, Suit } from './types';
 
@@ -254,7 +254,7 @@ export type LevelUpPreview =
       focus: HandLevelRow | null;
     };
 
-/** Wirkung eines Sternbilds (Level up einer Hand) oder des Omens mit `destroyAndLevelAll`, sonst null. */
+/** Wirkung eines Sternbilds (Level up einer Hand), von `levelMostPlayed` (meistgespielte Hand) oder des Omens mit `destroyAndLevelAll`, sonst null. */
 export function levelUpPreview(run: RunState, defId: string): LevelUpPreview | null {
   const e = CONSUMABLE_BY_ID[defId]?.effect;
   if (!e) return null;
@@ -263,6 +263,12 @@ export function levelUpPreview(run: RunState, defId: string): LevelUpPreview | n
     const row = handLevelRow(run, e.hand, e.amount);
     const x = run.rules.sternbildXMult;
     return { kind: 'hand', hidden, amount: e.amount, row: hidden ? null : row, level: row.level, heldXMult: x > 1 ? x : null };
+  }
+  if (e.kind === 'levelMostPlayed') {
+    const top = mostPlayedHand(run.handsPlayed);
+    if (!top) return null;
+    const row = handLevelRow(run, top, e.amount);
+    return { kind: 'hand', hidden: false, amount: e.amount, row, level: row.level, heldXMult: null };
   }
   if (e.kind === 'destroyAndLevelAll') {
     const visible = HAND_ORDER.filter((h) => !isHidden(run, h));
