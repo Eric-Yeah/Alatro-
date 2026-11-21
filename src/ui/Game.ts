@@ -64,7 +64,8 @@ import { levelUpBlock } from './levelUpView';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
+import { languageButton, languageRowTexts } from './langSwitch';
 import { scoreTier, xMultShake } from './juiceMath';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
@@ -237,18 +238,18 @@ export class Game {
   // ────────────────────────────────────────────────────────────── static layout
 
   private buildTable() {
-    const t = this.table;
+    const tb = this.table;
 
     // Invisible catcher: tapping empty space closes tooltips
     const catcher = new Graphics().rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0, alpha: 0.001 });
     catcher.eventMode = 'static';
     catcher.on('pointertap', () => this.closeTooltip());
-    t.addChild(catcher);
+    tb.addChild(catcher);
 
     // Sidebar background
     const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 12).fill({ color: 0x24354a, alpha: 0.9 }).stroke({ width: 3, color: C.panelLine })
       .roundRect(15, 15, 340, VIEW_H - 30, 9).stroke({ width: 1.5, color: C.holo, alpha: 0.3 });
-    t.addChild(side);
+    tb.addChild(side);
 
     // Blind panel
     const bp = this.blindPanel;
@@ -256,7 +257,7 @@ export class Game {
     this.blindBg = new Graphics();
     this.blindName = label('', 28);
     this.blindName.position.set(165, 30);
-    const zielLbl = label('Ziel', 18, C.textDim);
+    const zielLbl = label(t('Ziel'), 18, C.textDim);
     zielLbl.position.set(165, 72);
     this.zielLabel = zielLbl;
     this.targetText = label('', 40, C.mult);
@@ -267,12 +268,12 @@ export class Game {
     this.bossDesc.anchor.set(0.5, 0);
     this.bossDesc.position.set(165, 110);
     bp.addChild(this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
-    t.addChild(bp);
+    tb.addChild(bp);
     // Im Shop ersetzt ein Leuchtschild die Blind Anzeige
     this.shopSign = buildShopSign();
     this.shopSign.position.set(20, 20);
     this.shopSign.visible = false;
-    t.addChild(this.shopSign);
+    tb.addChild(this.shopSign);
 
     // Round score
     const sp = panel(330, 76, C.panelDark);
@@ -285,7 +286,7 @@ export class Game {
     this.scoreText.position.set(310, 38);
     sp.addChild(sLbl, this.scoreText);
     this.scorePanel = sp;
-    t.addChild(sp);
+    tb.addChild(sp);
 
     // Hand panel: name, level, chips × mult
     const hp = panel(330, 170, C.panelDark);
@@ -307,7 +308,7 @@ export class Game {
     x.position.set(165, 122);
     hp.addChild(this.handName, this.handLevel, this.chipsBox, this.multBox, x);
     this.handPanel = hp;
-    t.addChild(hp);
+    tb.addChild(hp);
     this.buildNextPanel();
 
     // Hands / discards
@@ -319,7 +320,7 @@ export class Game {
       const v = label('0', 38, color);
       v.position.set(80, 56);
       p.addChild(l, v);
-      t.addChild(p);
+      tb.addChild(p);
       return v;
     };
     this.handsText = counter('Hands', C.chips, 20);
@@ -331,7 +332,7 @@ export class Game {
     this.moneyText = label('$0', 48, C.money);
     this.moneyText.position.set(165, 42);
     mp.addChild(this.moneyText);
-    t.addChild(mp);
+    tb.addChild(mp);
 
     // Ante / round
     const info = (title: string, px: number) => {
@@ -342,31 +343,31 @@ export class Game {
       const v = label('', 32, C.money);
       v.position.set(80, 56);
       p.addChild(l, v);
-      t.addChild(p);
+      tb.addChild(p);
       return v;
     };
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button('Menü', 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
+    const menuBtn = new Button(t('Menü'), 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
     menuBtn.position.set(100, 800);
     const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
-    t.addChild(menuBtn, infoBtn);
+    tb.addChild(menuBtn, infoBtn);
     this.speedBtn = new Button('', 200, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
     this.refreshSpeedBtn();
     this.speedBtn.position.set(120, 872);
     // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
     const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
     deckBtn.position.set(290, 872);
-    t.addChild(this.speedBtn, deckBtn);
+    tb.addChild(this.speedBtn, deckBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
     this.tagsText = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.accent, wordWrap: true, wordWrapWidth: 320, align: 'center' } });
     this.tagsText.anchor.set(0.5, 1);
     this.tagsText.position.set(185, 935);
-    t.addChild(this.seedText, this.tagsText);
+    tb.addChild(this.seedText, this.tagsText);
 
     // Joker tray + consumable tray
     const jt = panel(JOKER_TRAY_W, 180, C.panelDark);
@@ -382,7 +383,7 @@ export class Game {
     this.consLabel.anchor.set(1, 0.5);
     this.consLabel.position.set(1408, 220);
     this.jokerTray = jt;
-    t.addChild(jt, ct, this.jokerCount, this.consLabel);
+    tb.addChild(jt, ct, this.jokerCount, this.consLabel);
 
     // Deck pile
     const deck = cardBack();
@@ -397,7 +398,7 @@ export class Game {
     this.deckPile.eventMode = 'static';
     this.deckPile.cursor = 'pointer';
     this.deckPile.on('pointertap', () => this.openDeck(() => this.clearOverlay()));
-    t.addChild(this.deckPile);
+    tb.addChild(this.deckPile);
     this.deckFx = new DeckFx(this.deckPile, this.deckCount, DECK_X, DECK_Y);
 
     // Buttons
@@ -409,17 +410,17 @@ export class Game {
     this.sortRankBtn.position.set(MX - 64, 935);
     this.sortSuitBtn = new Button('Suit', 116, 56, 0xf2711c, () => this.setSort('suit'), 22);
     this.sortSuitBtn.position.set(MX + 64, 935);
-    const sortLbl = label('Sortieren', 18, C.textDim);
+    const sortLbl = label(t('Sortieren'), 18, C.textDim);
     sortLbl.position.set(MX, 892);
     this.handControls.addChild(this.playBtn, this.discardBtn, this.sortRankBtn, this.sortSuitBtn, sortLbl);
-    t.addChild(this.handControls);
+    tb.addChild(this.handControls);
 
     this.totalText = label('', 64, C.text, { stroke: { color: 0x070b11, width: 8 } });
     this.totalText.position.set(MX, 600);
     this.totalText.alpha = 0;
     this.fxLayer.addChild(this.totalText);
 
-    this.hintText = wrapText('Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.', 800, 24, C.textDim);
+    this.hintText = wrapText(t('Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.'), 800, 24, C.textDim);
     this.hintText.position.set(MX, 380);
     this.hintText.eventMode = 'none';
     this.hintText.visible = false;
@@ -431,7 +432,7 @@ export class Game {
     const np = panel(330, 262, C.panelDark);
     np.position.set(20, 192);
     np.visible = false;
-    const head = label('Als Nächstes', 20, C.textDim);
+    const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);
     const blind = label('', 28);
     blind.position.set(165, 66);
@@ -440,7 +441,7 @@ export class Game {
     const reward = label('', 19, C.money);
     reward.position.set(165, 148);
     const line = new Graphics().rect(24, 168, 282, 2).fill({ color: C.holo, alpha: 0.3 });
-    const bossHead = label('Boss dieser Ante', 18, C.textDim);
+    const bossHead = label(t('Boss dieser Ante'), 18, C.textDim);
     bossHead.position.set(165, 186);
     const bossName = label('', 22, C.accent);
     bossName.position.set(165, 211);
@@ -466,7 +467,7 @@ export class Game {
     if (n.blind.width > 300) n.blind.scale.set(300 / n.blind.width);
     n.target.text = fmt(currentTarget(run, kind));
     const rw = blindReward(run.ante, kind, run.rules.smallBlindReward);
-    n.reward.text = rw > 0 ? 'Belohnung ' + '$'.repeat(rw) : 'Keine Belohnung';
+    n.reward.text = rw > 0 ? t('Belohnung {money}', { money: '$'.repeat(rw) }) : t('Keine Belohnung');
     // Ist der nächste Blind selbst der Boss, steht seine Regel direkt darunter, sonst in einem eigenen Abschnitt
     const nextIsBoss = kind === 'boss' && !!boss;
     n.line.visible = n.bossHead.visible = n.bossName.visible = !nextIsBoss;
@@ -504,7 +505,7 @@ export class Game {
     this.targetText.y = boss ? 86 : 105;
     if (boss) this.bossDesc.text = boss.description + (r?.debuffSuit ? ` (${SUIT_NAMES[r.debuffSuit]})` : '');
     const reward = blindReward(run.ante, blind, run.rules.smallBlindReward);
-    this.rewardText.text = reward > 0 ? 'Belohnung ' + '$'.repeat(reward) : 'Keine Belohnung';
+    this.rewardText.text = reward > 0 ? t('Belohnung {money}', { money: '$'.repeat(reward) }) : t('Keine Belohnung');
     this.setScore(r?.score ?? 0);
     this.handsText.text = String(r?.handsLeft ?? run.hands);
     this.discardsText.text = String(r?.discardsLeft ?? run.discards);
@@ -557,9 +558,9 @@ export class Game {
   }
 
   private fitBoxText() {
-    for (const t of [this.chipsText, this.multText]) {
-      t.scale.set(1);
-      if (t.width > 120) t.scale.set(120 / t.width);
+    for (const tx of [this.chipsText, this.multText]) {
+      tx.scale.set(1);
+      if (tx.width > 120) tx.scale.set(120 / tx.width);
     }
   }
 
@@ -787,12 +788,12 @@ export class Game {
     const tagRow = new Container();
     const trig = wrapText(triggerLabel(def), w - 30, 15, 0x5a4f78);
     // Wirkungs Marken mit Namen, mittig in einer Reihe
-    const tagW = tags.map((t) => Math.max(54, t.name.length * 9 + 18));
+    const tagW = tags.map((tg) => Math.max(54, tg.name.length * 9 + 18));
     const rowW = tagW.reduce((x, y) => x + y, 0) + (tags.length - 1) * 6;
     let tx = -rowW / 2;
-    tags.forEach((t, i) => {
-      const pill = new Graphics().roundRect(tx, 0, tagW[i], 24, 12).fill(t.color).stroke({ width: 2, color: C.cardEdge });
-      const pt = label(t.name, 13, 0xffffff);
+    tags.forEach((tg, i) => {
+      const pill = new Graphics().roundRect(tx, 0, tagW[i], 24, 12).fill(tg.color).stroke({ width: 2, color: C.cardEdge });
+      const pt = label(tg.name, 13, 0xffffff);
       pt.position.set(tx + tagW[i] / 2, 12);
       tagRow.addChild(pill, pt);
       tx += tagW[i] + 6;
@@ -812,7 +813,7 @@ export class Game {
     tagRow.position.set(0, 82);
     trig.position.set(0, 114);
     desc.position.set(0, 114 + trig.height + 10);
-    const sell = new Button(`Verkaufen $${jokerSellValue(v.joker)}`, 220, 56, C.green, () => this.sellJoker(v.joker.uid), 20);
+    const sell = new Button(t('Verkaufen {price}', { price: '$' + jokerSellValue(v.joker) }), 220, 56, C.green, () => this.sellJoker(v.joker.uid), 20);
     sell.position.set(0, h - 42);
     tip.addChild(bg, name, rar, rarT, tagRow, trig, desc, sell);
     tip.position.set(Math.max(JOKER_TRAY_X + w / 2, Math.min(VIEW_W - w / 2 - 10, v.x)), JOKER_Y + 82);
@@ -886,9 +887,9 @@ export class Game {
     const usable = canUseConsumable(run, inst.defId, targets, 'slot');
     let hint = '';
     if (!usable) {
-      if (def.targets && run.phase !== 'round') hint = 'Braucht Karten in der Hand, nur in einer Runde';
-      else if (def.targets) hint = def.targets.min === def.targets.max ? `Wähle ${def.targets.min} Karte in der Hand` : `Wähle ${def.targets.min} bis ${def.targets.max} Karten in der Hand`;
-      else hint = 'Gerade nicht benutzbar';
+      if (def.targets && run.phase !== 'round') hint = t('Braucht Karten in der Hand, nur in einer Runde');
+      else if (def.targets) hint = def.targets.min === def.targets.max ? t('Wähle {n} Karte in der Hand|Wähle {n} Karten in der Hand', { n: def.targets.min }) : t('Wähle {a} bis {b} Karten in der Hand', { a: def.targets.min, b: def.targets.max });
+      else hint = t('Gerade nicht benutzbar');
     }
     const hintText = hint ? wrapText(hint, w - 30, 15, 0xa8324a) : null;
     // Sternbild und Omen: was das Level up an Chips und Mult bringt
@@ -908,10 +909,10 @@ export class Game {
     const badge = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(CONSUMABLE_COLORS[def.type]);
     const badgeT = label(CONSUMABLE_TYPE_NAMES[def.type], 14, 0xffffff);
     badgeT.position.set(0, 56);
-    const use = new Button('Benutzen', 230, 56, C.chips, () => this.useConsumableUI(uid), 20);
+    const use = new Button(t('Benutzen'), 230, 56, C.chips, () => this.useConsumableUI(uid), 20);
     use.position.set(0, h - 104);
     use.enabled = usable;
-    const sell = new Button(`Verkaufen $${consumableSellValue(inst)}`, 230, 56, C.green, () => this.sellConsumableUI(uid), 20);
+    const sell = new Button(t('Verkaufen {price}', { price: '$' + consumableSellValue(inst) }), 230, 56, C.green, () => this.sellConsumableUI(uid), 20);
     sell.position.set(0, h - 40);
     tip.addChild(bg, name, badge, badgeT, desc, use, sell);
     if (lvlBlock) tip.addChild(lvlBlock);
@@ -956,10 +957,10 @@ export class Game {
     if (run.round && (res.changed.length || res.destroyed.length || res.created.length)) this.rebuildHand();
     juice(this.moneyText);
     const extra: string[] = [];
-    if (res.destroyed.length) extra.push(`${res.destroyed.length} zerstört`);
-    if (res.created.length) extra.push(`${res.created.length} neu`);
-    if (res.destroyedJokers) extra.push(`${res.destroyedJokers} Jokers zerstört`);
-    if (res.consumables.length) extra.push(`${res.consumables.length} erzeugt`);
+    if (res.destroyed.length) extra.push(t('{n} zerstört', { n: res.destroyed.length }));
+    if (res.created.length) extra.push(t('{n} neu', { n: res.created.length }));
+    if (res.destroyedJokers) extra.push(t('{n} Jokers zerstört', { n: res.destroyedJokers }));
+    if (res.consumables.length) extra.push(t('{n} erzeugt', { n: res.consumables.length }));
     this.toast(res.message + (extra.length ? ` (${extra.join(', ')})` : ''), C.accent);
     this.persist();
     if (run.phase === 'gameOver') this.showGameOver();
@@ -1061,7 +1062,7 @@ export class Game {
       }
     }, before, r.score, 500);
     juice(this.scoreText);
-    if (!this.tut && prevBest > 0 && result.total > prevBest) this.toast('Neuer Bestwert!', C.money);
+    if (!this.tut && prevBest > 0 && result.total > prevBest) this.toast(t('Neuer Bestwert!'), C.money);
     if (this.moneyText.text !== '$' + run.money) {
       this.moneyText.text = '$' + run.money;
       juice(this.moneyText);
@@ -1149,10 +1150,10 @@ export class Game {
 
   /** Round Score setzen. Lange Zahlen verkleinern die Schrift, damit sie nicht über die Beschriftung laufen. */
   private setScore(v: number) {
-    const t = this.scoreText;
-    t.style.fontSize = 40;
-    t.text = fmt(v);
-    if (t.width > SCORE_MAX_W) t.style.fontSize = Math.max(18, Math.floor(40 * SCORE_MAX_W / t.width));
+    const st = this.scoreText;
+    st.style.fontSize = 40;
+    st.text = fmt(v);
+    if (st.width > SCORE_MAX_W) st.style.fontSize = Math.max(18, Math.floor(40 * SCORE_MAX_W / st.width));
   }
 
   private async discard() {
@@ -1200,7 +1201,7 @@ export class Game {
     const by = this.run?.round?.rescuedBy;
     if (by && this.run?.phase === 'roundWon') {
       this.syncJokers();
-      this.toast(`${by} hat die Runde gerettet`, C.green);
+      this.toast(t('{name} hat die Runde gerettet', { name: by }), C.green);
     }
   }
 
@@ -1328,7 +1329,7 @@ export class Game {
     if (!added.length) return;
     const names = added.map((k) => entryName(k)).filter((n): n is string => !!n);
     if (!names.length) return;
-    const text = names.length <= 2 ? `Neu im Atlas: ${names.join(', ')}` : `Neu im Atlas: ${names[0]} und ${names.length - 1} weitere`;
+    const text = names.length <= 2 ? t('Neu im Atlas: {names}', { names: names.join(', ') }) : t('Neu im Atlas: {first} und {n} weitere', { first: names[0], n: names.length - 1 });
     this.toast(text, C.money);
   }
 
@@ -1368,14 +1369,14 @@ export class Game {
       .circle(0, 0, 34).fill(0x2a1f4a).stroke({ width: 4, color: C.money })
       .star(0, 0, 5, 22, 9).fill(C.money);
     badge.position.set(58, h / 2);
-    const head = label('Erfolg freigeschaltet', 17, C.money);
+    const head = label(t('Erfolg freigeschaltet'), 17, C.money);
     head.anchor.set(0, 0.5);
     head.position.set(112, 26);
     const name = label(a.name, 30, C.text);
     name.anchor.set(0, 0.5);
     name.position.set(112, 58);
     if (name.width > w - 250) name.scale.set((w - 250) / name.width);
-    const desc = label(a.secret ? 'Ein geheimer Erfolg' : a.description, 15, C.textDim, { fontWeight: '600' });
+    const desc = label(a.secret ? t('Ein geheimer Erfolg') : a.description, 15, C.textDim, { fontWeight: '600' });
     desc.anchor.set(0, 0.5);
     desc.position.set(112, 86);
     if (desc.width > w - 140) desc.scale.set((w - 140) / desc.width);
@@ -1404,7 +1405,7 @@ export class Game {
     if (!this.tut) return false;
     sfx.deny();
     haptics.deny();
-    this.toast('Das probierst du im echten Run aus.', 0x4a3f6b);
+    this.toast(t('Das probierst du im echten Run aus.'), 0x4a3f6b);
     return true;
   }
 
@@ -1452,7 +1453,7 @@ export class Game {
       case 'cashoutBtn': return one(this.refs.cashoutBtn);
       case 'shopJoker':
       case 'shopBuy': {
-        const buy = this.findButton(this.shopView, 'Kaufen');
+        const buy = this.findButton(this.shopView, t('Kaufen'));
         return one(buy ?? this.findDeep(this.shopView, (c) => c instanceof JokerView));
       }
       case 'nextRound': return one(this.findButton(this.shopView, 'Next'));
@@ -1476,7 +1477,7 @@ export class Game {
     const prog = flow.progress;
     this.guide.show(step, {
       targets: () => this.guideTargets(step.target, step.select),
-      progress: `Schritt ${prog.current} von ${prog.total}`,
+      progress: t('Schritt {a} von {b}', { a: prog.current, b: prog.total }),
       onNext: step.wait === 'tap' ? () => this.guideTap() : null,
       union: step.target === 'pickCards' && !step.select,
     });
@@ -1530,13 +1531,13 @@ export class Game {
   /** Angebot der Einführungsrunde beim allerersten Start */
   private showGuideOffer() {
     const { box } = this.modal(720, 520, C.panelDark);
-    const head = label('Willkommen in der Sternwarte', 38, C.money);
+    const head = label(t('Willkommen in der Sternwarte'), 38, C.money);
     head.position.set(360, 70);
-    const text = wrapText('Alatro ist ein Roguelike mit Pokerhänden. Spiel Karten aus, sammle Punkte, kaufe Jokers und besiege Blinds.\n\nIn einer kurzen geführten Runde zeigt dir Astra alles Wichtige, Schritt für Schritt. Du spielst dabei echte Hände. Das dauert nur ein paar Minuten.', 600, 22, C.text);
+    const text = wrapText(t('Alatro ist ein Roguelike mit Pokerhänden. Spiel Karten aus, sammle Punkte, kaufe Jokers und besiege Blinds.\n\nIn einer kurzen geführten Runde zeigt dir Astra alles Wichtige, Schritt für Schritt. Du spielst dabei echte Hände. Das dauert nur ein paar Minuten.'), 600, 22, C.text);
     text.position.set(360, 130);
-    const go = new Button('Einführung starten', 400, 76, C.chips, () => this.startGuide(), 30);
+    const go = new Button(t('Einführung starten'), 400, 76, C.chips, () => this.startGuide(), 30);
     go.position.set(360, 370);
-    const later = new Button('Später, ich kenne mich aus', 400, 56, 0x3b5068, () => {
+    const later = new Button(t('Später, ich kenne mich aus'), 400, 56, 0x3b5068, () => {
       const p = getProfile();
       p.tutorialOffered = true;
       saveProfile();
@@ -1554,13 +1555,13 @@ export class Game {
     haptics.victory();
     this.fx.flash(0.25, 0xffd23f);
     const { box } = this.modal(700, 560, C.panelDark);
-    const head = label('Einführung geschafft!', 44, C.money, { stroke: { color: C.mult, width: 6 } });
+    const head = label(t('Einführung geschafft!'), 44, C.money, { stroke: { color: C.mult, width: 6 } });
     head.position.set(350, 70);
-    const text = wrapText('Du kennst jetzt die Grundlagen: Hände spielen, Discards, Jokers kaufen und Blinds. Der Rest ergibt sich beim Spielen.\n\nFür deinen ersten richtigen Run empfehle ich die Stufe Morgenrot. Sie ist etwas leichter als das Grundspiel. Unter Erfolge sammelst du ab jetzt Sterne.', 600, 22, C.text);
+    const text = wrapText(t('Du kennst jetzt die Grundlagen: Hände spielen, Discards, Jokers kaufen und Blinds. Der Rest ergibt sich beim Spielen.\n\nFür deinen ersten richtigen Run empfehle ich die Stufe {stake}. Sie ist etwas leichter als das Grundspiel. Unter Erfolge sammelst du ab jetzt Sterne.', { stake: STAKES.find((s) => s.id === BEGINNER_STAKE_ID)?.name ?? '' }), 600, 22, C.text);
     text.position.set(350, 130);
-    const go = new Button('Echten Run starten', 400, 76, C.chips, () => this.exitGuide(true, 'setup'), 30);
+    const go = new Button(t('Echten Run starten'), 400, 76, C.chips, () => this.exitGuide(true, 'setup'), 30);
     go.position.set(350, 400);
-    const menu = new Button('Hauptmenü', 260, 56, 0x3b5068, () => this.exitGuide(true), 24);
+    const menu = new Button(t('Hauptmenü'), 260, 56, 0x3b5068, () => this.exitGuide(true), 24);
     menu.position.set(350, 490);
     box.addChild(head, text, go, menu);
   }
@@ -1579,19 +1580,19 @@ export class Game {
     let level = clampScale(pref.level ?? recommended);
     const W = 800;
     const { box } = this.modal(W, 880, C.panelDark);
-    const head = label('Neuer Run', 44, C.text);
+    const head = label(t('Neuer Run'), 44, C.text);
     head.position.set(W / 2, 48);
-    const backBtn = new Button('Zurück', 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
+    const backBtn = new Button(t('Zurück'), 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
     backBtn.position.set(100, 48);
     box.addChild(head, backBtn);
     const content = new Container();
     box.addChild(content);
     const body = (text: string, y: number, size = 18, color = C.textDim, width = 560) => {
-      const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
-      t.anchor.set(0.5, 0);
-      t.position.set(W / 2, y);
-      content.addChild(t);
-      return t;
+      const tx = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
+      tx.anchor.set(0.5, 0);
+      tx.position.set(W / 2, y);
+      content.addChild(tx);
+      return tx;
     };
     const arrow = (txt: string, x: number, y: number, fn: () => void) => {
       const b = new Button(txt, 70, 70, 0x3b5068, fn, 34);
@@ -1603,7 +1604,7 @@ export class Game {
     const preview = (deckId: string, opts: { stakeId?: string; level?: number }, y: number) => {
       const pr = createRun({ seed: 'VORSCHAU', deckId, ...opts });
       const tgt = (ante: number) => fmt(blindTarget(ante, 'small', { scaling: pr.rules.scaling, deckFactor: pr.rules.blindTargetFactor }));
-      body(`Start: ${pr.hands} Hands, ${pr.discards} Discards, ${pr.handSize} Karten, $${pr.money}\nSmall Blind Ziel: Ante 1 ${tgt(1)}, Ante 4 ${tgt(4)}, Ante 8 ${tgt(8)}`, y, 17, C.chips, 640);
+      body(t('Start: {hands} Hands, {discards} Discards, {size} Karten, ${money}\nSmall Blind Ziel: Ante 1 {t1}, Ante 4 {t4}, Ante 8 {t8}', { hands: pr.hands, discards: pr.discards, size: pr.handSize, money: pr.money, t1: tgt(1), t4: tgt(4), t8: tgt(8) }), y, 17, C.chips, 640);
     };
 
     const render = () => {
@@ -1614,12 +1615,12 @@ export class Game {
         b.position.set(x, 112);
         content.addChild(b);
       };
-      tab('Feste Stufen', W / 2 - 170, mode === 'stakes', () => { mode = 'stakes'; render(); });
-      tab('Skalierend', W / 2 + 170, mode === 'scale', () => { mode = 'scale'; render(); });
+      tab(t('Feste Stufen'), W / 2 - 170, mode === 'stakes', () => { mode = 'stakes'; render(); });
+      tab(t('Skalierend'), W / 2 + 170, mode === 'scale', () => { mode = 'scale'; render(); });
 
       // Deck
       const deck = DECKS[deckIdx];
-      const dl = label('Deck', 20, C.textDim);
+      const dl = label(t('Deck'), 20, C.textDim);
       dl.position.set(W / 2, 170);
       const back = cardBack(deck.color);
       back.position.set(W / 2, 252);
@@ -1637,21 +1638,21 @@ export class Game {
       if (mode === 'stakes') {
         const stake = STAKES[stakeIdx];
         stakeId = stake.id;
-        const sl = label('Schwierigkeit', 20, C.textDim);
+        const sl = label(t('Schwierigkeit'), 20, C.textDim);
         sl.position.set(W / 2, 438);
         const sn = label(stake.name, 32, stake.color);
         sn.position.set(W / 2, 478);
         content.addChild(sl, sn);
         const ladderIdx = STAKES.filter((s) => s.cumulative !== false).findIndex((s) => s.id === stake.id);
-        body(ladderIdx > 0 ? `${stake.description}, plus alle vorherigen` : stake.description, 506, 18, C.textDim, 480);
-        body(stake.cumulative === false ? 'Einsteigerstufe, außerhalb der Leiter' : `Stufe ${ladderIdx + 1} der Leiter von ${STAKES.filter((s) => s.cumulative !== false).length}`, 560, 16, C.textDim, 480);
+        body(ladderIdx > 0 ? t('{desc}, plus alle vorherigen', { desc: stake.description }) : stake.description, 506, 18, C.textDim, 480);
+        body(stake.cumulative === false ? t('Einsteigerstufe, außerhalb der Leiter') : t('Stufe {a} der Leiter von {b}', { a: ladderIdx + 1, b: STAKES.filter((s) => s.cumulative !== false).length }), 560, 16, C.textDim, 480);
         preview(deck.id, { stakeId }, 612);
         arrow('‹', 110, 470, () => { stakeIdx = (stakeIdx + STAKES.length - 1) % STAKES.length; render(); });
         arrow('›', 690, 470, () => { stakeIdx = (stakeIdx + 1) % STAKES.length; render(); });
       } else {
         levelOut = level;
         const band = scaleBand(level);
-        const sl = label('Stufe wählen', 20, C.textDim);
+        const sl = label(t('Stufe wählen'), 20, C.textDim);
         sl.position.set(W / 2, 438);
         const sn = label(scaleName(level), 32, band.color);
         sn.position.set(W / 2, 478);
@@ -1679,8 +1680,8 @@ export class Game {
         const py = sum.y + sum.height + 14;
         preview(deck.id, { level }, py);
         const note = profile.bestScale > 0
-          ? `Stufe ${SCALE.normal} ist das Grundspiel. Dein Bestwert: Stufe ${profile.bestScale} gewonnen, empfohlen: Stufe ${recommended}`
-          : `Stufe ${SCALE.normal} ist das Grundspiel. Für den Anfang empfohlen: Stufe 2 bis ${SCALE.normal}`;
+          ? t('Stufe {normal} ist das Grundspiel. Dein Bestwert: Stufe {best} gewonnen, empfohlen: Stufe {rec}', { normal: SCALE.normal, best: profile.bestScale, rec: recommended })
+          : t('Stufe {normal} ist das Grundspiel. Für den Anfang empfohlen: Stufe 2 bis {normal}', { normal: SCALE.normal });
         body(note, py + 56, 15, C.textDim, 640);
         arrow('‹', 52, 528, () => { level = clampScale(level - 1); render(); });
         arrow('›', 748, 528, () => { level = clampScale(level + 1); render(); });
@@ -1693,20 +1694,20 @@ export class Game {
         const wonHere = stakeId !== undefined && (profile.winsByDeckStake[`${deck.id}|${stakeId}`] ?? 0) > 0;
         const goalName = goalId ? STAKES.find((s) => s.id === goalId)?.name : null;
         const parts = [
-          seal ? `Siegel am Deck: ${sealName}` : 'Noch kein Siegel an diesem Deck',
-          ...(wonHere ? ['Auf dieser Stufe gewonnen'] : []),
-          ...(goalName ? [`Nächstes Ziel: ${goalName}`] : ['Alle Stufen der Leiter gemeistert']),
+          seal ? t('Siegel am Deck: {name}', { name: sealName }) : t('Noch kein Siegel an diesem Deck'),
+          ...(wonHere ? [t('Auf dieser Stufe gewonnen')] : []),
+          ...(goalName ? [t('Nächstes Ziel: {name}', { name: goalName })] : [t('Alle Stufen der Leiter gemeistert')]),
         ];
         body(parts.join('   ·   '), 690, 17, wonHere || seal ? C.money : C.textDim, 700);
       }
       const seedLbl = label('Seed', 20, C.textDim);
       seedLbl.position.set(W / 2, 748);
-      const seedBtn = new Button(this.setupSeed || 'Zufällig', 300, 52, 0x3b5068, () => {
+      const seedBtn = new Button(this.setupSeed || t('Zufällig'), 300, 52, 0x3b5068, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.showSeedEntry();
       }, 24);
       seedBtn.position.set(W / 2, 790);
-      const start = new Button('Start', 300, 66, C.chips, () => {
+      const start = new Button(t('Start'), 300, 66, C.chips, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.beginNewRun(deck.id, stakeId !== undefined ? { stakeId } : { level: levelOut });
       }, 30);
@@ -1724,9 +1725,9 @@ export class Game {
     const twist = TWIST_BY_ID[d.twistId];
     const W = 740;
     const { box } = this.modal(W, 810, C.panelDark);
-    const head = label('Tageslauf', 44, C.text);
+    const head = label(t('Tageslauf'), 44, C.text);
     head.position.set(W / 2, 52);
-    const date = label(new Date(`${d.date}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }), 22, C.textDim);
+    const date = label(new Date(`${d.date}T12:00:00`).toLocaleDateString(numLocale(), { weekday: 'long', day: 'numeric', month: 'long' }), 22, C.textDim);
     date.position.set(W / 2, 100);
     const back = cardBack(deck.color);
     back.position.set(W / 2, 210);
@@ -1740,19 +1741,19 @@ export class Game {
     ln.position.set(W / 2, 394);
     const ls = wrapText(scaleSummary(d.level).join(' · '), 600, 16, C.textDim);
     ls.position.set(W / 2, 422);
-    const tw = label(`Wandlung: ${twist.name}`, 28, C.accent);
+    const tw = label(t('Wandlung: {name}', { name: twist.name }), 28, C.accent);
     tw.position.set(W / 2, 500);
     const td = wrapText(twist.description, 560, 18, C.text);
     td.position.set(W / 2, 530);
     const seed = label(`Seed ${d.seed}`, 18, C.textDim, { fontWeight: '600' });
     seed.position.set(W / 2, 586);
-    const best = label(entry ? `Bisher heute: Ante ${entry.ante}${entry.won ? ', gewonnen' : ''}` : 'Heute noch nicht gespielt', 20, entry?.won ? C.green : C.textDim);
+    const best = label(entry ? t('Bisher heute: Ante {n}', { n: entry.ante }) + (entry.won ? t(', gewonnen') : '') : t('Heute noch nicht gespielt'), 20, entry?.won ? C.green : C.textDim);
     best.position.set(W / 2, 630);
-    const go = new Button(entry ? 'Nochmal spielen' : 'Starten', 360, 72, C.chips, () => {
+    const go = new Button(entry ? t('Nochmal spielen') : t('Starten'), 360, 72, C.chips, () => {
       this.beginNewRun(d.deckId, { level: d.level, seed: d.seed, daily: { date: d.date, twistId: d.twistId } });
     }, 30);
     go.position.set(W / 2, 690);
-    const bk = new Button('Zurück', 200, 50, 0x4a3f6b, () => this.showMainMenu(), 22);
+    const bk = new Button(t('Zurück'), 200, 50, 0x4a3f6b, () => this.showMainMenu(), 22);
     bk.position.set(W / 2, 764);
     box.addChild(head, date, back, dn, dd, ln, ls, tw, td, seed, best, go, bk);
   }
@@ -1809,7 +1810,7 @@ export class Game {
 
   private refreshSpeedBtn() {
     const st = SPEED_STEPS.find((x) => x.id === getSettings().speed) ?? SPEED_STEPS[0];
-    this.speedBtn.setText(`Tempo ${st.name}`);
+    this.speedBtn.setText(t('Tempo {name}', { name: st.name }));
   }
 
   private showTutorial() {
@@ -1828,7 +1829,7 @@ export class Game {
   private showOptions() {
     const W = 660;
     const { box } = this.modal(W, 1030, C.panelDark);
-    const head = label('Optionen', 44, C.text);
+    const head = label(t('Optionen'), 44, C.text);
     head.position.set(W / 2, 56);
     box.addChild(head);
     const dyn = new Container();
@@ -1836,7 +1837,7 @@ export class Game {
     const render = () => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
-      const gap = 64;
+      const gap = 60;
       const row = (i: number, name: string, desc: string) => {
         const y = 140 + i * gap;
         const n = label(name, 28, C.text);
@@ -1850,16 +1851,16 @@ export class Game {
       };
       const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
         const y = row(i, name, desc);
-        const b = new Button(on ? 'An' : 'Aus', 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
+        const b = new Button(on ? t('An') : t('Aus'), 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
         b.position.set(W - 115, y);
         dyn.addChild(b);
       };
-      onOff(0, 'CRT Effekt', 'Feine Scanlines und wandernder Hologramm Glanz', st.crt, () => updateSettings({ crt: !st.crt }));
-      onOff(1, 'Screen Shake', 'Wackeln und Aufblitzen bei hohen Punkten', st.shake, () => {
+      onOff(0, t('CRT Effekt'), t('Feine Scanlines und wandernder Hologramm Glanz'), st.crt, () => updateSettings({ crt: !st.crt }));
+      onOff(1, t('Screen Shake'), t('Wackeln und Aufblitzen bei hohen Punkten'), st.shake, () => {
         updateSettings({ shake: !st.shake });
         this.fx.shake(6);
       });
-      const vy = row(2, 'Lautstärke', `${Math.round(st.volume * 100)} Prozent`);
+      const vy = row(2, t('Lautstärke'), t('{n} Prozent', { n: Math.round(st.volume * 100) }));
       const minus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       minus.position.set(W - 175, vy);
       const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
@@ -1867,53 +1868,57 @@ export class Game {
       const musicIds = [MUSIC_MIX, ...TRACK_IDS, MUSIC_OFF];
       const mi = Math.max(0, musicIds.indexOf(st.music));
       const mt = getTrack(st.music);
-      const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : 'Aus';
-      const my = row(3, 'Musik', st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : 'Ruhige Hintergrundmusik, aus');
+      const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : t('Aus');
+      const my = row(3, t('Musik'), st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : t('Ruhige Hintergrundmusik, aus'));
       const music = new Button(musicName, 230, 56, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
         updateSettings({ music: musicIds[(mi + 1) % musicIds.length] });
         render();
       }, 22);
       music.position.set(W - 170, my);
-      const muy = row(4, 'Musiklautstärke', `${Math.round(st.musicVolume * 100)} Prozent`);
+      const muy = row(4, t('Musiklautstärke'), t('{n} Prozent', { n: Math.round(st.musicVolume * 100) }));
       const mMinus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume - VOLUME_STEP) }); render(); }, 30);
       mMinus.position.set(W - 175, muy);
       const mPlus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume + VOLUME_STEP) }); render(); }, 30);
       mPlus.position.set(W - 95, muy);
-      const sy = row(5, 'Animationstempo', 'Zählen, Karten und Übergänge');
+      const sy = row(5, t('Animationstempo'), t('Zählen, Karten und Übergänge'));
       const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
       const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x3b5068, () => {
         updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
         render();
       }, 22);
       speed.position.set(W - 150, sy);
-      const qy = row(6, 'Grafik', st.quality === 'sparsam' ? '30 FPS, ohne CRT und Edition Glanz' : 'Volle Effekte');
+      const qy = row(6, t('Grafik'), st.quality === 'sparsam' ? t('30 FPS, ohne CRT und Edition Glanz') : t('Volle Effekte'));
       const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
         updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
         render();
       }, 22);
       quality.position.set(W - 150, qy);
-      onOff(7, 'FPS Anzeige', 'Bildrate oben rechts, zum Prüfen der Leistung', st.fps, () => updateSettings({ fps: !st.fps }));
-      onOff(8, 'Vibration', haptics.supported ? 'Rückmeldung bei Berührung und Punkten' : 'Auf diesem Gerät nicht verfügbar (z. B. iPad)', st.haptics, () => {
+      onOff(7, t('FPS Anzeige'), t('Bildrate oben rechts, zum Prüfen der Leistung'), st.fps, () => updateSettings({ fps: !st.fps }));
+      onOff(8, t('Vibration'), haptics.supported ? t('Rückmeldung bei Berührung und Punkten') : t('Auf diesem Gerät nicht verfügbar (z. B. iPad)'), st.haptics, () => {
         updateSettings({ haptics: !st.haptics });
         if (st.haptics) haptics.stop();
         else haptics.victory();
       });
-      const cpy = row(9, 'Kartenfarben', CARD_PALETTES[st.cardPalette].description);
+      const cpy = row(9, t('Kartenfarben'), CARD_PALETTES[st.cardPalette].description);
       const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, 56, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
         const at = Math.max(0, CARD_PALETTE_IDS.indexOf(st.cardPalette));
         updateSettings({ cardPalette: CARD_PALETTE_IDS[(at + 1) % CARD_PALETTE_IDS.length] });
         render();
       }, 22);
       cardPal.position.set(W - 170, cpy);
-      const bky = row(10, 'Spielstand', 'Sichern, auf ein anderes Gerät übertragen und zurückladen');
-      const backup = new Button('Sichern', 230, 56, C.chips, () => this.showBackup(), 22);
+      const bky = row(10, t('Spielstand'), t('Sichern, auf ein anderes Gerät übertragen und zurückladen'));
+      const backup = new Button(t('Sichern'), 230, 56, C.chips, () => this.showBackup(), 22);
       backup.position.set(W - 170, bky);
-      const cly = row(11, 'Geräte koppeln', syncManager.isCoupled() ? 'Gekoppelt, der Stand wird abgeglichen' : 'Einen Spielstand auf mehreren Geräten nutzen');
-      const cloud = new Button(syncManager.isCoupled() ? 'Gekoppelt' : 'Koppeln', 230, 56, syncManager.isCoupled() ? C.green : C.chips, () => this.showSync(), 22);
+      const cly = row(11, t('Geräte koppeln'), syncManager.isCoupled() ? t('Gekoppelt, der Stand wird abgeglichen') : t('Einen Spielstand auf mehreren Geräten nutzen'));
+      const cloud = new Button(syncManager.isCoupled() ? t('Gekoppelt') : t('Koppeln'), 230, 56, syncManager.isCoupled() ? C.green : C.chips, () => this.showSync(), 22);
       cloud.position.set(W - 170, cly);
-      const back = new Button('Zurück', 300, 70, C.chips, () => this.showMainMenu(), 28);
+      const lr = languageRowTexts();
+      const lgy = row(12, lr.name, lr.desc);
+      const lang = languageButton(230, 56);
+      lang.position.set(W - 170, lgy);
+      const back = new Button(t('Zurück'), 300, 70, C.chips, () => this.showMainMenu(), 28);
       back.position.set(W / 2, 940);
-      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, backup, cloud, back);
+      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, backup, cloud, lang, back);
     };
     render();
   }
@@ -1959,7 +1964,7 @@ export class Game {
     const { box } = this.modal(W, 720, C.panelDark);
     const head = label('Seed', 44, C.text);
     head.position.set(W / 2, 50);
-    const hint = label(`0 bis ${SEED_LENGTH} Zeichen, leer lassen für einen Zufalls Seed`, 18, C.textDim);
+    const hint = label(t('0 bis {n} Zeichen, leer lassen für einen Zufalls Seed', { n: SEED_LENGTH }), 18, C.textDim);
     hint.position.set(W / 2, 100);
     box.addChild(head, hint);
     const dyn = new Container();
@@ -1984,12 +1989,12 @@ export class Game {
         b.enabled = seed.length < SEED_LENGTH;
         dyn.addChild(b);
       });
-      const del = new Button('Löschen', 200, 62, C.mult, () => { seed = seed.slice(0, -1); render(); }, 24);
+      const del = new Button(t('Löschen'), 200, 62, C.mult, () => { seed = seed.slice(0, -1); render(); }, 24);
       del.position.set(W / 2 - 230, 620);
       del.enabled = seed.length > 0;
-      const rnd = new Button('Zufällig', 200, 62, 0xf2711c, () => { seed = ''; render(); }, 24);
+      const rnd = new Button(t('Zufällig'), 200, 62, 0xf2711c, () => { seed = ''; render(); }, 24);
       rnd.position.set(W / 2, 620);
-      const ok = new Button('Fertig', 200, 62, C.green, () => {
+      const ok = new Button(t('Fertig'), 200, 62, C.green, () => {
         this.setupSeed = seed;
         this.showRunSetup();
       }, 24);
@@ -2004,7 +2009,7 @@ export class Game {
     this.clearScreen();
     this.refreshInfo();
     const { box } = this.modal(1000, 610, C.panelDark);
-    const head = label(`Ante ${run.ante}${run.ante > FINAL_ANTE ? ' · Endless' : ''}`, 40, C.text);
+    const head = label(t('Ante {n}', { n: run.ante }) + (run.ante > FINAL_ANTE ? ' · Endless' : ''), 40, C.text);
     head.position.set(500, 46);
     box.addChild(head);
     if (!this.tut) {
@@ -2039,18 +2044,18 @@ export class Game {
         d.position.set(150, 160);
         col.addChild(d);
       }
-      const zl = label('Mindestens', 17, C.textDim);
+      const zl = label(t('Mindestens'), 17, C.textDim);
       zl.position.set(150, 228);
       const target = label(fmt(currentTarget(run, kind)), 34, C.mult);
       target.position.set(150, 262);
       const rw = blindReward(run.ante, kind, run.rules.smallBlindReward);
-      const rew = label(rw > 0 ? 'Belohnung ' + '$'.repeat(rw) : 'Keine Belohnung', 19, C.money);
+      const rew = label(rw > 0 ? t('Belohnung {money}', { money: '$'.repeat(rw) }) : t('Keine Belohnung'), 19, C.money);
       rew.position.set(150, 298);
       col.addChild(zl, target, rew);
       if (kind !== 'boss' && run.anteTags) {
         const tag = TAG_BY_ID[run.anteTags[kind]];
         const tb = new Graphics().roundRect(16, 322, 268, 86, 6).fill(shade(state === 'current' ? color : C.panel, 0.45));
-        const tn = label(`Skip Tag: ${tag.name}`, 17, C.accent);
+        const tn = label(t('Skip Tag: {name}', { name: tag.name }), 17, C.accent);
         tn.position.set(150, 342);
         const td = new Text({ text: tag.description, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
         td.anchor.set(0.5, 0);
@@ -2058,7 +2063,7 @@ export class Game {
         col.addChild(tb, tn, td);
       }
       if (state === 'current') {
-        const play = new Button('Spielen', kind === 'boss' ? 220 : 140, 58, C.money, () => this.beginRound(), 24);
+        const play = new Button(t('Spielen'), kind === 'boss' ? 220 : 140, 58, C.money, () => this.beginRound(), 24);
         play.position.set(kind === 'boss' ? 150 : 85, 448);
         col.addChild(play);
         this.refs.blindPlay = play;
@@ -2069,7 +2074,7 @@ export class Game {
           this.refs.blindSkip = skip;
         }
       } else {
-        const s = label(state === 'done' ? 'Erledigt' : 'Kommt noch', 21, C.textDim);
+        const s = label(state === 'done' ? t('Erledigt') : t('Kommt noch'), 21, C.textDim);
         s.position.set(150, 448);
         col.addChild(s);
         col.alpha = state === 'done' ? 0.5 : 0.75;
@@ -2085,7 +2090,7 @@ export class Game {
     this.persist();
     this.refreshInfo();
     juice(this.moneyText);
-    this.toast(`Tag: ${TAG_BY_ID[r.tagId].name}${r.doubled ? ' (doppelt)' : ''}`);
+    this.toast(t('Tag: {name}', { name: TAG_BY_ID[r.tagId].name }) + (r.doubled ? t(' (doppelt)') : ''));
     if (run.phase === 'pack') this.showPack();
     else this.showBlindSelect();
   }
@@ -2115,7 +2120,7 @@ export class Game {
     if (picked.money || picked.consumables.length) {
       const n = picked.consumables.length;
       const parts = [picked.money ? `+$${picked.money}` : '', n ? `${n} Consumable${n > 1 ? 's' : ''}` : ''].filter(Boolean);
-      this.toast(`Jokers: ${parts.join(', ')}`, C.money);
+      this.toast(t('Jokers: {parts}', { parts: parts.join(', ') }), C.money);
       juice(this.moneyText);
     }
     await this.drawCards([...run.round!.hand]);
@@ -2137,25 +2142,25 @@ export class Game {
     haptics.win();
     this.fx.flash(over ? 0.26 : 0.18, 0xffd23f);
     const lines: [string, number][] = [
-      ['Blind Belohnung', e.blindReward],
-      [`Übrige Hands (${run.round!.handsLeft})`, e.handsBonus],
-      ...(e.discardsBonus ? [[`Übrige Discards (${run.round!.discardsLeft})`, e.discardsBonus] as [string, number]] : []),
-      [`Zinsen ($1 je $${run.rules.interestPer}, max. $${run.rules.interestCap + jokerPassive(run).interestCapDelta})`, e.interest],
+      [t('Blind Belohnung'), e.blindReward],
+      [t('Übrige Hands ({n})', { n: run.round!.handsLeft }), e.handsBonus],
+      ...(e.discardsBonus ? [[t('Übrige Discards ({n})', { n: run.round!.discardsLeft }), e.discardsBonus] as [string, number]] : []),
+      [t('Zinsen ($1 je ${per}, max. ${cap})', { per: run.rules.interestPer, cap: run.rules.interestCap + jokerPassive(run).interestCapDelta }), e.interest],
       ...(e.jokers ? [['Jokers', e.jokers] as [string, number]] : []),
     ];
     const overH = over ? 36 : 0;
     const boxH = 288 + 58 * lines.length + overH;
     const { box } = this.modal(580, boxH, C.panelDark);
-    const head = label('Blind geschafft!', 44, C.money);
+    const head = label(t('Blind geschafft!'), 44, C.money);
     head.position.set(290, 60);
     box.addChild(head);
     if (over) {
-      const ol = label(`Überschuss: ${fmt(over.extra)} Punkte (${Math.round(over.ratio * 100)} Prozent des Ziels)`, 19, C.chips);
+      const ol = label(t('Überschuss: {n} Punkte ({pct} Prozent des Ziels)', { n: fmt(over.extra), pct: Math.round(over.ratio * 100) }), 19, C.chips);
       ol.position.set(290, 112);
       box.addChild(ol);
     }
-    lines.forEach(([t, v], i) => {
-      const l = label(t, 22, C.text);
+    lines.forEach(([txt, v], i) => {
+      const l = label(txt, 22, C.text);
       l.anchor.set(0, 0.5);
       l.position.set(40, 150 + overH + i * 58);
       const r = label('$' + v, 30, C.money);
@@ -2165,7 +2170,7 @@ export class Game {
       wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); sfx.coins(v); });
       box.addChild(l, r);
     });
-    const btn = new Button(`Einkassieren $${e.total}`, 360, 76, C.money, async () => {
+    const btn = new Button(t('Einkassieren {amount}', { amount: '$' + e.total }), 360, 76, C.money, async () => {
       btn.enabled = false;
       sfx.coins(e.total);
       const remaining = run.round!.hand.map((c) => this.cardViews.get(c.id)!).filter(Boolean);
@@ -2177,7 +2182,7 @@ export class Game {
       this.syncConsumables();
       juice(this.moneyText);
       this.clearOverlay();
-      if (paid.starSealCreated.length) this.toast(`Stern Seal: ${paid.starSealCreated.length} Sternbild erzeugt`, C.chips);
+      if (paid.starSealCreated.length) this.toast(t('Stern Seal: {n} Sternbild erzeugt|Stern Seal: {n} Sternbilder erzeugt', { n: paid.starSealCreated.length }), C.chips);
       // refreshInfo hat den Stapel schon ausgeblendet, für das Einziehen bleibt er sichtbar
       this.deckPile.visible = true;
       await this.flyAway(remaining, { from: pileBefore, to: run.deck.length });
@@ -2356,7 +2361,7 @@ export class Game {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       if (swapFor !== null) return renderSwap(swapFor);
       const fanTargets: FanTarget[] = [];
-      const sub = label(`Wähle noch ${p.picksLeft}`, 20, C.textDim);
+      const sub = label(t('Wähle noch {n}', { n: p.picksLeft }), 20, C.textDim);
       sub.position.set(W / 2, 92);
       dyn.addChild(sub);
       const n = p.options.length;
@@ -2374,14 +2379,14 @@ export class Game {
           view = new ConsumableView(o.defId);
           const cd = CONSUMABLE_BY_ID[o.defId];
           text = `${cd.name}\n${consumableDescription(run, cd.id)}`;
-          if (cd.targets) text += `\nZiele: ${targets.length} von ${cd.targets.min === cd.targets.max ? cd.targets.min : `${cd.targets.min} bis ${cd.targets.max}`}`;
+          if (cd.targets) text += '\n' + t('Ziele: {a} von {b}', { a: targets.length, b: cd.targets.min === cd.targets.max ? cd.targets.min : t('{a} bis {b}', { a: cd.targets.min, b: cd.targets.max }) });
         } else {
           view = new CardView(o.card);
           const parts: string[] = [];
           if (o.card.enhancement) parts.push(`${ENHANCEMENTS[o.card.enhancement].name}: ${ENHANCEMENTS[o.card.enhancement].description}`);
           if (o.card.seal) parts.push(`${SEALS[o.card.seal].name}: ${SEALS[o.card.seal].description}`);
           if (o.card.edition) parts.push(`${EDITIONS[o.card.edition].name}: ${EDITIONS[o.card.edition].description}`);
-          text = parts.join('\n') || 'Normale Karte';
+          text = parts.join('\n') || t('Normale Karte');
         }
         view.eventMode = 'none';
         view.position.set(x, 200);
@@ -2395,7 +2400,7 @@ export class Game {
         const swap = o.kind === 'joker' && !canPick(run, i, targets) && p.picksLeft > 0 && run.jokers.some((j) => canSwapJoker(run, i, j.uid));
         const pick = swap
           ? new Button(t('Tauschen'), 140, 56, C.green, () => { swapFor = i; swapUid = null; render(); }, 20)
-          : new Button('Wählen', 140, 56, C.green, () => this.pickPackOption(i, targets), 20);
+          : new Button(t('Wählen'), 140, 56, C.green, () => this.pickPackOption(i, targets), 20);
         pick.position.set(x, withHand ? 460 : 470);
         pick.enabled = swap || canPick(run, i, targets);
         dyn.addChild(view, info, pick);
@@ -2404,7 +2409,7 @@ export class Game {
       });
 
       if (p.handIds) {
-        const hl = label('Deine Karten, wähle die Ziele', 18, C.textDim);
+        const hl = label(t('Deine Karten, wähle die Ziele'), 18, C.textDim);
         hl.position.set(W / 2, 520);
         dyn.addChild(hl);
         const cards = p.handIds.map((id) => run.deck.find((c) => c.id === id)).filter((c): c is Card => !!c);
@@ -2425,7 +2430,7 @@ export class Game {
         });
       }
 
-      const skip = new Button('Überspringen', 240, 56, 0xf2711c, () => {
+      const skip = new Button(t('Überspringen'), 240, 56, 0xf2711c, () => {
         closePack(run);
         this.persist();
         this.clearOverlay();
@@ -2473,24 +2478,24 @@ export class Game {
     const sync = getProfile().sync;
     const same = !!sync && sync.runId === run.runId && sync.startBestHand > 0;
     const records: string[] = [];
-    if (same && run.stats.bestHand > sync!.startBestHand) records.push(`Neuer Rekord: Beste Hand ${fmt(run.stats.bestHand)}`);
-    if (same && run.ante > sync!.startBestAnte) records.push(`Neuer Rekord: Ante ${run.ante}`);
+    if (same && run.stats.bestHand > sync!.startBestHand) records.push(t('Neuer Rekord: Beste Hand {n}', { n: fmt(run.stats.bestHand) }));
+    if (same && run.ante > sync!.startBestAnte) records.push(t('Neuer Rekord: Ante {n}', { n: run.ante }));
     const bestType = run.stats.bestHandType ? ` (${HAND_DATA[run.stats.bestHandType].name})` : '';
-    const lines = [`Beste Hand: ${fmt(run.stats.bestHand)}${bestType}`];
+    const lines = [t('Beste Hand: {n}{type}', { n: fmt(run.stats.bestHand), type: bestType })];
     const played = Object.values(run.handsPlayed).reduce((a, b) => a + b, 0);
-    lines.push(`Hands gespielt ${played}, Discards genutzt ${run.stats.discardsUsed}, Jokers gekauft ${run.stats.jokersBought}`);
+    lines.push(t('Hands gespielt {a}, Discards genutzt {b}, Jokers gekauft {c}', { a: played, b: run.stats.discardsUsed, c: run.stats.jokersBought }));
     const top = (Object.entries(run.handsPlayed) as [HandType, number][]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])[0];
-    if (top) lines.push(`Meistgespielt: ${HAND_DATA[top[0]].name} (${top[1]}x, Level ${run.handLevels[top[0]]})`);
+    if (top) lines.push(t('Meistgespielt: {name} ({n}x, Level {lvl})', { name: HAND_DATA[top[0]].name, n: top[1], lvl: run.handLevels[top[0]] }));
     const names = run.jokers.map((j) => getJoker(j.defId)?.name).filter(Boolean);
-    lines.push(names.length ? `Jokers: ${names.join(', ')}` : 'Jokers: keine');
+    lines.push(names.length ? t('Jokers: {parts}', { parts: names.join(', ') }) : t('Jokers: keine'));
     const fresh = newKeys(this.runStartKeys, loadDiscovered()).map((k) => entryName(k)).filter((n): n is string => !!n);
     if (fresh.length) {
       const shown = fresh.slice(0, REPORT_NEW_MAX).join(', ');
-      lines.push(`Neu im Atlas (${fresh.length}): ${shown}${fresh.length > REPORT_NEW_MAX ? ` und ${fresh.length - REPORT_NEW_MAX} weitere` : ''}`);
+      lines.push(t('Neu im Atlas ({n}): {shown}', { n: fresh.length, shown }) + (fresh.length > REPORT_NEW_MAX ? t(' und {n} weitere', { n: fresh.length - REPORT_NEW_MAX }) : ''));
     }
     if (this.runUnlocked.length) {
       const list = this.runUnlocked.map((id) => ACHIEVEMENTS.find((a) => a.id === id)?.name).filter(Boolean);
-      lines.push(`Neue Erfolge (${list.length}): ${list.join(', ')}`);
+      lines.push(t('Neue Erfolge ({n}): {list}', { n: list.length, list: list.join(', ') }));
     }
     return { lines, records };
   }
@@ -2533,21 +2538,21 @@ export class Game {
     const info = wrapText(sum.lines.join('\n'), W - 120, 18, C.text);
     const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
     const recH = recs ? recs.height + 14 : 0;
-    const tip = wrapText(`Tipp: ${TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length]}`, W - 140, 17, C.accent);
+    const tip = wrapText(t('Tipp: {tip}', { tip: TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length] }), W - 140, 17, C.accent);
     const infoH = info.height;
     const near = nearMiss(run.round?.score ?? 0, run.round?.target ?? 0);
     const nearH = near ? 34 : 0;
     const H = 400 + recH + infoH + tip.height + 190 + nearH + 76;
     const { box } = this.modal(W, H, C.panelDark);
-    const head = label('Verloren', 64, C.mult);
+    const head = label(t('Verloren'), 64, C.mult);
     head.position.set(W / 2, 80);
-    const l1 = label(`Erreicht: Ante ${run.ante}, Round ${(run.ante - 1) * 3 + run.blindIndex + 1}`, 26);
+    const l1 = label(t('Erreicht: Ante {a}, Round {b}', { a: run.ante, b: (run.ante - 1) * 3 + run.blindIndex + 1 }), 26);
     l1.position.set(W / 2, 160);
-    const l1b = label(this.difficultyLabel(run) + (run.daily ? ', Tageslauf' : ''), 20, C.textDim);
+    const l1b = label(this.difficultyLabel(run) + (run.daily ? t(', Tageslauf') : ''), 20, C.textDim);
     l1b.position.set(W / 2, 196);
-    const l2 = label(`Punkte: ${fmt(run.round?.score ?? 0)} / ${fmt(run.round?.target ?? 0)}`, 22, C.textDim);
+    const l2 = label(t('Punkte: {a} / {b}', { a: fmt(run.round?.score ?? 0), b: fmt(run.round?.target ?? 0) }), 22, C.textDim);
     l2.position.set(W / 2, 228);
-    const nl = near ? label(`Dir fehlten ${fmt(near.missing)} Punkte (${Math.round(near.fraction * 100)} Prozent des Ziels)`, 20, C.chips) : null;
+    const nl = near ? label(t('Dir fehlten {n} Punkte ({pct} Prozent des Ziels)', { n: fmt(near.missing), pct: Math.round(near.fraction * 100) }), 20, C.chips) : null;
     if (nl) nl.position.set(W / 2, 262);
     if (recs) recs.position.set(W / 2, 262 + nearH);
     info.position.set(W / 2, 262 + nearH + recH);
@@ -2555,13 +2560,13 @@ export class Game {
     const seed = label(`Seed ${run.seed}`, 18, C.textDim);
     seed.position.set(W / 2, tip.y + tip.height + 26);
     // Erste Reihe: sofort weiter. Im Tageslauf gibt es nur den gleichen Seed (der Seed ist der Tag).
-    const quick = run.daily ? null : new Button('Sofort nochmal', 660, 70, C.mult, () => this.rerun(run, false, false), 32);
+    const quick = run.daily ? null : new Button(t('Sofort nochmal'), 660, 70, C.mult, () => this.rerun(run, false, false), 32);
     if (quick) quick.position.set(W / 2, H - 202);
-    const again = new Button('Gleicher Seed', 320, 70, C.accent, () => this.rerun(run, false, true), 28);
+    const again = new Button(t('Gleicher Seed'), 320, 70, C.accent, () => this.rerun(run, false, true), 28);
     again.position.set(W / 2 + 170, H - 126);
-    const b = new Button('Neuer Run', 320, 70, C.chips, () => this.startNewRun(), 30);
+    const b = new Button(t('Neuer Run'), 320, 70, C.chips, () => this.startNewRun(), 30);
     b.position.set(W / 2 - 170, H - 126);
-    const m = new Button('Hauptmenü', 220, 54, 0x3b5068, () => this.showMainMenu(), 22);
+    const m = new Button(t('Hauptmenü'), 220, 54, 0x3b5068, () => this.showMainMenu(), 22);
     m.position.set(W / 2, H - 52);
     box.addChild(head, l1, l1b, l2, info, tip, seed, b, again, m);
     if (quick) box.addChild(quick);
@@ -2583,9 +2588,9 @@ export class Game {
     const harder = this.canGoHarder(run);
     const H = 470 + recH + info.height + (harder ? 86 : 0) + 20;
     const { box } = this.modal(W, H, C.panelDark);
-    const head = label('Gewonnen!', 72, C.money, { stroke: { color: C.mult, width: 8 } });
+    const head = label(t('Gewonnen!'), 72, C.money, { stroke: { color: C.mult, width: 8 } });
     head.position.set(W / 2, 90);
-    const l = label(`Ante ${FINAL_ANTE} besiegt auf ${this.difficultyLabel(run)}${run.daily ? ' im Tageslauf' : ''}.`, 24);
+    const l = label(t('Ante {n} besiegt auf {diff}{daily}.', { n: FINAL_ANTE, diff: this.difficultyLabel(run), daily: run.daily ? t(' im Tageslauf') : '' }), 24);
     l.position.set(W / 2, 175);
     const sd = label(`Seed ${run.seed}`, 18, C.textDim);
     sd.position.set(W / 2, 212);
@@ -2594,17 +2599,17 @@ export class Game {
     box.addChild(head, l, sd, info);
     if (recs) box.addChild(recs);
     let y = 250 + recH + info.height + 60;
-    const a = new Button('Endless weiterspielen', 400, 70, C.chips, () => this.showShop(), 26);
+    const a = new Button(t('Endless weiterspielen'), 400, 70, C.chips, () => this.showShop(), 26);
     a.position.set(W / 2, y);
     box.addChild(a);
     y += 86;
     if (harder) {
-      const hb = new Button(`Härter: ${harder}`, 400, 70, C.accent, () => this.rerun(run, true, false), 26);
+      const hb = new Button(t('Härter: {name}', { name: harder }), 400, 70, C.accent, () => this.rerun(run, true, false), 26);
       hb.position.set(W / 2, y);
       box.addChild(hb);
       y += 86;
     }
-    const b = new Button('Neuer Run', 400, 70, C.mult, () => this.startNewRun(), 26);
+    const b = new Button(t('Neuer Run'), 400, 70, C.mult, () => this.startNewRun(), 26);
     b.position.set(W / 2, y);
     box.addChild(b);
   }

@@ -4,7 +4,7 @@ const dict: Record<string, string> = {
   Jokers: 'Jokers',
   Sternbilder: 'Constellations',
   Elixiere: 'Elixirs',
-  Omen: 'Omens',
+  Omen: 'Omen',
   Vouchers: 'Vouchers',
   Tags: 'Tags',
   Bosse: 'Bosses',
