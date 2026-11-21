@@ -1838,7 +1838,8 @@ export class Game {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
       const gap = 60;
-      const row = (i: number, name: string, desc: string) => {
+      /** maxW: Platz bis zum Knopf rechts, längere Hinweise (englisch oft länger) schrumpfen */
+      const row = (i: number, name: string, desc: string, maxW = 320) => {
         const y = 140 + i * gap;
         const n = label(name, 28, C.text);
         n.anchor.set(0, 0.5);
@@ -1846,11 +1847,12 @@ export class Game {
         const d = label(desc, 16, C.textDim, { fontWeight: '600' });
         d.anchor.set(0, 0.5);
         d.position.set(50, y + 20);
+        if (d.width > maxW) d.scale.set(maxW / d.width);
         dyn.addChild(n, d);
         return y;
       };
       const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
-        const y = row(i, name, desc);
+        const y = row(i, name, desc, 410);
         const b = new Button(on ? t('An') : t('Aus'), 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
         b.position.set(W - 115, y);
         dyn.addChild(b);
