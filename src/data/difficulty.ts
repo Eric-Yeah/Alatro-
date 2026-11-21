@@ -1,4 +1,5 @@
 import type { RunMods } from './modsSpec';
+import { t } from '../i18n';
 
 /**
  * Skalierende Schwierigkeit: eine einzige Zahl (Stufe) regelt feiner als die festen Stakes.
@@ -63,7 +64,7 @@ export function scaleMods(level: number): RunMods[] {
 export function scaleSummary(level: number): string[] {
   const l = clampScale(level);
   const pct = Math.round((scaleTargetFactor(l) - 1) * 100);
-  const lines = [pct === 0 ? 'Blind Ziele wie im Grundspiel' : `Blind Ziele ${pct > 0 ? '+' : ''}${pct}%`.replace('-', 'minus ').replace('+', 'plus ')];
+  const lines = [pct === 0 ? t('Blind Ziele wie im Grundspiel') : pct > 0 ? t('Blind Ziele plus {n}%', { n: pct }) : t('Blind Ziele minus {n}%', { n: -pct })];
   for (const f of SCALE_FEATURES) if (l >= f.from && l <= (f.to ?? SCALE.max)) lines.push(f.text);
   return lines;
 }
@@ -92,5 +93,5 @@ export function scaleBand(level: number): ScaleBand {
 
 /** Anzeigename, z. B. "Stufe 7 Fordernd" */
 export function scaleName(level: number): string {
-  return `Stufe ${clampScale(level)} ${scaleBand(level).name}`;
+  return t('Stufe {n} {band}', { n: clampScale(level), band: scaleBand(level).name });
 }
