@@ -1,4 +1,5 @@
 import { getSettings, onSettings } from '../settings';
+import { COIN_SOUND } from '../data/coinSound';
 import { BLIND_FANFARE } from '../data/report';
 import { MUSIC, tracksFor } from '../data/music';
 import { scaleFreq } from './juiceMath';
@@ -169,6 +170,26 @@ class Sfx {
   money() {
     this.tone(1318, 0.09, 'square', 0.1);
     this.tone(1760, 0.2, 'square', 0.1, { delay: 0.08 });
+  }
+  /** Ein Münzklirren (Geld einkassieren). `pitch` verstimmt leicht (1 ist Grundton), `gain` skaliert die Lautstärke. */
+  coin(pitch = 1, gain = 1, delay = 0) {
+    const c = COIN_SOUND;
+    const base = c.baseHz * pitch;
+    this.noise(c.click.dur, c.click.gain * gain, { freq: c.click.freq, q: 1.5, delay });
+    const ring = (hz: number, vol: number, d: number) => {
+      c.partials.forEach((p, i) => this.tone(hz * p, c.partialDecay[i], 'sine', c.partialGain[i] * vol * gain, { delay: d, attack: 0.002 }));
+    };
+    ring(base, 1, delay);
+    ring(base * c.ching.ratio, c.ching.gain, delay + c.ching.delay);
+  }
+  /** Münzkaskade für einen Geldbetrag: je mehr Dollar, desto mehr Klirren (begrenzt), leiser werdend */
+  coins(dollars: number) {
+    const c = COIN_SOUND.burst;
+    const n = Math.max(1, Math.min(c.maxCoins, Math.round(Math.max(0, dollars) * COIN_SOUND.coinsPerDollar)));
+    for (let i = 0; i < n; i++) {
+      const pitch = 1 + (Math.random() * 2 - 1) * c.pitchJitter;
+      this.coin(pitch, 1 - (i / n) * (1 - c.fade), i * c.spacing);
+    }
   }
   retrigger(step: number) { this.tone(scaleFreq(step) * 4, 0.07, 'square', 0.08, { slideTo: scaleFreq(step) * 6 }); }
   message(step: number) { this.tone(scaleFreq(step) * 2, 0.1, 'sine', 0.14); }
