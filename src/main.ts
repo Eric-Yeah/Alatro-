@@ -11,7 +11,7 @@ import { CrtFilter } from './ui/crt';
 import { Game } from './ui/Game';
 import { FpsMeter } from './ui/perf';
 import { setTextResolution } from './ui/textRes';
-import { FONT } from './ui/theme';
+import { FONT, setPhoneUi } from './ui/theme';
 import { computeView, isPhone, type Insets } from './ui/viewport';
 
 /** Liest die sicheren Ränder (Statusleiste, Home Indikator) der Seite, 0 ohne Unterstützung. */
@@ -38,6 +38,7 @@ function readSafeInsets(): Insets {
 async function main() {
   // Schrift laden, bevor der erste Text gezeichnet wird (sonst bleibt die Systemschrift im Cache)
   try { await Promise.all([document.fonts.load('20px "Alatro Pixel"'), document.fonts.load('20px "Alatro Karte"')]); } catch { /* Rückfall auf Systemschrift */ }
+  setPhoneUi(isPhone(window.screen.width, window.screen.height));
   const app = new Application();
   await app.init({
     resizeTo: window,

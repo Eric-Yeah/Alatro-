@@ -18,7 +18,7 @@ import { PackView, packPixelSize } from './PackView';
 import { attachPop } from './artFx';
 import { VOUCHER_H, VOUCHER_W, VoucherView } from './VoucherView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, ps, tipExtra } from './theme';
 import { easeOutBack, tween, wait } from './tween';
 import { Button, label, panel, wrapText } from './widgets';
 
@@ -186,11 +186,11 @@ interface Slot {
 
 /** Detail Karte. up = Karte sitzt oberhalb des Artikels, die Spitze zeigt dann nach unten. */
 function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; h: number } {
-  const w = L.calloutW;
+  const w = L.calloutW + tipExtra();
   const box = new Container();
-  const desc = richText(d.desc, w - 36, { size: 18, theme: 'light' });
+  const desc = richText(d.desc, w - 36, { size: ps(18), theme: 'light' });
   const extra = d.extra ? d.extra() : null;
-  const hint = d.hint ? wrapText(d.hint, w - 36, 15, 0xa8324a) : null;
+  const hint = d.hint ? wrapText(d.hint, w - 36, ps(15), 0xa8324a) : null;
   desc.position.set(0, 82);
   const below = 82 + desc.height + (extra ? LEVEL_UP_VIEW.gap + extra.height : 0);
   if (extra) extra.position.set(0, 82 + desc.height + LEVEL_UP_VIEW.gap);
@@ -323,7 +323,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     sfx.click();
     haptics.tap();
     tween(slot.item, { y: slot.homeY - L.lift }, 140, easeOutBack);
-    const w = L.calloutW;
+    const w = L.calloutW + tipExtra();
     const cx = Math.max(w / 2 + 14, Math.min(SHOP_W - w / 2 - 14, slot.x));
     let up = slot.dir === 'above';
     let built = buildCallout(slot.detail, slot.x - cx, up);
@@ -386,7 +386,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
         badge: CONSUMABLE_TYPE_NAMES[def.type],
         badgeColor: CONSUMABLE_COLORS[def.type],
         desc: consumableDescription(run, def.id),
-        extra: lvl ? () => levelUpBlock(lvl, L.calloutW - 36, { size: 17, theme: 'light' }) : undefined,
+        extra: lvl ? () => levelUpBlock(lvl, L.calloutW + tipExtra() - 36, { size: 17, theme: 'light' }) : undefined,
         hint: can ? undefined : why,
         actions,
       });

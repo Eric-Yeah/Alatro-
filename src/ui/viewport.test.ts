@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { computeView, isPhone } from './viewport';
-import { VIEW_H, VIEW_W } from './theme';
+import { VIEW_H, VIEW_W, ps, setPhoneUi, tipExtra } from './theme';
 
 /** Bildschirmposition eines Punkts im Spielfeld. */
 function toScreen(t: ReturnType<typeof computeView>, px: number, py: number) {
@@ -53,5 +53,26 @@ describe('viewport', () => {
     expect(t.y + VIEW_H * t.scale).toBeLessThanOrEqual(834 - insets.bottom + 1e-6);
     expect(t.scale).toBeLessThan(computeView(1194, 834, false).scale);
     expect(t.x + (VIEW_W * t.scale) / 2).toBeCloseTo(1194 / 2);
+  });
+});
+
+describe('Handy Schrift (ps)', () => {
+  it('iPad: Schriftgröße bleibt unverändert', () => {
+    setPhoneUi(false);
+    for (const s of [12, 18, 28, 44]) expect(ps(s)).toBe(s);
+    expect(tipExtra()).toBe(0);
+  });
+
+  it('Handy: kleine Schrift wächst am meisten, große bleibt, nie kleiner', () => {
+    setPhoneUi(true);
+    try {
+      expect(ps(14) / 14).toBeGreaterThan(ps(22) / 22);
+      expect(ps(22) / 22).toBeGreaterThan(ps(28) / 28);
+      expect(ps(44)).toBe(44);
+      for (let s = 10; s <= 60; s++) expect(ps(s)).toBeGreaterThanOrEqual(s);
+      expect(tipExtra()).toBeGreaterThan(0);
+    } finally {
+      setPhoneUi(false);
+    }
   });
 });

@@ -2,7 +2,7 @@ import { Container } from 'pixi.js';
 import { PATCH_NOTES } from '../data/patchnotes';
 import { TUTORIAL } from '../data/tutorial';
 import { t } from '../i18n';
-import { C } from './theme';
+import { C, ps } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
 export const TUTORIAL_W = 1100;
@@ -15,7 +15,7 @@ function clear(c: Container) {
 }
 
 /** Zeilen mit "* " am Anfang als Aufzählung, alle anderen als Absatz. Gibt die Endhöhe zurück. */
-function addLines(parent: Container, lines: string[], x: number, y: number, width: number, size: number): number {
+function layoutLines(parent: Container, lines: string[], x: number, y: number, width: number, size: number): number {
   for (const line of lines) {
     const bullet = line.startsWith('* ');
     const t = wrapText(bullet ? line.slice(2) : line, bullet ? width - 34 : width, size, C.text, 'left');
@@ -29,6 +29,19 @@ function addLines(parent: Container, lines: string[], x: number, y: number, widt
     y += t.height + (bullet ? 8 : 14);
   }
   return y;
+}
+
+/** Auf dem Handy so große Schrift, wie über dem Rand maxY noch Platz hat (iPad: immer die Grundgröße). */
+function addLines(parent: Container, lines: string[], x: number, y: number, width: number, size: number, maxY: number): number {
+  for (let s = ps(size); ; s--) {
+    const holder = new Container();
+    const end = layoutLines(holder, lines, x, y, width, s);
+    if (end <= maxY || s <= size) {
+      parent.addChild(holder);
+      return end;
+    }
+    holder.destroy({ children: true });
+  }
 }
 
 /** Anleitung: Reiter für die Themen, Pfeile blättern zur nächsten Seite. */
@@ -50,7 +63,7 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
     const title = label(page.title, 32, C.money);
     title.position.set(W / 2, 168);
     dyn.addChild(title);
-    addLines(dyn, page.lines, 70, 205, W - 140, 21);
+    addLines(dyn, page.lines, 70, 205, W - 140, 21, TUTORIAL_H - 90);
 
     const prev = new Button('‹', 70, 56, 0x3b5068, () => { idx = (idx + TUTORIAL.length - 1) % TUTORIAL.length; render(); }, 30);
     prev.position.set(W / 2 - 150, TUTORIAL_H - 50);
@@ -85,7 +98,7 @@ export function buildPatchNotes(box: Container, close: () => void) {
     const sub = label(`${n.title} · ${n.date}`, 20, C.textDim);
     sub.position.set(W / 2, 148);
     dyn.addChild(ver, sub);
-    addLines(dyn, n.items.map((i) => `* ${i}`), 60, 190, W - 120, 20);
+    addLines(dyn, n.items.map((i) => `* ${i}`), 60, 190, W - 120, 20, PATCH_H - 90);
     if (PATCH_NOTES.length > 1) {
       const newer = new Button(t('‹ Neuer'), 150, 56, 0x3b5068, () => { idx = Math.max(0, idx - 1); render(); }, 22);
       newer.position.set(120, PATCH_H - 50);

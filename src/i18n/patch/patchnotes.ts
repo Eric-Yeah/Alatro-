@@ -8,6 +8,14 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.10.1': {
+    title: 'Easier to Read on Phones',
+    items: [
+      'Improved: On phones the text is larger. Small text grows the most, large text stays as it is. The look and layout of the game stay the same.',
+      'Improved: Detail cards (Jokers, Consumables, shop) are wider on phones so the larger text fits well.',
+      'Nothing changes on the iPad.',
+    ],
+  },
   '0.10.0': {
     title: 'Floating Cards, Deck, English',
     items: [

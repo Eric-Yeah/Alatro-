@@ -1,6 +1,7 @@
 import type { Suit } from '../core/cards';
 import type { Rarity } from '../core/jokers';
 import type { ConsumableType } from '../data/consumables';
+import { PHONE_UI } from '../data/phoneUi';
 import { getLang } from '../i18n';
 
 export const VIEW_W = 1440;
@@ -121,3 +122,21 @@ export const CONSUMABLE_COLORS: Record<ConsumableType, number> = {
 
 /** Handy: kürzere Bildschirmseite (CSS Pixel) bis zu dieser Grenze zählt als Handy. */
 export const PHONE_MAX_SHORT_SIDE = 600;
+
+let phoneUi = false;
+
+/** Schaltet die Handy Ansicht ein (einmal beim Start, vor dem Aufbau der Oberfläche). */
+export function setPhoneUi(on: boolean) { phoneUi = on; }
+export function isPhoneUi(): boolean { return phoneUi; }
+
+/** Schriftgröße für die Oberfläche: auf dem Handy werden kleine Schriften größer, sonst unverändert. */
+export function ps(size: number): number {
+  if (!phoneUi) return size;
+  const k = Math.min(1, Math.max(0, (PHONE_UI.boostFrom - size) / PHONE_UI.boostSpan));
+  return Math.round(size * (1 + (PHONE_UI.boostMax - 1) * k));
+}
+
+/** Zusatzbreite für Detail Karten und Tooltips auf dem Handy (der Text ist dort größer). */
+export function tipExtra(): number {
+  return phoneUi ? PHONE_UI.tipExtra : 0;
+}

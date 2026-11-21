@@ -8,6 +8,16 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.10.1',
+    date: '21.11.2026',
+    title: 'Besser lesbar auf dem Handy',
+    items: [
+      'Besser: Auf dem Handy ist die Schrift größer. Kleine Texte wachsen am meisten, große bleiben wie sie sind. Aussehen und Aufbau des Spiels bleiben gleich.',
+      'Besser: Hinweiskarten (Joker, Consumables, Shop) sind auf dem Handy breiter, damit der größere Text gut hineinpasst.',
+      'Auf dem iPad ändert sich nichts.',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '21.11.2026',
     title: 'Schwebende Karten, Deck, Englisch',

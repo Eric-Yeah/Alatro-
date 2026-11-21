@@ -64,13 +64,13 @@ import { levelUpBlock } from './levelUpView';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, ps, shade, tipExtra } from './theme';
 import { languageButton, languageRowTexts } from './langSwitch';
 import { scoreTier, xMultShake } from './juiceMath';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
-import { Button, label, overlay, panel, popup, wrapText } from './widgets';
+import { Button, fitText, growText, label, overlay, panel, popup, wrapText } from './widgets';
 
 const MX = 850; // centre of the play area
 const HAND_Y = 775;
@@ -420,7 +420,7 @@ export class Game {
     this.totalText.alpha = 0;
     this.fxLayer.addChild(this.totalText);
 
-    this.hintText = wrapText(t('Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.'), 800, 24, C.textDim);
+    this.hintText = wrapText(t('Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.'), 800, ps(24), C.textDim);
     this.hintText.position.set(MX, 380);
     this.hintText.eventMode = 'none';
     this.hintText.visible = false;
@@ -782,11 +782,11 @@ export class Game {
     const def = getJoker(v.joker.defId)!;
     const tip = new Container() as Container & { jokerUid?: number };
     tip.jokerUid = v.joker.uid;
-    const w = 280;
-    const desc = richText(jokerDescription(def, v.joker), w - 30, { size: 19, theme: 'light' });
+    const w = 280 + tipExtra();
+    const desc = richText(jokerDescription(def, v.joker), w - 30, { size: ps(19), theme: 'light' });
     const tags = effectTags(def);
     const tagRow = new Container();
-    const trig = wrapText(triggerLabel(def), w - 30, 15, 0x5a4f78);
+    const trig = wrapText(triggerLabel(def), w - 30, ps(15), 0x5a4f78);
     // Wirkungs Marken mit Namen, mittig in einer Reihe
     const tagW = tags.map((tg) => Math.max(54, tg.name.length * 9 + 18));
     const rowW = tagW.reduce((x, y) => x + y, 0) + (tags.length - 1) * 6;
@@ -881,8 +881,8 @@ export class Game {
     const def = CONSUMABLE_BY_ID[inst.defId];
     const tip = new Container() as Container & { consumableUid?: number };
     tip.consumableUid = uid;
-    const w = 300;
-    const desc = richText(consumableDescription(run, def.id), w - 30, { size: 19, theme: 'light' });
+    const w = 300 + tipExtra();
+    const desc = richText(consumableDescription(run, def.id), w - 30, { size: ps(19), theme: 'light' });
     const targets = this.selected().map((c) => c.card.id);
     const usable = canUseConsumable(run, inst.defId, targets, 'slot');
     let hint = '';
@@ -891,7 +891,7 @@ export class Game {
       else if (def.targets) hint = def.targets.min === def.targets.max ? t('Wähle {n} Karte in der Hand|Wähle {n} Karten in der Hand', { n: def.targets.min }) : t('Wähle {a} bis {b} Karten in der Hand', { a: def.targets.min, b: def.targets.max });
       else hint = t('Gerade nicht benutzbar');
     }
-    const hintText = hint ? wrapText(hint, w - 30, 15, 0xa8324a) : null;
+    const hintText = hint ? wrapText(hint, w - 30, ps(15), 0xa8324a) : null;
     // Sternbild und Omen: was das Level up an Chips und Mult bringt
     const lvl = levelUpPreview(run, inst.defId);
     const lvlBlock = lvl ? levelUpBlock(lvl, w - 30, { size: 17, theme: 'light', slot: true }) : null;
@@ -1588,8 +1588,7 @@ export class Game {
     const content = new Container();
     box.addChild(content);
     const body = (text: string, y: number, size = 18, color = C.textDim, width = 560) => {
-      const tx = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align: 'center' } });
-      tx.anchor.set(0.5, 0);
+      const tx = growText(text, width, size, color);
       tx.position.set(W / 2, y);
       content.addChild(tx);
       return tx;
@@ -1734,16 +1733,16 @@ export class Game {
     back.scale.set(0.7);
     const dn = label(deck.name, 30, C.text);
     dn.position.set(W / 2, 290);
-    const dd = wrapText(deck.description, 520, 17, C.textDim);
+    const dd = growText(deck.description, 520, 17, C.textDim);
     dd.position.set(W / 2, 314);
     const band = scaleBand(d.level);
     const ln = label(scaleName(d.level), 28, band.color);
     ln.position.set(W / 2, 394);
-    const ls = wrapText(scaleSummary(d.level).join(' · '), 600, 16, C.textDim);
+    const ls = growText(scaleSummary(d.level).join(' · '), 600, 16, C.textDim);
     ls.position.set(W / 2, 422);
     const tw = label(t('Wandlung: {name}', { name: twist.name }), 28, C.accent);
     tw.position.set(W / 2, 500);
-    const td = wrapText(twist.description, 560, 18, C.text);
+    const td = growText(twist.description, 560, 18, C.text);
     td.position.set(W / 2, 530);
     const seed = label(`Seed ${d.seed}`, 18, C.textDim, { fontWeight: '600' });
     seed.position.set(W / 2, 586);
@@ -2041,8 +2040,7 @@ export class Game {
       chipT.position.set(150, 108);
       col.addChild(name, chip, chipT);
       if (boss) {
-        const d = new Text({ text: boss.description, style: { fontFamily: FONT_BODY, fontSize: 17, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 260, align: 'center' } });
-        d.anchor.set(0.5, 0);
+        const d = fitText(boss.description, 260, 62, 17, C.text);
         d.position.set(150, 160);
         col.addChild(d);
       }
@@ -2059,8 +2057,8 @@ export class Game {
         const tb = new Graphics().roundRect(16, 322, 268, 86, 6).fill(shade(state === 'current' ? color : C.panel, 0.45));
         const tn = label(t('Skip Tag: {name}', { name: tag.name }), 17, C.accent);
         tn.position.set(150, 342);
-        const td = new Text({ text: tag.description, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
-        td.anchor.set(0.5, 0);
+        if (tn.width > 252) tn.scale.set(252 / tn.width);
+        const td = fitText(tag.description, 250, 44, 15, C.text);
         td.position.set(150, 360);
         col.addChild(tb, tn, td);
       }
@@ -2537,10 +2535,10 @@ export class Game {
     this.fx.shake(12);
     const W = 760;
     const sum = this.runSummary(run);
-    const info = wrapText(sum.lines.join('\n'), W - 120, 18, C.text);
-    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
+    const info = wrapText(sum.lines.join('\n'), W - 120, ps(18), C.text);
+    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, ps(22), C.money) : null;
     const recH = recs ? recs.height + 14 : 0;
-    const tip = wrapText(t('Tipp: {tip}', { tip: TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length] }), W - 140, 17, C.accent);
+    const tip = wrapText(t('Tipp: {tip}', { tip: TIPS[hashString(`${run.seed}${run.ante}`) % TIPS.length] }), W - 140, ps(17), C.accent);
     const infoH = info.height;
     const near = nearMiss(run.round?.score ?? 0, run.round?.target ?? 0);
     const nearH = near ? 34 : 0;
@@ -2584,8 +2582,8 @@ export class Game {
     this.fx.shake(10);
     const W = 760;
     const sum = this.runSummary(run);
-    const info = wrapText(sum.lines.join('\n'), W - 120, 18, C.text);
-    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
+    const info = wrapText(sum.lines.join('\n'), W - 120, ps(18), C.text);
+    const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, ps(22), C.money) : null;
     const recH = recs ? recs.height + 14 : 0;
     const harder = this.canGoHarder(run);
     const H = 470 + recH + info.height + (harder ? 86 : 0) + 20;

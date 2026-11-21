@@ -1,7 +1,8 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { PHONE_UI } from '../data/phoneUi';
 import { sfx } from './audio';
 import { haptics } from './haptics';
-import { C, FONT, FONT_BODY, STYLE, shade } from './theme';
+import { C, FONT, FONT_BODY, STYLE, ps, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
 /** Helle Textfarben bekommen einen harten dunklen Schatten (ein Schriftpixel), wie bei Pixel Spielen. Dunkler Text bleibt ohne. */
@@ -14,7 +15,7 @@ function hardShadow(color: number, size: number): TextStyleOptions['dropShadow']
 export function label(text: string, size: number, color = C.text, extra: Partial<TextStyleOptions> = {}): Text {
   const t = new Text({
     text,
-    style: { fontFamily: FONT, fontSize: size, fill: color, fontWeight: '800', dropShadow: hardShadow(color, size), ...extra },
+    style: { fontFamily: FONT, fontSize: ps(size), fill: color, fontWeight: '800', dropShadow: hardShadow(color, ps(size)), ...extra },
   });
   t.anchor.set(0.5);
   return t;
@@ -129,6 +130,31 @@ export function wrapText(text: string, width: number, size = 16, color = C.text,
   const t = new Text({ text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: '700', fill: color, wordWrap: true, wordWrapWidth: width, align } });
   t.anchor.set(align === 'center' ? 0.5 : 0, 0);
   return t;
+}
+
+/**
+ * Mehrzeiliger Text für einen Kasten fester Höhe: auf dem Handy so groß wie möglich (höchstens ps(size)),
+ * aber nie höher als maxH. Auf dem iPad immer die Grundgröße.
+ */
+export function fitText(text: string, width: number, maxH: number, size = 16, color = C.text, align: 'left' | 'center' = 'center'): Text {
+  let t = wrapText(text, width, ps(size), color, align);
+  for (let s = ps(size) - 1; s >= size && t.height > maxH; s--) {
+    t.destroy();
+    t = wrapText(text, width, s, color, align);
+  }
+  return t;
+}
+
+/**
+ * Wie fitText, aber ohne feste Kastenhöhe: der Text darf auf dem Handy höchstens um den Faktor grow höher werden
+ * als in der Grundgröße (der Platz darunter ist meist nur knapp bemessen). Auf dem iPad immer die Grundgröße.
+ */
+export function growText(text: string, width: number, size = 16, color = C.text, align: 'left' | 'center' = 'center', grow = PHONE_UI.growH): Text {
+  const base = wrapText(text, width, size, color, align);
+  if (ps(size) === size) return base;
+  const maxH = base.height * grow;
+  base.destroy();
+  return fitText(text, width, maxH, size, color, align);
 }
 
 /** Full-screen dimmer that blocks input below it. */

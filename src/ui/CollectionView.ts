@@ -2,7 +2,7 @@ import { richText } from './richText';
 import { t } from '../i18n';
 import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult, ps } from './theme';
 import { Button, label, tabBar } from './widgets';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
@@ -118,7 +118,7 @@ export function buildCollection(box: Container, close: () => void) {
         dyn.addChild(bg, badge);
       }
       if (!known) {
-        const hint = richText(collectionHint(e), CELL_W - 28, { size: 15, theme: 'dark' });
+        const hint = richText(collectionHint(e), CELL_W - 28, { size: ps(15), theme: 'dark' });
         hint.position.set(x + CELL_W / 2, y + 96);
         dyn.addChild(hint);
       }
