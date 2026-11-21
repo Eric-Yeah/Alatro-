@@ -4,6 +4,7 @@ import { CBAND_H, CBAND_Y, CONS_TRAY, CT_BAND_TEXT, CT_H, CT_SCALE, CT_W, RARE_C
 import { IDLE_FX } from '../data/artFx';
 import { hashString } from '../core/rng';
 import { addShimmer, attachPop } from './artFx';
+import { attachFloat } from './cardMotion';
 import { consumableTexture } from './consumableArt';
 import { C, FONT_BODY } from './theme';
 import { tween, easeOutBack } from './tween';
@@ -11,11 +12,15 @@ import { tween, easeOutBack } from './tween';
 export const CONSUMABLE_W = CT_W * CT_SCALE;
 export const CONSUMABLE_H = CT_H * CT_SCALE;
 
+let nextSeed = 0;
+
 /** Ein Consumable als Karte (Slot, Shop, Pack): Pixel Art Kachel mit Zierrahmen je Art, Name im Titelband. */
 export class ConsumableView extends Container {
   selected = false;
   /** Innerer Container (für den Aufprall, auch wenn ein Elternobjekt die Berührung auffängt) */
   readonly body = new Container();
+  /** Schwebe Hülle um body (body selbst gehört dem Aufprall beim Berühren) */
+  private readonly floater = new Container();
   private readonly nameText: Text;
   private readonly fullName: string;
   /** Maßstab in der Leiste (1 = volle Größe), darunter wird der Name gekürzt */
@@ -23,7 +28,8 @@ export class ConsumableView extends Container {
   private hovering = false;
   private restZ = 0;
 
-  constructor(public readonly defId: string) {
+  /** float: leichtes Schweben, 'shop': etwas ruhiger (Shop und Pack Auswahl) */
+  constructor(public readonly defId: string, float: boolean | 'shop' = true) {
     super();
     const def = CONSUMABLE_BY_ID[defId];
     const w = CONSUMABLE_W, h = CONSUMABLE_H;
@@ -50,9 +56,12 @@ export class ConsumableView extends Container {
     if (RARE_CONSUMABLE_TYPES.has(def.type) || RARE_CONSUMABLE_IDS.has(defId)) {
       addShimmer(this.body, w - 8, h - 8, IDLE_FX.sparksCard, hashString(defId), true, 0xffffff, 8);
     }
-    this.addChild(this.body);
+    this.floater.addChild(this.body);
+    this.addChild(this.floater);
     this.eventMode = 'static';
     this.cursor = 'pointer';
+    // Phase aus der Vorlage plus laufender Nummer, damit zwei gleiche Consumables nicht im Gleichschritt schweben
+    if (float) attachFloat(this.floater, hashString(defId) + nextSeed++, float === 'shop' ? 'shop' : 'consumable');
     attachPop(this, this.body, {
       hoverScale: () => (this.compact < 1 ? CONS_TRAY.hoverScale / this.compact : undefined),
       always: () => this.compact < 1,
