@@ -1,10 +1,10 @@
-# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.1)
+# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.2)
 
 Stand: 21.11.2026. Arbeitsbranch `claude/wonderful-euler-rqq4w3`, live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
-## Version 0.10.1: Münzklang als Aufnahme
+## Version 0.10.2: Münzklang als Aufnahme, einmalig
 
-* Münzklang ist jetzt `src/assets/coin.mp3` (Aufnahme des Eigentümers, um 14 Halbtöne abgesenkt, Höhen beschnitten, mono). Abspielen und Ersatzsynthese in `src/ui/audio.ts` (`coin`, `loadCoin`), Zahlen in `src/data/coinSound.ts`. Bitte auf dem iPad anhören, Absenkung und Höhengrenze lassen sich per ffmpeg nachstellen.
+* Münzklang ist `src/assets/coin.mp3` (vom Eigentümer gelieferte Aufnahme, unverändert bis auf Mono und kurzen Ausklang). Die Synthese und die Kaskade sind entfernt. `sfx.coins(...)` spielt immer genau einen Klang (`src/ui/audio.ts`, `coin`, `loadCoin`), Lautstärke in `src/data/coinSound.ts`. Beim Auszahlungsbild gibt es keinen Klang je Zeile mehr, nur einen beim Einkassieren. Bitte auf dem iPad anhören.
 
 ## Version 0.10.0
 

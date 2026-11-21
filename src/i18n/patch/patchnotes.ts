@@ -8,6 +8,12 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.10.2': {
+    title: 'Coin Sound, Chosen Anew',
+    items: [
+      'Improved: New coin sound. It now plays exactly once when you collect money, with no cascade and no separate sound for each payout line.',
+    ],
+  },
   '0.10.1': {
     title: 'New Coin Sound',
     items: [

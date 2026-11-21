@@ -84,7 +84,7 @@ class Sfx {
     }
   }
 
-  /** Lädt und dekodiert die Münzaufnahme einmal, bis dahin klingt die Synthese */
+  /** Lädt und dekodiert die Münzaufnahme einmal */
   private async loadCoin() {
     try {
       const ctx = this.ctx;
@@ -186,37 +186,22 @@ class Sfx {
     this.tone(1318, 0.09, 'square', 0.1);
     this.tone(1760, 0.2, 'square', 0.1, { delay: 0.08 });
   }
-  /** Ein Münzklirren (Geld einkassieren). `pitch` verstimmt leicht (1 ist Grundton), `gain` skaliert die Lautstärke. */
+  /** Der Münzklang (Aufnahme), einmal. `pitch` ändert die Tonhöhe (1 ist Original), `gain` skaliert die Lautstärke. */
   coin(pitch = 1, gain = 1, delay = 0) {
-    const c = COIN_SOUND;
-    if (this.coinBuf && this.ready) {
-      const ctx = this.ctx!;
-      const src = ctx.createBufferSource();
-      src.buffer = this.coinBuf;
-      src.playbackRate.value = pitch;
-      const g = ctx.createGain();
-      g.gain.value = c.sampleGain * gain;
-      src.connect(g);
-      g.connect(this.master!);
-      src.start(ctx.currentTime + delay);
-      return;
-    }
-    const base = c.baseHz * pitch;
-    this.noise(c.click.dur, c.click.gain * gain, { freq: c.click.freq, q: 1.5, delay });
-    const ring = (hz: number, vol: number, d: number) => {
-      c.partials.forEach((p, i) => this.tone(hz * p, c.partialDecay[i], 'sine', c.partialGain[i] * vol * gain, { delay: d, attack: 0.002 }));
-    };
-    ring(base, 1, delay);
-    ring(base * c.ching.ratio, c.ching.gain, delay + c.ching.delay);
+    if (!this.coinBuf || !this.ready) return;
+    const ctx = this.ctx!;
+    const src = ctx.createBufferSource();
+    src.buffer = this.coinBuf;
+    src.playbackRate.value = pitch;
+    const g = ctx.createGain();
+    g.gain.value = COIN_SOUND.sampleGain * gain;
+    src.connect(g);
+    g.connect(this.master!);
+    src.start(ctx.currentTime + delay);
   }
-  /** Münzkaskade für einen Geldbetrag: je mehr Dollar, desto mehr Klirren (begrenzt), leiser werdend */
-  coins(dollars: number) {
-    const c = COIN_SOUND.burst;
-    const n = Math.max(1, Math.min(c.maxCoins, Math.round(Math.max(0, dollars) * COIN_SOUND.coinsPerDollar)));
-    for (let i = 0; i < n; i++) {
-      const pitch = 1 + (Math.random() * 2 - 1) * c.pitchJitter;
-      this.coin(pitch, 1 - (i / n) * (1 - c.fade), i * c.spacing);
-    }
+  /** Geld kassiert: immer ein einzelner Münzklang, egal wie hoch der Betrag ist */
+  coins(_dollars: number) {
+    this.coin();
   }
   retrigger(step: number) { this.tone(scaleFreq(step) * 4, 0.07, 'square', 0.08, { slideTo: scaleFreq(step) * 6 }); }
   message(step: number) { this.tone(scaleFreq(step) * 2, 0.1, 'sine', 0.14); }

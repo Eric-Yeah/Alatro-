@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.10.2',
+    date: '21.11.2026',
+    title: 'Münzklang, neu gewählt',
+    items: [
+      'Besser: Neuer Münzklang. Er erklingt jetzt immer genau einmal, wenn Du Geld einsammelst, ohne Kaskade und ohne einzelne Klänge je Auszahlungszeile.',
+    ],
+  },
+  {
     version: '0.10.1',
     date: '21.11.2026',
     title: 'Neuer Münzklang',

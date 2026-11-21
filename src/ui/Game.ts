@@ -2169,7 +2169,7 @@ export class Game {
       r.anchor.set(1, 0.5);
       r.position.set(540, 150 + overH + i * 58);
       l.alpha = r.alpha = 0;
-      wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); sfx.coins(v); });
+      wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
       box.addChild(l, r);
     });
     const btn = new Button(t('Einkassieren {amount}', { amount: '$' + e.total }), 360, 76, C.money, async () => {
