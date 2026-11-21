@@ -8,6 +8,12 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.10.1': {
+    title: 'New Coin Sound',
+    items: [
+      'Improved: The coin sound is now a real recording, much lower and warmer than before and no longer so shrill. With several coins they still trickle in one after another.',
+    ],
+  },
   '0.10.0': {
     title: 'Floating Cards, Deck, English',
     items: [

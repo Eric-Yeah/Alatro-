@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.10.1',
+    date: '21.11.2026',
+    title: 'Neuer Münzklang',
+    items: [
+      'Besser: Der Münzklang ist jetzt eine echte Aufnahme und viel tiefer und wärmer als vorher, nicht mehr so schrill. Bei mehreren Münzen rieseln sie weiter nacheinander.',
+    ],
+  },
+  {
     version: '0.10.0',
     date: '21.11.2026',
     title: 'Schwebende Karten, Deck, Englisch',

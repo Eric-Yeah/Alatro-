@@ -1,6 +1,10 @@
-# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.0)
+# Übergabe: Stand nach Sprachen, Deck Ansicht und Kartenbewegung (Version 0.10.1)
 
 Stand: 21.11.2026. Arbeitsbranch `claude/wonderful-euler-rqq4w3`, live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.10.1: Münzklang als Aufnahme
+
+* Münzklang ist jetzt `src/assets/coin.mp3` (Aufnahme des Eigentümers, um 14 Halbtöne abgesenkt, Höhen beschnitten, mono). Abspielen und Ersatzsynthese in `src/ui/audio.ts` (`coin`, `loadCoin`), Zahlen in `src/data/coinSound.ts`. Bitte auf dem iPad anhören, Absenkung und Höhengrenze lassen sich per ffmpeg nachstellen.
 
 ## Version 0.10.0
 
