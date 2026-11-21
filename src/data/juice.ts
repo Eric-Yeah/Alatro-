@@ -153,5 +153,7 @@ export const DEFAULT_SETTINGS = {
   haptics: true,
   /** Farbpalette der Spielkarten (ID aus data/cardArt/cardPalettes.ts) */
   cardPalette: 'standard' as CardPaletteId,
+  /** Sprache (siehe src/i18n/index.ts) */
+  lang: 'de' as 'de' | 'en',
 };
 export const VOLUME_STEP = 0.1;

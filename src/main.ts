@@ -1,4 +1,5 @@
 import './core/index';
+import './i18n/boot';
 import './style.css';
 import { Application, Text, Ticker } from 'pixi.js';
 import { QUALITY_PROFILE, FPS_WINDOW_MS } from './data/juice';

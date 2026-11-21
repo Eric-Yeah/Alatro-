@@ -1,6 +1,7 @@
 import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
 import { CARD_PALETTE_IDS, type CardPaletteId } from './data/cardArt/cardPalettes';
 import { MUSIC_MIX, MUSIC_OFF, TRACK_IDS } from './data/music';
+import { isLang, setLang, type Lang } from './i18n';
 import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
 
 export interface Settings {
@@ -14,6 +15,8 @@ export interface Settings {
   fps: boolean;
   haptics: boolean;
   cardPalette: CardPaletteId;
+  /** Sprache der Oberfläche und der Inhalte (Wechsel lädt die App neu) */
+  lang: Lang;
 }
 
 const KEY = 'alatro.settings.v2';
@@ -36,6 +39,7 @@ export function parseSettings(raw: unknown): Settings {
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
     haptics: typeof o.haptics === 'boolean' ? o.haptics : DEFAULT_SETTINGS.haptics,
     cardPalette: CARD_PALETTE_IDS.find((x) => x === o.cardPalette) ?? DEFAULT_SETTINGS.cardPalette,
+    lang: isLang(o.lang) ? o.lang : DEFAULT_SETTINGS.lang,
   };
 }
 
@@ -87,6 +91,7 @@ export function getSettings(): Settings {
 
 export function updateSettings(patch: Partial<Settings>): Settings {
   current = parseSettings({ ...getSettings(), ...patch });
+  setLang(current.lang);
   try {
     localStorage.setItem(KEY, JSON.stringify(current));
   } catch {
