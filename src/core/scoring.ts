@@ -1,4 +1,5 @@
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
+import { t } from '../i18n';
 import { chipValue, isFace, isRankless } from './cards';
 import { detectHand } from './handEval';
 import { handBase, type HandLevels } from './hands';
@@ -78,9 +79,10 @@ export interface ScoreInput {
   chance?: (num: number, den: number, key: string) => boolean;
 }
 
-export const RETRIGGER_MESSAGE = 'Nochmal!';
-export const DEBUFF_MESSAGE = 'Geschwächt';
-export const BALANCE_MESSAGE = 'Ausgleich';
+/** Meldungen der Wertung, zur Laufzeit übersetzt (Sprache steht erst nach dem Laden der Module fest) */
+export const RETRIGGER_MESSAGE = () => t('Nochmal!');
+export const DEBUFF_MESSAGE = () => t('Geschwächt');
+export const BALANCE_MESSAGE = () => t('Ausgleich');
 
 export function previewHand(played: Card[], handLevels: HandLevels, rules: DetectRules = {}) {
   const { type, scoring } = detectHand(played, rules);
@@ -152,7 +154,7 @@ export function scoreHand(input: ScoreInput): ScoreResult {
   events.push({ phase: 'base', source: { kind: 'base' }, chips, mult, chipsTotal: chips, multTotal: mult });
 
   if (input.boss?.nullify) {
-    events.push({ phase: 'debuff', source: { kind: 'rule' }, message: DEBUFF_MESSAGE, chipsTotal: 0, multTotal: 0 });
+    events.push({ phase: 'debuff', source: { kind: 'rule' }, message: DEBUFF_MESSAGE(), chipsTotal: 0, multTotal: 0 });
     return { handType: type, scoring, contained, chips: 0, mult: 0, total: 0, money: 0, events, destroyed: [], cardEdits: [], destroyJokers: [] };
   }
 
@@ -165,13 +167,13 @@ export function scoreHand(input: ScoreInput): ScoreResult {
   // 3) Scoring Cards links nach rechts
   scoring.forEach((card, index) => {
     if (card.debuffed) {
-      apply('debuff', { kind: 'card', cardId: card.id }, { message: DEBUFF_MESSAGE });
+      apply('debuff', { kind: 'card', cardId: card.id }, { message: DEBUFF_MESSAGE() });
       return;
     }
     const reps = 1 + repetitions(card, 'played', index);
     for (let r = 0; r < reps; r++) {
       const src = { kind: 'card', cardId: card.id } as const;
-      if (r > 0) apply('retrigger', src, { message: RETRIGGER_MESSAGE });
+      if (r > 0) apply('retrigger', src, { message: RETRIGGER_MESSAGE() });
       const rankChips = isRankless(card) ? 0 : chipValue(card.rank);
       apply('card', src, { chips: rankChips + (card.extraChips ?? 0) });
       apply('card', src, card.enhancement ? ENHANCEMENTS[card.enhancement]?.scored : undefined);
@@ -192,7 +194,7 @@ export function scoreHand(input: ScoreInput): ScoreResult {
         ...jokers.map((j): [ScorePhase, ScoreEventSource, Effect | void] =>
           ['joker', { kind: 'joker', jokerUid: j.inst.uid }, callJoker(j, 'held', { card, area: 'held' })]),
       ];
-      if (r > 0 && steps.some(([, , e]) => e)) apply('retrigger', src, { message: RETRIGGER_MESSAGE });
+      if (r > 0 && steps.some(([, , e]) => e)) apply('retrigger', src, { message: RETRIGGER_MESSAGE() });
       for (const [phase, s, e] of steps) apply(phase, s, e);
     }
   }
@@ -222,7 +224,7 @@ export function scoreHand(input: ScoreInput): ScoreResult {
     const avg = Math.floor((chips + mult) / 2);
     chips = avg;
     mult = avg;
-    events.push({ phase: 'balance', source: { kind: 'rule' }, message: BALANCE_MESSAGE, chipsTotal: chips, multTotal: mult });
+    events.push({ phase: 'balance', source: { kind: 'rule' }, message: BALANCE_MESSAGE(), chipsTotal: chips, multTotal: mult });
   }
 
   // 8) Ergebnis abrunden (Offener Punkt O2)

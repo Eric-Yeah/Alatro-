@@ -4,6 +4,7 @@
  * Ein Abgleich ersetzt den lokalen Run nur, wenn der Home Bildschirm offen ist (`canReplaceRun`).
  */
 import { SYNC } from '../data/sync';
+import { t } from '../i18n';
 import { clearSyncState, CloudError, loadSyncState, saveSyncState, syncOnce, type SyncResult } from '../syncCloud';
 import { generateCode, normalizeCode } from '../syncCrypto';
 import { onLocalChange } from '../syncHooks';
@@ -20,6 +21,8 @@ export type SyncPhase = 'aus' | 'ok' | 'laeuft' | 'netz' | 'fehler' | 'konflikt'
 export class SyncManager {
   phase: SyncPhase = 'aus';
   message = '';
+  /** Der letzte Fehler war ein falscher Code (sprachunabhängig, statt den Text zu vergleichen) */
+  private codeMismatch = false;
   private host: SyncHost | null = null;
   private listeners = new Set<() => void>();
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -88,7 +91,7 @@ export class SyncManager {
     saveSyncState({ code: normalizeCode(input), revs: { profile: 0, run: 0 }, lastSync: 0 });
     const r = await this.syncNow(onConflict);
     // Falscher Code (Daten nicht entschlüsselbar): Kopplung wieder lösen
-    if (this.phase === 'fehler' && this.message.startsWith('Der Code passt nicht')) this.uncouple();
+    if (this.phase === 'fehler' && this.codeMismatch) this.uncouple();
     return r;
   }
 
@@ -108,16 +111,19 @@ export class SyncManager {
     }
     this.running = true;
     this.set('laeuft');
+    this.codeMismatch = false;
     let result: SyncResult | null = null;
     try {
       result = await syncOnce({ onConflict, allowRunReplace: this.host?.canReplaceRun() ?? true });
-      if (result.status === 'conflict') this.set('konflikt', 'Auf diesem Gerät und in der Cloud läuft ein anderer Run.');
-      else if (result.runBlocked) this.set('wartet', 'In der Cloud liegt ein neuerer Run. Er wird am Home Bildschirm geladen.');
+      if (result.status === 'conflict') this.set('konflikt', t('Auf diesem Gerät und in der Cloud läuft ein anderer Run.'));
+      else if (result.runBlocked) this.set('wartet', t('In der Cloud liegt ein neuerer Run. Er wird am Home Bildschirm geladen.'));
       else this.set('ok');
       if (result?.status === 'ok' && result.runReplaced) this.host?.onRunReplaced();
     } catch (e) {
-      if (e instanceof CloudError) this.set(e.reason === 'netz' ? 'netz' : 'fehler', e.reason === 'code' ? 'Der Code passt nicht zu den Daten.' : e.message);
-      else this.set('fehler', 'Unbekannter Fehler beim Abgleich.');
+      if (e instanceof CloudError) {
+        this.codeMismatch = e.reason === 'code';
+        this.set(e.reason === 'netz' ? 'netz' : 'fehler', e.reason === 'code' ? t('Der Code passt nicht zu den Daten.') : e.message);
+      } else this.set('fehler', t('Unbekannter Fehler beim Abgleich.'));
     } finally {
       this.running = false;
     }

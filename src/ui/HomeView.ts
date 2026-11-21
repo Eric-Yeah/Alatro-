@@ -4,6 +4,7 @@ import { STAKES } from '../data/stakes';
 import { scaleName } from '../data/difficulty';
 import type { RunState } from '../core/run';
 import { cardBack } from './CardView';
+import { t } from '../i18n';
 import { C, VIEW_H, VIEW_W, fmt } from './theme';
 import { easeOutCubic, loop, tween } from './tween';
 import { buildTitleCards } from './TitleCards';
@@ -114,14 +115,14 @@ export function buildHome(input: HomeInput): Container {
 
   const title = buildTitleCards();
   title.position.set(VIEW_W / 2, HOME.titleY);
-  const sub = label('Sternwarte der Alchemisten', 34, C.money);
+  const sub = label(t('Sternwarte der Alchemisten'), 34, C.money);
   sub.position.set(VIEW_W / 2, HOME.subtitleY);
-  const tag = label('Roguelike Poker Deckbuilder', 22, C.textDim);
+  const tag = label(t('Roguelike Poker Deckbuilder'), 22, C.textDim);
   tag.position.set(VIEW_W / 2, HOME.taglineY);
   root.addChild(title, sub, tag);
 
   // Rang und Erfolge
-  const rank = label(`${input.rank.name}  ·  ${input.rank.unlocked} von ${input.rank.total} Erfolgen`, 22, input.rank.color);
+  const rank = label(t('{name}  ·  {unlocked} von {total} Erfolgen', { name: input.rank.name, unlocked: input.rank.unlocked, total: input.rank.total }), 22, input.rank.color);
   rank.position.set(VIEW_W / 2, HOME.rankY);
   root.addChild(rank);
 
@@ -141,9 +142,9 @@ export function buildHome(input: HomeInput): Container {
   if (saved) {
     const deck = DECKS.find((d) => d.id === saved.deckId)?.name ?? '';
     const stake = saved.difficulty !== null ? scaleName(saved.difficulty) : STAKES.find((s) => s.id === saved.stakeId)?.name ?? '';
-    main('Fortsetzen', C.chips, actions.resume, `Ante ${saved.ante}, ${fmt(saved.money)} Geld, ${deck}, ${stake}${saved.daily ? ', Tageslauf' : ''}`);
+    main(t('Fortsetzen'), C.chips, actions.resume, t('Ante {ante}, {money} Geld, {deck}, {stake}{daily}', { ante: saved.ante, money: fmt(saved.money), deck, stake, daily: saved.daily ? t(', Tageslauf') : '' }));
   }
-  main('Neuer Run', C.mult, actions.newRun);
+  main(t('Neuer Run'), C.mult, actions.newRun);
 
   // Zwei Hälften: Tageslauf und Erfolge
   const half = (text: string, i: number, color: number, fn: () => void, sub?: string) => {
@@ -156,30 +157,30 @@ export function buildHome(input: HomeInput): Container {
       root.addChild(s);
     }
   };
-  half('Tageslauf', 0, 0x2f9f7a, actions.daily, input.dailyDone ? 'heute gespielt' : 'neu heute');
-  half('Erfolge', 1, 0xc9962b, actions.achievements, `${input.rank.unlocked} von ${input.rank.total}`);
+  half(t('Tageslauf'), 0, 0x2f9f7a, actions.daily, input.dailyDone ? t('heute gespielt') : t('neu heute'));
+  half(t('Erfolge'), 1, 0xc9962b, actions.achievements, t('{a} von {b}', { a: input.rank.unlocked, b: input.rank.total }));
   y += HOME.buttonGap + 12;
 
   // Nebenmenüs in einer Reihe
   const smalls: [string, () => void, number?][] = [
-    [input.atlas.fresh ? 'Atlas!' : 'Atlas', actions.collection, input.atlas.fresh ? C.accent : 0x6b5a9e],
-    [input.guidePending ? 'Einführung!' : 'Einführung', actions.guide, input.guidePending ? C.accent : 0x4a3f6b],
-    ['Anleitung', actions.tutorial],
-    ['Optionen', actions.options],
-    ['Neuigkeiten', actions.patchNotes],
+    [input.atlas.fresh ? t('Atlas!') : t('Atlas'), actions.collection, input.atlas.fresh ? C.accent : 0x6b5a9e],
+    [input.guidePending ? t('Einführung!') : t('Einführung'), actions.guide, input.guidePending ? C.accent : 0x4a3f6b],
+    [t('Anleitung'), actions.tutorial],
+    [t('Optionen'), actions.options],
+    [t('Neuigkeiten'), actions.patchNotes],
   ];
   smalls.forEach(([text, fn, color], i) => {
     const b = new Button(text, HOME.smallW, HOME.smallH, color ?? 0x4a3f6b, fn, 22);
     b.position.set(VIEW_W / 2 + (i - (smalls.length - 1) / 2) * HOME.smallGap, y + 10);
     root.addChild(b);
     if (i === 0) {
-      const s = label(`${input.atlas.found} von ${input.atlas.total}`, 16, C.textDim, { fontWeight: '700' });
+      const s = label(t('{a} von {b}', { a: input.atlas.found, b: input.atlas.total }), 16, C.textDim, { fontWeight: '700' });
       s.position.set(b.x, y + 10 + HOME.smallH / 2 + 14);
       root.addChild(s);
     }
   });
 
-  const ver = label(`Version ${version}`, 18, C.textDim, { fontWeight: '600' });
+  const ver = label(t('Version {version}', { version }), 18, C.textDim, { fontWeight: '600' });
   ver.position.set(VIEW_W / 2, VIEW_H - 36);
   root.addChild(ver);
 

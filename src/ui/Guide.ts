@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import type { GuideStep } from '../data/guide';
+import { t } from '../i18n';
 import { C, VIEW_H } from './theme';
 import { easeOutBack, tween } from './tween';
 import { Button, label, panel, wrapText } from './widgets';
@@ -116,11 +117,11 @@ export class Guide {
     prog.position.set(w - pad, pad + headH / 2);
     box.addChild(badge, name, title, prog, body);
     if (opts.onNext) {
-      const next = new Button('Weiter', 220, rowH, C.chips, opts.onNext, 28);
+      const next = new Button(t('Weiter'), 220, rowH, C.chips, opts.onNext, 28);
       next.position.set(w - pad - 110, h - 16 - rowH / 2);
       box.addChild(next);
     }
-    const skip = new Button('Einführung beenden', 230, 44, 0x4a3f6b, this.onSkip, 17);
+    const skip = new Button(t('Einführung beenden'), 230, 44, 0x4a3f6b, this.onSkip, 17);
     skip.position.set(pad + 115, h - 16 - rowH / 2);
     box.addChild(skip);
     box.pivot.set(w / 2, 0);

@@ -326,6 +326,26 @@ Deutsche Texte bleiben im Code die Quelle, Englisch kommt aus Patch Dateien (`sr
 * **Begriffe:** Sternenatlas heißt "Star Atlas", die Einführung "Tutorial", die Anleitung "How to Play", der Tageslauf "Daily Run", feste Stufen "tiers" (Stakes), die skalierende Schwierigkeit "levels of the scaling difficulty". Erfolgsnamen sind eigenständig und höchstens vier Zeichen länger als die deutschen.
 * **Tests:** `src/i18n/contentEnB.test.ts` (Vollständigkeit je id, Zahlen, Platzhalter, keine Gedankenstriche, Patch Notes Struktur).
 
+### Mehrsprachigkeit (Deutsch und Englisch, Teil Oberfläche und Engine)
+
+Das Spiel bekommt eine deutsche und eine englische Fassung. Dieser Teil betrifft Oberfläche (`src/ui/**` ohne `Game.ts`, das folgt in Phase 2) und Engine Texte. Die Inhalte aus `src/data/` und den Dateien direkt unter `src/*.ts` übersetzen Patch Dateien in `src/i18n/patch/` (anderer Arbeitsstrang).
+
+* **Konzept:** `t('Deutscher Text')` aus `src/i18n`, der deutsche Text ist der Schlüssel und bleibt im Code stehen. Englisch kommt aus den Wörterbüchern `src/i18n/en/*.ts` (`ui-menu.ts`, `ui-sync.ts`, `ui-shop.ts`, `ui-widgets.ts`). Platzhalter `{n}`, Mehrzahl `'{n} Karte|{n} Karten'` (Form vor dem Strich für n gleich 1). Der Test `src/i18n/i18n.test.ts` verlangt für jedes `t('...')` im Quelltext einen englischen Eintrag mit gleichen Platzhaltern und ohne Gedankenstriche. Sprachwechsel lädt die App neu.
+* **Laufzeit statt Modulstart:** Texte in Konstanten auf Modulebene wurden zu Funktionen oder Getter (`tabs()` in `RunInfoView`, `groupName()` in `CollectionView`, `phaseText()` in `SyncView`, `EFFECT_TAGS` mit Gettern, Wertungsmeldungen `RETRIGGER_MESSAGE()`, `DEBUFF_MESSAGE()`, `BALANCE_MESSAGE()` in `core/scoring.ts`, `BLIND_INFO` mit Gettern), weil die Sprache beim Laden der Module noch nicht feststeht und Daten erst später umgeschrieben werden.
+* **Zahlen und Datum:** `fmt` und `fmtMult` (`src/ui/theme.ts`) nutzen `numLocale()`: Deutsch Tausenderpunkt und Dezimalkomma, Englisch Tausenderkomma und Dezimalpunkt. Das Datum bei Erfolgen ebenso.
+* **Rich Text:** `src/ui/richTokens.ts` wählt die Muster für Bedingungen ("wenn", "pro", "jede" gegen "if", "when", "per", "each", "on the last") und "aktuell" Hinweise nach Sprache. Schlüsselwörter (Chips, Mult, X Mult, `$`, Handnamen, Suits, Hands, Discards, Hand Size) wirken in beiden Sprachen, Dezimalkomma und Punkt werden erkannt. Tests in `src/ui/richTokens.test.ts`.
+* **Joker Marken und Auslöser:** `effectTags` und `triggerLabel` (`src/ui/jokerInfo.ts`) leiten aus dem Wortlaut der Beschreibung ab. Damit sie nicht vom englischen Wortlaut abhängen, merkt `src/i18n/deSource.ts` die deutschen Beschreibungen, bevor `applyDataLanguage()` sie umschreibt (Aufruf in `src/i18n/boot.ts`). Die Marken sind so in beiden Sprachen gleich. Fehlt der Merkzettel (Tests), greifen englische Rückfallmuster. Kurzzeichen auf der Karte folgen der Sprache (`SHORTS`), je Sprache ohne Doppelungen.
+* **Knopf Beschriftungen:** `Button` schrumpft die Beschriftung, wenn sie breiter als der Knopf ist (englische Texte sind oft länger). Titel und Hinweise im Shop und Atlas schrumpfen oder brechen bereits um.
+* **Sprachwahl Baustein:** `src/ui/langSwitch.ts` (`switchLanguage`, `nextLang`, `languageButton`, `languageRowTexts`), gespeichert über `updateSettings({ lang })`, danach `location.reload()`. Der Einbau als Zeile "Sprache" in `Game.showOptions` folgt in Phase 2.
+
+| Nr | Thema | Entscheidung, Stand |
+|---|---|---|
+| O-L1 | Kleine Korrekturen im deutschen Text | In `SyncView` stand bei der Konfliktfrage ein wörtliches `\n` (Backslash n) statt eines Zeilenumbruchs, jetzt Zeilenumbruch. Zeitangaben "vor 1 Minute" statt "vor 1 Minuten" (Mehrzahl Muster). Sonst bleibt der deutsche Text exakt gleich. |
+| O-L2 | Standardsprache | Ohne gespeicherte Einstellung startet das Spiel Deutsch. Eine Erkennung der Browsersprache (`navigator.language`) gibt es nicht, weil das Spiel nur dem Eigentümer gehört. Offen, falls gewünscht. |
+| O-L3 | Zeitangaben in Patch Notes | Das Datum in `PATCH_NOTES` (`n.date`) ist ein fester Text aus den Daten und wird nicht umformatiert (Aufgabe der Daten Übersetzung). |
+| O-L4 | Englische Begriffe | Thema Namen: Sternbild gleich Constellation, Elixier gleich Elixir, Omen bleibt Omen, Sternenatlas gleich Star Atlas, Einführung gleich Tutorial, Anleitung gleich How to Play, Neuigkeiten gleich What's New. Spielbegriffe (Joker, Blind, Ante, Chips, Mult, Hands, Discards, Voucher, Tag, Pack, Reroll) bleiben. Das Wörterbuch ist auf diese Wörter abgestimmt, die Daten Übersetzung sollte sie ebenso verwenden. |
+| O-L5 | Noch offen (Phase 2) | `src/ui/Game.ts` (Optionen mit Sprachzeile, Spieltisch, Tooltips, Game Over, Toasts) und Prüfung der englischen Oberfläche im Browser über alle Szenen. |
+
 ## Behalten
 
 * **Tech Stack und PWA Setup** inkl. GitHub Pages Deploy und iPad Bedienung (Querformat, Touch, Vollbild).

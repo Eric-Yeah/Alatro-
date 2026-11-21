@@ -3,6 +3,7 @@ import { SUIT_NAMES, isRankless, rankLabel } from '../core/cards';
 import { canBuyAndUse, canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
 import { getJoker, jokerDescription } from '../core/jokers';
 import { richText } from './richText';
+import { t } from '../i18n';
 import type { RunState } from '../core/run';
 import { CONSUMABLE_BY_ID, CONSUMABLE_TYPE_NAMES } from '../data/consumables';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
@@ -67,16 +68,16 @@ const SHOP_FRAME = 0xc8412f;
 /** Preis Fahne: dunkles Schild mit Goldrand, sitzt mit der Unterkante auf dem Artikel. */
 function priceTag(price: number, affordable: boolean): Container {
   const c = new Container();
-  const t = label(price === 0 ? 'Gratis' : `$${price}`, 24, affordable ? C.money : 0x8a7f99);
-  const w = Math.max(60, t.width + 26);
+  const txt = label(price === 0 ? t('Gratis') : `$${price}`, 24, affordable ? C.money : 0x8a7f99);
+  const w = Math.max(60, txt.width + 26);
   const line = affordable ? C.money : 0x3b5068;
   c.addChild(
     new Graphics()
       .roundRect(-w / 2, -L.tagH + 4, w, L.tagH, 10).fill(0x1b2230).stroke({ width: 3, color: C.panelLine })
       .roundRect(-w / 2 + 3, -L.tagH + 7, w - 6, L.tagH - 6, 8).stroke({ width: 1.5, color: line, alpha: 0.9 }),
-    t,
+    txt,
   );
-  t.y = -L.tagH / 2 + 5;
+  txt.y = -L.tagH / 2 + 5;
   return c;
 }
 
@@ -128,16 +129,16 @@ export function buildShopSign(): Container {
   const title = label('SHOP', 66, C.money, { letterSpacing: 6 });
   title.position.set(w / 2, 70);
   if (title.width > w - 70) title.scale.set((w - 70) / title.width);
-  const sub = label('Rüste deinen Run auf!', 20, C.cardFace);
+  const sub = label(t('Rüste deinen Run auf!'), 20, C.cardFace);
   sub.position.set(w / 2, 122);
   if (sub.width > w - 60) sub.scale.set((w - 60) / sub.width);
   sign.addChild(title, sub);
 
   let acc = 0;
   let on = 0;
-  Ticker.shared.add((t) => {
+  Ticker.shared.add((tk) => {
     if (!sign.visible || sign.destroyed) return;
-    acc += t.deltaMS;
+    acc += tk.deltaMS;
     if (acc < SIGN.blinkMs) return;
     acc = 0;
     on = 1 - on;
@@ -236,12 +237,12 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   rr.position.set(L.pad + L.btnW / 2, L.pad + L.btnH + 28 + L.btnH / 2);
   rr.enabled = run.money >= cost;
   rr.nudgeText(-18);
-  const price = label(cost === 0 ? 'Gratis' : `$${cost}`, 34, C.money);
+  const price = label(cost === 0 ? t('Gratis') : `$${cost}`, 34, C.money);
   price.position.set(L.btnW / 2, L.btnH / 2 + 24);
   rr.addChild(price);
   root.addChild(next, rr);
   if (shop.freeRerolls > 0) {
-    const fr = label(`${shop.freeRerolls} gratis`, 18, C.green);
+    const fr = label(t('{n} gratis', { n: shop.freeRerolls }), 18, C.green);
     fr.position.set(L.pad + L.btnW / 2, L.pad + L.btnH * 2 + 28 + 38);
     root.addChild(fr);
   }
@@ -349,8 +350,8 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     }
     const affordable = run.money >= item.price;
     const can = canBuyCard(run, i);
-    const why = !affordable ? 'Zu wenig Geld' : 'Kein freier Platz';
-    const buy: Action = { text: 'Kaufen', color: C.green, enabled: can, run: () => cb.buyCard(i) };
+    const why = !affordable ? t('Zu wenig Geld') : t('Kein freier Platz');
+    const buy: Action = { text: t('Kaufen'), color: C.green, enabled: can, run: () => cb.buyCard(i) };
     slotLayer.addChild(emptySlot(x, cardsCy, w, h));
     if (item.kind === 'joker') {
       const def = getJoker(item.defId)!;
@@ -369,7 +370,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       const view = new ConsumableView(item.defId);
       view.scale.set(unit);
       const actions: Action[] = [buy];
-      if (!def.targets) actions.push({ text: 'Nutzen', color: C.chips, enabled: canBuyAndUse(run, i), run: () => cb.buyAndUse(i) });
+      if (!def.targets) actions.push({ text: t('Nutzen'), color: C.chips, enabled: canBuyAndUse(run, i), run: () => cb.buyAndUse(i) });
       addSlot(view, x, cardsCy, w, h, item, 'below', {
         name: def.name,
         badge: CONSUMABLE_TYPE_NAMES[def.type],
@@ -387,10 +388,10 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       if (item.card.seal) parts.push(`${SEALS[item.card.seal].name}: ${SEALS[item.card.seal].description}`);
       if (item.card.edition) parts.push(`${EDITIONS[item.card.edition].name}: ${EDITIONS[item.card.edition].description}`);
       addSlot(view, x, cardsCy, w, h, item, 'below', {
-        name: isRankless(item.card) ? 'Spielkarte' : `${rankLabel(item.card.rank)} ${SUIT_NAMES[item.card.suit]}`,
-        badge: 'Spielkarte',
+        name: isRankless(item.card) ? t('Spielkarte') : `${rankLabel(item.card.rank)} ${SUIT_NAMES[item.card.suit]}`,
+        badge: t('Spielkarte'),
         badgeColor: 0xf2711c,
-        desc: parts.join('\n') || 'Kommt ins Deck',
+        desc: parts.join('\n') || t('Kommt ins Deck'),
         hint: can ? undefined : why,
         actions: [buy],
       });
@@ -410,11 +411,11 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       badgeColor: C.money,
       badgeText: 0x2b2540,
       desc: v.description,
-      hint: can ? undefined : 'Zu wenig Geld',
-      actions: [{ text: 'Einlösen', color: C.green, enabled: can, run: () => cb.buyVoucher() }],
+      hint: can ? undefined : t('Zu wenig Geld'),
+      actions: [{ text: t('Einlösen'), color: C.green, enabled: can, run: () => cb.buyVoucher() }],
     });
   } else {
-    const none = label('Ausverkauft', 22, 0x5a6c82);
+    const none = label(t('Ausverkauft'), 22, 0x5a6c82);
     none.position.set(vcx, rowCy);
     root.addChild(none);
   }
@@ -437,9 +438,9 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       name: def.name,
       badge: def.size === 'normal' ? 'Normal' : def.size === 'jumbo' ? 'Jumbo' : 'Mega',
       badgeColor: color,
-      desc: `Wähle ${def.picks} aus ${def.choices}`,
-      hint: can ? undefined : 'Zu wenig Geld',
-      actions: [{ text: 'Öffnen', color: C.green, enabled: can, run: () => cb.buyPack(i) }],
+      desc: t('Wähle {a} aus {b}', { a: def.picks, b: def.choices }),
+      hint: can ? undefined : t('Zu wenig Geld'),
+      actions: [{ text: t('Öffnen'), color: C.green, enabled: can, run: () => cb.buyPack(i) }],
     });
   });
 

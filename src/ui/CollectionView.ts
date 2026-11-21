@@ -1,4 +1,5 @@
 import { richText } from './richText';
+import { t } from '../i18n';
 import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS } from './theme';
@@ -54,9 +55,9 @@ export function buildCollection(box: Container, close: () => void) {
   let tab: CollectionTab = 'jokers';
   let page = 0;
 
-  const head = label('Sternenatlas', 38);
+  const head = label(t('Sternenatlas'), 38);
   head.position.set(W / 2, 30);
-  const overall = label(`${total.found} von ${total.total} entdeckt (${Math.round(total.fraction * 100)} Prozent)`, 18, C.accent);
+  const overall = label(t('{found} von {total} entdeckt ({pct} Prozent)', { found: total.found, total: total.total, pct: Math.round(total.fraction * 100) }), 18, C.accent);
   overall.position.set(W / 2, 62);
   box.addChild(head, overall);
   const dyn = new Container();
@@ -64,14 +65,14 @@ export function buildCollection(box: Container, close: () => void) {
 
   const render = () => {
     for (const c of [...dyn.children]) c.destroy({ children: true });
-    const bar = tabBar(COLLECTION_TABS.map((t) => ({ id: t.id, name: collectionEntries(t.id).some((e) => fresh.has(e.key)) ? `${t.name} *` : t.name })), W - 80, tab, (id) => { tab = id; page = 0; render(); }, 16);
+    const bar = tabBar(COLLECTION_TABS.map((tb) => ({ id: tb.id, name: collectionEntries(tb.id).some((e) => fresh.has(e.key)) ? `${tb.name} *` : tb.name })), W - 80, tab, (id) => { tab = id; page = 0; render(); }, 16);
     bar.position.set(40, 88);
     dyn.addChild(bar);
 
     const entries = collectionEntries(tab);
     const seen = entries.filter((e) => found.has(e.key)).length;
     const newHere = entries.filter((e) => fresh.has(e.key)).length;
-    const count = label(`${seen} von ${entries.length} entdeckt${newHere ? `, ${newHere} neu` : ''}`, 20, newHere ? C.money : C.textDim);
+    const count = label(t('{seen} von {total} entdeckt', { seen, total: entries.length }) + (newHere ? t(', {n} neu', { n: newHere }) : ''), 20, newHere ? C.money : C.textDim);
     count.position.set(W / 2, 156);
     dyn.addChild(count);
 
@@ -98,11 +99,11 @@ export function buildCollection(box: Container, close: () => void) {
       const name = label(known ? e.name : '???', tile ? 20 : 24, known ? C.text : C.textDim);
       name.position.set(cx, y + (tile ? 36 : 42));
       if (name.width > tw - 16) name.scale.set((tw - 16) / name.width);
-      const sub = label(known ? groupName(e.group) : 'Noch nicht gesehen', 15, known ? color === 0x2e2838 ? C.textDim : C.accent : C.textDim);
+      const sub = label(known ? groupName(e.group) : t('Noch nicht gesehen'), 15, known ? color === 0x2e2838 ? C.textDim : C.accent : C.textDim);
       sub.position.set(cx, y + (tile ? 60 : 70));
       dyn.addChild(name, sub);
       if (known && fresh.has(e.key)) {
-        const badge = label('NEU', 14, 0x1a1a1a);
+        const badge = label(t('NEU'), 14, 0x1a1a1a);
         const bw = badge.width + 16;
         const bg = new Graphics().roundRect(x + CELL_W - bw - 10, y + 22, bw, 22, 6).fill(C.money);
         badge.position.set(x + CELL_W - bw / 2 - 10, y + 33);
@@ -127,26 +128,26 @@ export function buildCollection(box: Container, close: () => void) {
       prev.position.set(W / 2 - 150, H_NAV);
       const next = new Button('›', 70, 56, 0x3b5068, () => { page = (page + 1) % pages; render(); }, 30);
       next.position.set(W / 2 + 150, H_NAV);
-      const pl = label(`Seite ${page + 1} von ${pages}`, 20, C.text);
+      const pl = label(t('Seite {a} von {b}', { a: page + 1, b: pages }), 20, C.text);
       pl.position.set(W / 2, H_NAV);
       dyn.addChild(prev, next, pl);
     }
   };
   render();
 
-  const closeBtn = new Button('Schließen', 260, 60, 0xf2711c, () => { markAllSeen(); close(); }, 24);
+  const closeBtn = new Button(t('Schließen'), 260, 60, 0xf2711c, () => { markAllSeen(); close(); }, 24);
   closeBtn.position.set(W - 190, COLLECTION_H - 50);
   box.addChild(closeBtn);
 }
 
 const H_NAV = COLLECTION_H - 50;
 
-const GROUP_NAMES: Record<string, string> = {
-  common: 'Common', uncommon: 'Uncommon', rare: 'Rare', legendary: 'Legendary',
-  sternbild: 'Sternbild', elixier: 'Elixier', omen: 'Omen',
-  tag: 'Skip Tag', deck: 'Deck',
-};
-
+/** Anzeigename der Gruppe eines Eintrags (zur Laufzeit übersetzt) */
 function groupName(group: string): string {
-  return GROUP_NAMES[group] ?? group;
+  const names: Record<string, string> = {
+    common: t('Common'), uncommon: t('Uncommon'), rare: t('Rare'), legendary: t('Legendary'),
+    sternbild: t('Sternbild'), elixier: t('Elixier'), omen: t('Omen'),
+    tag: t('Skip Tag'), deck: t('Deck'),
+  };
+  return names[group] ?? group;
 }
