@@ -10,6 +10,7 @@ import { TAGS } from './data/tags';
 import { VOUCHERS } from './data/vouchers';
 import { allJokers, getJoker, jokerDescription } from './core/jokers';
 import type { RunState } from './core/run';
+import { t } from './i18n';
 
 const KEY = 'alatro.collection.v1';
 /** Einträge, die der Spieler in der Sammlung schon gesehen hat (für die Neu Marker) */
@@ -18,15 +19,15 @@ const SEEN_KEY = 'alatro.collection.seen.v1';
 export type CollectionTab = 'jokers' | 'sternbild' | 'elixier' | 'omen' | 'vouchers' | 'tags' | 'bosses' | 'decks' | 'mods';
 
 export const COLLECTION_TABS: { id: CollectionTab; name: string }[] = [
-  { id: 'jokers', name: 'Jokers' },
-  { id: 'sternbild', name: 'Sternbilder' },
-  { id: 'elixier', name: 'Elixiere' },
-  { id: 'omen', name: 'Omen' },
-  { id: 'vouchers', name: 'Vouchers' },
-  { id: 'tags', name: 'Tags' },
-  { id: 'bosses', name: 'Bosse' },
-  { id: 'decks', name: 'Decks' },
-  { id: 'mods', name: 'Modifikatoren' },
+  { id: 'jokers', name: t('Jokers') },
+  { id: 'sternbild', name: t('Sternbilder') },
+  { id: 'elixier', name: t('Elixiere') },
+  { id: 'omen', name: t('Omen') },
+  { id: 'vouchers', name: t('Vouchers') },
+  { id: 'tags', name: t('Tags') },
+  { id: 'bosses', name: t('Bosse') },
+  { id: 'decks', name: t('Decks') },
+  { id: 'mods', name: t('Modifikatoren') },
 ];
 
 export interface CollectionEntry {
@@ -154,26 +155,27 @@ export function collectionHint(e: CollectionEntry): string {
   const [kind, id] = e.key.split(':');
   switch (kind) {
     case 'joker': {
-      if (e.group === 'legendary') return 'Sehr selten. Kommt nur über ein Omen ins Spiel.';
+      if (e.group === 'legendary') return t('Sehr selten. Kommt nur über ein Omen ins Spiel.');
       const min = getJoker(id)?.minAnte ?? 1;
-      const rar = e.group === 'common' ? 'Häufig im Shop' : e.group === 'uncommon' ? 'Gelegentlich im Shop' : 'Selten im Shop';
-      return min > 1 ? `${rar}, erst ab Ante ${min}.` : `${rar}.`;
+      if (e.group === 'common') return min > 1 ? t('Häufig im Shop, erst ab Ante {min}.', { min }) : t('Häufig im Shop.');
+      if (e.group === 'uncommon') return min > 1 ? t('Gelegentlich im Shop, erst ab Ante {min}.', { min }) : t('Gelegentlich im Shop.');
+      return min > 1 ? t('Selten im Shop, erst ab Ante {min}.', { min }) : t('Selten im Shop.');
     }
     case 'consumable':
-      return e.group === 'sternbild' ? 'Ein Sternbild. Kauf Sternbild Packs oder spiele Hände seltener Art.'
-        : e.group === 'elixier' ? 'Ein Elixier. Es steckt in Elixier Packs und im Shop.' : 'Ein Omen. Es steckt in Omen Packs und im Shop.';
+      return e.group === 'sternbild' ? t('Ein Sternbild. Kauf Sternbild Packs oder spiele Hände seltener Art.')
+        : e.group === 'elixier' ? t('Ein Elixier. Es steckt in Elixier Packs und im Shop.') : t('Ein Omen. Es steckt in Omen Packs und im Shop.');
     case 'voucher':
-      return e.group === 'Upgrade' ? 'Ein Upgrade. Der Basis Voucher dazu muss zuerst gekauft sein.' : 'Wird im Shop als Voucher des Antes angeboten.';
+      return e.group === 'Upgrade' ? t('Ein Upgrade. Der Basis Voucher dazu muss zuerst gekauft sein.') : t('Wird im Shop als Voucher des Antes angeboten.');
     case 'tag': {
-      const min = TAGS.find((t) => t.id === id)?.minAnte ?? 1;
-      return min > 1 ? `Eine Skip Belohnung, erst ab Ante ${min}.` : 'Eine Skip Belohnung. Überspringe einen Blind.';
+      const min = TAGS.find((x) => x.id === id)?.minAnte ?? 1;
+      return min > 1 ? t('Eine Skip Belohnung, erst ab Ante {min}.', { min }) : t('Eine Skip Belohnung. Überspringe einen Blind.');
     }
     case 'boss':
-      return e.group === 'Showdown' ? 'Ein Showdown Boss. Er wartet am Ende des Runs.' : 'Ein Boss Blind. Er erwartet dich am Ende eines Antes.';
+      return e.group === 'Showdown' ? t('Ein Showdown Boss. Er wartet am Ende des Runs.') : t('Ein Boss Blind. Er erwartet dich am Ende eines Antes.');
     case 'deck':
-      return 'Starte einen Run mit diesem Deck.';
+      return t('Starte einen Run mit diesem Deck.');
     default:
-      return e.group === 'Edition' ? 'Eine Edition auf Jokers und Karten.' : e.group === 'Seal' ? 'Ein Seal auf einer Karte.' : 'Ein Enhancement auf einer Karte.';
+      return e.group === 'Edition' ? t('Eine Edition auf Jokers und Karten.') : e.group === 'Seal' ? t('Ein Seal auf einer Karte.') : t('Ein Enhancement auf einer Karte.');
   }
 }
 
