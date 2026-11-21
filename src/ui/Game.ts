@@ -62,6 +62,7 @@ import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfo
 import { buildShop, buildShopSign } from './ShopView';
 import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
+import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
@@ -114,6 +115,8 @@ export class Game {
   private trans = new ScreenTransition();
   private handControls = new Container();
   private deckPile = new Container();
+  /** Zucken und Stauchen des Stapels beim Austeilen und Einziehen */
+  private deckFx!: DeckFx;
   private shopView: Container | null = null;
 
   /** Einführungsrunde: Ablauf (null außerhalb der Einführung), Hinweisfeld und Zeiger Ziele */
@@ -383,6 +386,7 @@ export class Game {
     this.deckCount.position.set(DECK_X, DECK_Y + CARD_H / 2 + 22);
     this.deckPile.addChild(deck, deck2, this.deckCount);
     t.addChild(this.deckPile);
+    this.deckFx = new DeckFx(this.deckPile, this.deckCount, DECK_X, DECK_Y);
 
     // Buttons
     this.playBtn = new Button('Play Hand', 230, 72, C.chips, () => this.play(), 28);
@@ -614,7 +618,8 @@ export class Game {
     this.persist();
   }
 
-  private layoutHand(ms = 260) {
+  /** skip: Karten, die gerade ausgeteilt werden (sie bekommen nur die Zielwerte, die Bewegung übernimmt dealCards) */
+  private layoutHand(ms = 260, skip?: Set<CardView>) {
     const hand = this.run?.round?.hand ?? [];
     const n = hand.length;
     const spacing = Math.min(108, 780 / Math.max(n - 1, 1));
@@ -626,31 +631,25 @@ export class Game {
       v.homeY = HAND_Y + off * off * 2.2;
       v.homeRot = off * 0.03;
       v.zIndex = i;
+      if (skip?.has(v)) return;
       tween(v, { x: v.homeX, y: v.homeY - (v.selected ? 40 : 0), rotation: v.homeRot }, ms, easeInOutCubic);
     });
   }
 
-  /** Animiert Karten, die die Engine bereits gezogen hat, vom Stapel in die Hand. */
+  /** Animiert Karten, die die Engine bereits gezogen hat, vom Stapel in die Hand (Flug, Umdrehen, gestaffelt). */
   private async drawCards(drawn: Card[]) {
     this.applySort();
-    const views = drawn.map((c) => {
-      const v = this.makeCardView(c.id);
-      v.position.set(DECK_X, DECK_Y);
-      v.scale.set(0.8);
-      return v;
+    const views = drawn.map((c) => this.makeCardView(c.id));
+    this.refreshInfo();
+    // bestehende Karten rücken weich auf ihre neuen Plätze, die neuen fliegen selbst dorthin
+    this.layoutHand(240, new Set(views));
+    const run = this.run!;
+    const pile = run.round?.drawPile.length ?? 0;
+    await dealCards(this.deckFx, views, { x: DECK_X, y: DECK_Y }, {
+      countFrom: pile + views.length,
+      setCount: (n) => { this.deckCount.text = `${n}/${run.deck.length}`; },
     });
     this.refreshInfo();
-    this.layoutHand(0);
-    // layoutHand(0) setzt die Zielpositionen, die neuen Karten fliegen vom Stapel dorthin
-    views.forEach((v) => v.position.set(DECK_X, DECK_Y));
-    for (const v of views) {
-      sfx.draw();
-      tween(v, { x: v.homeX, y: v.homeY, rotation: v.homeRot }, 320, easeInOutCubic);
-      tween(v, { 'scale.x': 1, 'scale.y': 1 }, 320);
-      await wait(60);
-    }
-    this.refreshInfo();
-    await wait(260);
   }
 
   private clearCardViews() {
@@ -658,15 +657,18 @@ export class Game {
     this.cardViews.clear();
   }
 
-  private async flyAway(views: CardView[]) {
-    views.forEach((v, i) => {
-      wait(i * 40).then(() => tween(v, { x: VIEW_W + 120, y: v.y - 40, rotation: 0.6 }, 360, easeInOutCubic))
-        .then(() => {
-          this.cardViews.delete(v.card.id);
-          v.destroy({ children: true });
-        });
+  /** Zieht Karten zum Stapel zurück (gespielt, verworfen, Rundenende). count: Zähler am Stapel zählt dabei hoch. */
+  private async flyAway(views: CardView[], count?: { from: number; to: number }) {
+    const run = this.run;
+    const set = (n: number) => { this.deckCount.text = `${n}/${run?.deck.length ?? 0}`; };
+    if (count && views.length) set(count.from);
+    await collectCards(this.deckFx, views, { x: DECK_X, y: DECK_Y }, {
+      done: (v) => {
+        this.cardViews.delete(v.card.id);
+        v.destroy({ children: true });
+      },
+      count: count ? { ...count, set } : undefined,
     });
-    await wait(360 + views.length * 40);
   }
 
   // ────────────────────────────────────────────────────────────── jokers
@@ -2133,6 +2135,7 @@ export class Game {
     const btn = new Button(`Einkassieren $${e.total}`, 360, 76, C.money, async () => {
       btn.enabled = false;
       const remaining = run.round!.hand.map((c) => this.cardViews.get(c.id)!).filter(Boolean);
+      const pileBefore = run.round!.drawPile.length;
       const paid = cashOut(run);
       if (this.tut) rigTutorialShop(run);
       this.persist();
@@ -2141,7 +2144,10 @@ export class Game {
       juice(this.moneyText);
       this.clearOverlay();
       if (paid.starSealCreated.length) this.toast(`Stern Seal: ${paid.starSealCreated.length} Sternbild erzeugt`, C.chips);
-      await this.flyAway(remaining);
+      // refreshInfo hat den Stapel schon ausgeblendet, für das Einziehen bleibt er sichtbar
+      this.deckPile.visible = true;
+      await this.flyAway(remaining, { from: pileBefore, to: run.deck.length });
+      this.deckPile.visible = false;
       this.clearCardViews();
       if (run.won && !run.winShown) {
         run.winShown = true;

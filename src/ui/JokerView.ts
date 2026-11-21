@@ -1,6 +1,8 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { getJoker, type JokerInstance } from '../core/jokers';
 import { EDITIONS } from '../data/modifiers';
+import { hashString } from '../core/rng';
+import { attachFloat } from './cardMotion';
 import { editionOverlay } from './editionFx';
 import { ART_H, ART_Y, BAND_H, BAND_TEXT, BAND_Y, TILE_H, TILE_SCALE, TILE_W } from '../data/jokerArt';
 import { jokerTexture } from './jokerArt';
@@ -12,7 +14,11 @@ export const JOKER_W = TILE_W * TILE_SCALE;
 export const JOKER_H = TILE_H * TILE_SCALE;
 
 export class JokerView extends Container {
-  constructor(public readonly joker: JokerInstance) {
+  /** Innerer Container mit allem Sichtbaren (hier schwebt die Karte, die Karte selbst bleibt für Tweens frei) */
+  readonly body = new Container();
+
+  /** float: leichtes Schweben, 'shop': etwas ruhiger (Shop und Pack Auswahl) */
+  constructor(public readonly joker: JokerInstance, float: boolean | 'shop' = true) {
     super();
     const def = getJoker(joker.defId)!;
     const w = JOKER_W, h = JOKER_H;
@@ -29,7 +35,8 @@ export class JokerView extends Container {
     name.y = -h / 2 + (BAND_Y + BAND_H / 2) * TILE_SCALE;
     // lange einzelne Wörter (z. B. Kartenhändler) verkleinern statt über den Kartenrand laufen
     if (name.width > w - 14) name.scale.set((w - 14) / name.width);
-    this.addChild(shadow, tile, name);
+    this.addChild(this.body);
+    this.body.addChild(shadow, tile, name);
     // Wirkungs Marken am unteren Rand des Motivs: Farbe und Buchstabe zeigen auf einen Blick, was der Joker tut
     const tags = effectTags(def).slice(0, 5);
     const pw = 18, ph = 14, gap = 2;
@@ -42,7 +49,7 @@ export class JokerView extends Container {
         .roundRect(px, py, pw, ph, 4).fill(tg.color);
       const t = label(tg.short, 11, 0xffffff);
       t.position.set(px + pw / 2, py + ph / 2);
-      this.addChild(pill, t);
+      this.body.addChild(pill, t);
     });
     if (joker.edition && EDITIONS[joker.edition]) {
       const ec = EDITION_COLORS[joker.edition] ?? C.accent;
@@ -51,12 +58,14 @@ export class JokerView extends Container {
       const ed = new Text({ text: EDITIONS[joker.edition].name, style: { fontFamily: FONT_BODY, fontSize: 12, fontWeight: '900', fill: 0xffffff, stroke: { color: 0x1b1530, width: 4 } } });
       ed.anchor.set(0.5);
       ed.y = -h / 2 + 14;
-      this.addChild(glow);
+      this.body.addChild(glow);
       const fx = editionOverlay(joker.edition, w, h, 10);
-      if (fx) this.addChild(fx);
-      this.addChild(ed);
+      if (fx) this.body.addChild(fx);
+      this.body.addChild(ed);
     }
     this.eventMode = 'static';
     this.cursor = 'pointer';
+    // Phase aus der Joker UID, Vorschau Karten (UID -1) aus dem Namen der Vorlage
+    if (float) attachFloat(this.body, joker.uid >= 0 ? joker.uid : hashString(joker.defId), float === 'shop' ? 'shop' : 'joker');
   }
 }

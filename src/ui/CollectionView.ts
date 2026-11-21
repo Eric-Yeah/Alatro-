@@ -33,8 +33,8 @@ function tileFor(e: CollectionEntry): { view: Container; w: number; h: number } 
   const [kind, id] = e.key.split(':');
   let view: Container | null = null;
   let w = 104, h = 140;
-  if (kind === 'joker') view = new JokerView({ uid: -1, defId: id, vars: {} });
-  else if (kind === 'consumable' && CONSUMABLE_BY_ID[id]) view = new ConsumableView(id);
+  if (kind === 'joker') view = new JokerView({ uid: -1, defId: id, vars: {} }, false);
+  else if (kind === 'consumable' && CONSUMABLE_BY_ID[id]) view = new ConsumableView(id, false);
   else if (kind === 'voucher') { view = new VoucherView(e.name); w = 132; h = 180; }
   if (!view) return null;
   const k = Math.min(COLLECTION_TILE.maxW / w, COLLECTION_TILE.maxH / h, 1);

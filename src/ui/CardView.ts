@@ -4,6 +4,7 @@ import { CARD_PX_H, CARD_PX_SCALE, CARD_PX_W } from '../data/cardArt/cardGlyphs'
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { getSettings, onSettings } from '../settings';
 import { cardBackTexture, cardTexture } from './cardArt/cardTextures';
+import { attachFloat } from './cardMotion';
 import { editionOverlay } from './editionFx';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS } from './theme';
 
@@ -27,6 +28,8 @@ export class CardView extends Container {
   homeRot = 0;
   readonly face = new Container();
   private debuffOverlay: Container | null = null;
+  /** Rückseite, wird erst beim Austeilen und Einziehen gebraucht */
+  private backSide: Container | null = null;
   private readonly art: Sprite;
   private readonly faceColor: number | undefined;
 
@@ -46,7 +49,8 @@ export class CardView extends Container {
     super.destroy(options);
   }
 
-  constructor(public readonly card: Card) {
+  /** float: leichtes Schweben, 'shop': etwas ruhiger (Shop und Pack Auswahl) */
+  constructor(public readonly card: Card, float: boolean | 'shop' = true) {
     super();
     const w = CARD_W, h = CARD_H;
     const rankless = isRankless(card);
@@ -104,6 +108,19 @@ export class CardView extends Container {
     this.addChild(this.face);
     this.eventMode = 'static';
     this.cursor = 'pointer';
+    // Schweben nur auf face, so stören Tweens auf der Karte selbst nicht (Phase aus der Karten ID)
+    if (float) attachFloat(this.face, card.id, float === 'shop' ? 'shop' : 'hand');
+  }
+
+  /** Zeigt die Rückseite statt der Vorderseite (Austeilen und Einziehen mit Umdrehen) */
+  setBackShown(on: boolean) {
+    if (this.destroyed) return;
+    if (on && !this.backSide) {
+      this.backSide = cardBack();
+      this.addChild(this.backSide);
+    }
+    if (this.backSide) this.backSide.visible = on;
+    this.face.visible = !on;
   }
 
   /** Geschwächte Karten (Boss) werden abgedunkelt und durchgestrichen. */

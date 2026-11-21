@@ -355,7 +355,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     slotLayer.addChild(emptySlot(x, cardsCy, w, h));
     if (item.kind === 'joker') {
       const def = getJoker(item.defId)!;
-      const view = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition });
+      const view = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition }, 'shop');
       view.scale.set(unit);
       addSlot(view, x, cardsCy, w, h, item, 'below', {
         name: def.name,
@@ -367,7 +367,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
       });
     } else if (item.kind === 'consumable') {
       const def = CONSUMABLE_BY_ID[item.defId];
-      const view = new ConsumableView(item.defId);
+      const view = new ConsumableView(item.defId, 'shop');
       view.scale.set(unit);
       const actions: Action[] = [buy];
       if (!def.targets) actions.push({ text: t('Nutzen'), color: C.chips, enabled: canBuyAndUse(run, i), run: () => cb.buyAndUse(i) });
@@ -380,7 +380,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
         actions,
       });
     } else {
-      const view = new CardView(item.card);
+      const view = new CardView(item.card, 'shop');
       const k = (L.itemH / CARD_H) * unit;
       view.scale.set(k);
       const parts: string[] = [];
