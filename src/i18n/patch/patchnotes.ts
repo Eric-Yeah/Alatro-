@@ -8,6 +8,12 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.1': {
+    title: 'One Sort Button',
+    items: [
+      'Improved: Rank and Suit are now a single button. Each tap switches how your hand is sorted, and the label shows the active sort.',
+    ],
+  },
   '0.11.0': {
     title: '150 Jokers, More Consumables',
     items: [

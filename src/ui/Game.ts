@@ -91,6 +91,7 @@ const SCORE_MAX_W = 185;
 const BLIND_COLORS: Record<BlindKind, number> = { small: 0x1f8fc4, big: 0xe08a1e, boss: 0xd23a4a };
 
 type SortMode = 'rank' | 'suit';
+const SORT_LABEL: Record<SortMode, string> = { rank: 'Rank', suit: 'Suit' };
 
 export interface GameHooks {
   /** Wechselt die Farbstimmung des Hintergrunds, bossColor färbt die Boss Stimmung */
@@ -183,8 +184,7 @@ export class Game {
 
   private playBtn!: Button;
   private discardBtn!: Button;
-  private sortRankBtn!: Button;
-  private sortSuitBtn!: Button;
+  private sortBtn!: Button;
   private speedBtn!: Button;
 
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
@@ -406,13 +406,12 @@ export class Game {
     this.playBtn.position.set(MX - 260, 935);
     this.discardBtn = new Button('Discard', 230, 72, C.mult, () => this.discard(), 28);
     this.discardBtn.position.set(MX + 260, 935);
-    this.sortRankBtn = new Button('Rank', 116, 56, 0xf2711c, () => this.setSort('rank'), 22);
-    this.sortRankBtn.position.set(MX - 64, 935);
-    this.sortSuitBtn = new Button('Suit', 116, 56, 0xf2711c, () => this.setSort('suit'), 22);
-    this.sortSuitBtn.position.set(MX + 64, 935);
+    // Ein Knopf wechselt zwischen Rank und Suit, die Beschriftung zeigt die aktive Sortierung
+    this.sortBtn = new Button(SORT_LABEL[this.sortMode], 170, 56, 0xf2711c, () => this.cycleSort(), 24);
+    this.sortBtn.position.set(MX, 935);
     const sortLbl = label(t('Sortieren'), 18, C.textDim);
     sortLbl.position.set(MX, 892);
-    this.handControls.addChild(this.playBtn, this.discardBtn, this.sortRankBtn, this.sortSuitBtn, sortLbl);
+    this.handControls.addChild(this.playBtn, this.discardBtn, this.sortBtn, sortLbl);
     tb.addChild(this.handControls);
 
     this.totalText = label('', 64, C.text, { stroke: { color: 0x070b11, width: 8 } });
@@ -545,8 +544,7 @@ export class Game {
     const can = !!r && !this.busy;
     this.playBtn.enabled = can && n > 0 && r!.handsLeft > 0;
     this.discardBtn.enabled = can && n > 0 && r!.discardsLeft > 0;
-    this.sortRankBtn.enabled = can;
-    this.sortSuitBtn.enabled = can;
+    this.sortBtn.enabled = can;
   }
 
   private setHandDisplay(name: string, level: number | null, chips: number, mult: number) {
@@ -623,9 +621,11 @@ export class Game {
     r.hand = this.sortMode === 'rank' ? sortByRank(r.hand) : sortBySuit(r.hand);
   }
 
-  private setSort(mode: SortMode) {
+  /** Schaltet die Sortierung von Rank auf Suit und zurück */
+  private cycleSort() {
     if (this.busy) return;
-    this.sortMode = mode;
+    this.sortMode = this.sortMode === 'rank' ? 'suit' : 'rank';
+    this.sortBtn.setText(SORT_LABEL[this.sortMode]);
     this.applySort();
     this.layoutHand();
     this.persist();

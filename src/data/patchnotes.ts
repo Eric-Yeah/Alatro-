@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.1',
+    date: '22.11.2026',
+    title: 'Ein Sortierknopf',
+    items: [
+      'Besser: Rank und Suit sind jetzt ein Knopf. Jeder Tipp wechselt die Sortierung der Hand, die Beschriftung zeigt die aktive.',
+    ],
+  },
+  {
     version: '0.11.0',
     date: '21.11.2026',
     title: '150 Jokers, mehr Consumables',

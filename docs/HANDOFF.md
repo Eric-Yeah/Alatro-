@@ -2,6 +2,10 @@
 
 Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
+## Version 0.11.1: ein Sortierknopf
+
+* Die zwei Knöpfe Rank und Suit unter den Handkarten sind ein Knopf (`sortBtn` in `src/ui/Game.ts`, `cycleSort`). Jeder Tipp wechselt zwischen Rank und Suit, die Beschriftung zeigt die aktive Sortierung. Auf dem iPad prüfen: Größe und Position (Mitte zwischen Play Hand und Discard).
+
 ## Version 0.11.0: 150 Jokers und 23 neue Consumables
 
 * **Jokers (71 neu, gesamt 150):** Entwurf mit Balance Leitplanken und Motiv Anregungen in `docs/joker-design-150.md`. Logik in `src/data/jokersMore.ts`, gemeinsame Hilfen in `src/data/jokerHelpers.ts`, `jokers.ts` führt beide Listen zu `JOKER_DEFS` zusammen. Verteilung: 79 Common, 44 Uncommon, 20 Rare, 7 Legendary. Englisch in `src/i18n/patch/jokers.ts`, Tests in `src/core/jokersMore.test.ts` (inklusive Katalog Prüfung: Anzahl, Preise, keine unbedingten X Mult über 1,25 unterhalb Legendary). Das Scoring kennt jetzt `ante` und `blind` (`ScoreInput`, `JokerContext`).
