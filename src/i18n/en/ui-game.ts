@@ -7,6 +7,7 @@ const dict: Record<string, string> = {
   'Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.':
     'Tap up to 5 cards to select them.\nThe box on the left shows the poker hand. Then Play Hand.',
   'Als Nächstes': 'Up next',
+  'Wähle bis zu 5 Karten': 'Pick up to 5 cards',
   'Boss dieser Ante': 'Boss of this Ante',
   'Verkaufen {price}': 'Sell {price}',
   'Braucht Karten in der Hand, nur in einer Runde': 'Needs cards in hand, only during a round',

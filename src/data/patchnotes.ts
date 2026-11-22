@@ -8,6 +8,16 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.2',
+    date: '22.11.2026',
+    title: 'Neue Seitenleiste',
+    items: [
+      'Neu: Die linke Seite im Spiel ist übersichtlicher. Ein Balken unter Round Score zeigt, wie weit Du vom Ziel entfernt bist, und wird gold, sobald Du es erreicht hast.',
+      'Neu: Ante und Round stehen in einem Feld, darunter zeigt eine Leiste mit acht Markern, wie weit Dein Run ist.',
+      'Besser: Hands, Discards und Geld haben Farbstreifen, Chips und Mult sind beschriftet, und die Knöpfe Menü, Run Info und Deck stehen in einer Reihe.',
+    ],
+  },
+  {
     version: '0.11.1',
     date: '22.11.2026',
     title: 'Ein Sortierknopf',

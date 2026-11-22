@@ -2,6 +2,12 @@
 
 Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
+## Version 0.11.2: neue Seitenleiste (noch nicht live)
+
+* Die linke Leiste im Spiel ist neu geordnet. Bausteine und alle Maße stehen in `src/ui/sideBar.ts` (`SIDE`): Blind Fenster, Round Score mit Fortschrittsbalken (`drawScoreBar`, wird gold ab Ziel), Hand Fenster mit Beschriftung Chips und Mult und Platzhalter "Wähle bis zu 5 Karten", Hands und Discards als Kacheln mit Farbstreifen (`statTile`), schmales Geldfeld (`buildMoneyTile`), Ante Feld mit acht Markern (`buildAnteStrip`, `drawAntePips`), dann Menü, Run Info und Deck in einer Reihe und Tempo in voller Breite. `Game.buildTable` baut sie zusammen, `refreshInfo` und `setScore` füllen sie.
+* Die Einführung greift weiter über `moneyText.parent`, `handsText.parent` und `discardsText.parent` auf die Felder zu: diese Eltern Beziehung nicht ändern.
+* Vorher Nachher Bilder in `preview/sidebar-*.png`. Auf dem iPad prüfen: Lesbarkeit der Marker, Höhe der Knopfreihe, ob der Balken genug Fortschritt zeigt. Auf dem Deploy Branch liegt diese Version noch nicht, auf Wunsch des Eigentümers erst nach seiner Freigabe.
+
 ## Version 0.11.1: ein Sortierknopf
 
 * Die zwei Knöpfe Rank und Suit unter den Handkarten sind ein Knopf (`sortBtn` in `src/ui/Game.ts`, `cycleSort`). Jeder Tipp wechselt zwischen Rank und Suit, die Beschriftung zeigt die aktive Sortierung. Auf dem iPad prüfen: Größe und Position (Mitte zwischen Play Hand und Discard).

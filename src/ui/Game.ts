@@ -70,6 +70,7 @@ import { scoreTier, xMultShake } from './juiceMath';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
+import { SIDE, buildAnteStrip, buildMoneyTile, drawAntePips, drawBlindBanner, drawScoreBar, handHintText, statTile } from './sideBar';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
 const MX = 850; // centre of the play area
@@ -174,6 +175,11 @@ export class Game {
   private discardsText!: Text;
   private moneyText!: Text;
   private anteText!: Text;
+  private antePips = new Graphics();
+  private scoreBar = new Graphics();
+  /** Ziel der laufenden Runde, für den Fortschrittsbalken */
+  private scoreTarget = 0;
+  private handHint!: Text;
   private roundText!: Text;
   private seedText!: Text;
   private jokerCount!: Text;
@@ -253,51 +259,52 @@ export class Game {
 
     // Blind panel
     const bp = this.blindPanel;
-    bp.position.set(20, 20);
+    bp.position.set(SIDE.x, SIDE.blind.y);
     this.blindBg = new Graphics();
     this.blindName = label('', 28);
-    this.blindName.position.set(165, 30);
+    this.blindName.position.set(165, 31);
     const zielLbl = label(t('Ziel'), 18, C.textDim);
-    zielLbl.position.set(165, 72);
+    zielLbl.position.set(165, 77);
     this.zielLabel = zielLbl;
     this.targetText = label('', 40, C.mult);
-    this.targetText.position.set(165, 105);
+    this.targetText.position.set(165, 112);
     this.rewardText = label('', 20, C.money);
-    this.rewardText.position.set(165, 140);
+    this.rewardText.position.set(165, 148);
     this.bossDesc = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 300, align: 'center' } });
     this.bossDesc.anchor.set(0.5, 0);
-    this.bossDesc.position.set(165, 110);
+    this.bossDesc.position.set(165, 114);
     bp.addChild(this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
     tb.addChild(bp);
     // Im Shop ersetzt ein Leuchtschild die Blind Anzeige
     this.shopSign = buildShopSign();
-    this.shopSign.position.set(20, 20);
+    this.shopSign.position.set(SIDE.x, SIDE.blind.y);
     this.shopSign.visible = false;
     tb.addChild(this.shopSign);
 
-    // Round score
-    const sp = panel(330, 76, C.panelDark);
-    sp.position.set(20, 192);
+    // Round score mit Fortschrittsbalken zum Ziel
+    const sp = panel(SIDE.w, SIDE.score.h, C.panelDark);
+    sp.position.set(SIDE.x, SIDE.score.y);
     const sLbl = label('Round Score', 20, C.textDim);
     sLbl.anchor.set(0, 0.5);
-    sLbl.position.set(20, 38);
+    sLbl.position.set(20, 30);
     this.scoreText = label('0', 40);
     this.scoreText.anchor.set(1, 0.5);
-    this.scoreText.position.set(310, 38);
-    sp.addChild(sLbl, this.scoreText);
+    this.scoreText.position.set(310, 30);
+    sp.addChild(this.scoreBar, sLbl, this.scoreText);
     this.scorePanel = sp;
     tb.addChild(sp);
 
     // Hand panel: name, level, chips × mult
-    const hp = panel(330, 170, C.panelDark);
-    hp.position.set(20, 284);
+    const hp = panel(SIDE.w, SIDE.hand.h, C.panelDark);
+    hp.position.set(SIDE.x, SIDE.hand.y);
     this.handName = label('', 28);
-    this.handName.position.set(165, 34);
+    this.handName.position.set(165, 28);
     this.handLevel = label('', 18, C.textDim);
-    this.handLevel.position.set(165, 66);
+    this.handLevel.position.set(165, 56);
+    this.handHint = handHintText();
     const box = (c: Container, color: number, x: number) => {
-      c.addChild(new Graphics().roundRect(-66, -36, 132, 72, 8).fill(color).stroke({ width: 3, color: C.panelLine }));
-      c.position.set(x, 122);
+      c.addChild(new Graphics().roundRect(-66, -32, 132, 64, 8).fill(color).stroke({ width: 3, color: C.panelLine }));
+      c.position.set(x, 124);
       const tx = label('0', 38, C.text);
       c.addChild(tx);
       return tx;
@@ -305,68 +312,57 @@ export class Game {
     this.chipsText = box(this.chipsBox, C.chips, 88);
     this.multText = box(this.multBox, C.mult, 242);
     const x = label('×', 34, C.mult);
-    x.position.set(165, 122);
-    hp.addChild(this.handName, this.handLevel, this.chipsBox, this.multBox, x);
+    x.position.set(165, 124);
+    const chipsCap = label('Chips', 16, 0x7cc4ff);
+    chipsCap.position.set(88, 83);
+    const multCap = label('Mult', 16, 0xff8a80);
+    multCap.position.set(242, 83);
+    hp.addChild(this.handName, this.handLevel, this.handHint, chipsCap, multCap, this.chipsBox, this.multBox, x);
     this.handPanel = hp;
     tb.addChild(hp);
     this.buildNextPanel();
 
     // Hands / discards
-    const counter = (title: string, color: number, px: number) => {
-      const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 470);
-      const l = label(title, 18, C.textDim);
-      l.position.set(80, 22);
-      const v = label('0', 38, color);
-      v.position.set(80, 56);
-      p.addChild(l, v);
-      tb.addChild(p);
-      return v;
-    };
-    this.handsText = counter('Hands', C.chips, 20);
-    this.discardsText = counter('Discards', C.mult, 190);
+    const { counters } = SIDE;
+    const hands = statTile('Hands', C.chips, SIDE.x, counters.y);
+    const discards = statTile('Discards', C.mult, SIDE.x + counters.w + counters.gap, counters.y);
+    this.handsText = hands.value;
+    this.discardsText = discards.value;
+    tb.addChild(hands.box, discards.box);
 
     // Money
-    const mp = panel(330, 84, C.panelDark);
-    mp.position.set(20, 570);
-    this.moneyText = label('$0', 48, C.money);
-    this.moneyText.position.set(165, 42);
-    mp.addChild(this.moneyText);
-    tb.addChild(mp);
+    const money = buildMoneyTile();
+    this.moneyText = money.value;
+    tb.addChild(money.box);
 
-    // Ante / round
-    const info = (title: string, px: number) => {
-      const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 670);
-      const l = label(title, 18, C.textDim);
-      l.position.set(80, 22);
-      const v = label('', 32, C.money);
-      v.position.set(80, 56);
-      p.addChild(l, v);
-      tb.addChild(p);
-      return v;
-    };
-    this.anteText = info('Ante', 20);
-    this.roundText = info('Round', 190);
+    // Ante / round mit Markern für den Run Fortschritt
+    const ante = buildAnteStrip();
+    this.anteText = ante.anteText;
+    this.roundText = ante.roundText;
+    this.antePips = ante.pips;
+    tb.addChild(ante.box);
 
-    const menuBtn = new Button(t('Menü'), 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
-    menuBtn.position.set(100, 800);
-    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
-    infoBtn.position.set(270, 800);
-    tb.addChild(menuBtn, infoBtn);
-    this.speedBtn = new Button('', 200, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
-    this.refreshSpeedBtn();
-    this.speedBtn.position.set(120, 872);
+    const { buttons } = SIDE;
+    const bx = (i: number) => SIDE.x + buttons.w / 2 + i * (buttons.w + buttons.gap);
+    const by = buttons.y + buttons.h / 2;
+    const menuBtn = new Button(t('Menü'), buttons.w, buttons.h, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 22);
+    menuBtn.position.set(bx(0), by);
+    const infoBtn = new Button('Run Info', buttons.w, buttons.h, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 22);
+    infoBtn.position.set(bx(1), by);
     // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
-    const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
-    deckBtn.position.set(290, 872);
-    tb.addChild(this.speedBtn, deckBtn);
+    const deckBtn = deckButton(buttons.w, buttons.h, 22, () => this.openDeck(() => this.clearOverlay()));
+    deckBtn.position.set(bx(2), by);
+    tb.addChild(menuBtn, infoBtn, deckBtn);
+    this.speedBtn = new Button('', SIDE.tempo.w, SIDE.tempo.h, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 22);
+    this.refreshSpeedBtn();
+    this.speedBtn.position.set(SIDE.x + SIDE.tempo.w / 2, SIDE.tempo.y + SIDE.tempo.h / 2);
+    tb.addChild(this.speedBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
-    this.seedText.position.set(185, 960);
+    this.seedText.position.set(185, SIDE.seedY);
     this.tagsText = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.accent, wordWrap: true, wordWrapWidth: 320, align: 'center' } });
     this.tagsText.anchor.set(0.5, 1);
-    this.tagsText.position.set(185, 935);
+    this.tagsText.position.set(185, SIDE.tagsBottom);
     tb.addChild(this.seedText, this.tagsText);
 
     // Joker tray + consumable tray
@@ -429,7 +425,7 @@ export class Game {
   /** Vorschau im Shop: nächster Blind und Boss der Ante, damit sich Käufe darauf abstimmen lassen */
   private buildNextPanel() {
     const np = panel(330, 262, C.panelDark);
-    np.position.set(20, 192);
+    np.position.set(SIDE.x, SIDE.next.y);
     np.visible = false;
     const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);
@@ -489,19 +485,17 @@ export class Game {
     const blind = BLIND_KINDS[Math.min(run.blindIndex, 2)];
     const r = run.round;
     const boss = blind === 'boss' ? (r ? activeBoss(run) : run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined) : undefined;
-    this.blindBg.clear()
-      .roundRect(0, 4, 330, 160, 8).fill(STYLE.shadowColor)
-      .roundRect(0, 0, 330, 160, 8).fill(boss ? boss.color : BLIND_COLORS[blind]).stroke({ width: 3, color: C.panelLine })
-      .roundRect(10, 56, 310, 96, 6).fill(shade(boss ? boss.color : BLIND_COLORS[blind], 0.4));
+    drawBlindBanner(this.blindBg, boss ? boss.color : BLIND_COLORS[blind]);
     this.blindName.text = boss ? boss.name : BLIND_NAMES[blind];
     this.blindName.scale.set(1);
     if (this.blindName.width > 310) this.blindName.scale.set(310 / this.blindName.width);
-    this.targetText.text = fmt(r ? r.target : currentTarget(run, blind));
+    this.scoreTarget = r ? r.target : currentTarget(run, blind);
+    this.targetText.text = fmt(this.scoreTarget);
     this.rewardText.visible = !boss;
     this.bossDesc.visible = !!boss;
     // Bei Bossen rückt das Ziel nach oben, damit die Sonderregel (bis zu zwei Zeilen) ins Fach passt
     this.zielLabel.visible = !boss;
-    this.targetText.y = boss ? 86 : 105;
+    this.targetText.y = boss ? 92 : 112;
     if (boss) this.bossDesc.text = boss.description + (r?.debuffSuit ? ` (${SUIT_NAMES[r.debuffSuit]})` : '');
     const reward = blindReward(run.ante, blind, run.rules.smallBlindReward);
     this.rewardText.text = reward > 0 ? t('Belohnung {money}', { money: '$'.repeat(reward) }) : t('Keine Belohnung');
@@ -511,6 +505,7 @@ export class Game {
     this.moneyText.text = '$' + run.money;
     this.anteText.text = `${run.ante}/${FINAL_ANTE}`;
     this.roundText.text = String((run.ante - 1) * 3 + run.blindIndex + 1);
+    drawAntePips(this.antePips, run.ante, FINAL_ANTE, run.blindIndex);
     this.seedText.text = 'Seed ' + run.seed;
     this.jokerCount.text = `Joker ${run.jokers.length}/${jokerCapacity(run)}`;
     this.consLabel.text = `Consumables ${run.consumables.length}/${consumableCapacity(run)}`;
@@ -549,6 +544,7 @@ export class Game {
 
   private setHandDisplay(name: string, level: number | null, chips: number, mult: number) {
     this.handName.text = name;
+    this.handHint.visible = !name;
     this.handLevel.text = level ? `Level ${level}` : '';
     this.chipsText.text = fmt(chips);
     this.multText.text = fmtMult(mult);
@@ -1155,6 +1151,7 @@ export class Game {
     st.style.fontSize = 40;
     st.text = fmt(v);
     if (st.width > SCORE_MAX_W) st.style.fontSize = Math.max(18, Math.floor(40 * SCORE_MAX_W / st.width));
+    drawScoreBar(this.scoreBar, this.scoreTarget > 0 ? v / this.scoreTarget : 0);
   }
 
   private async discard() {

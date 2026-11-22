@@ -8,6 +8,14 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.2': {
+    title: 'New Sidebar',
+    items: [
+      'New: The left side of the game is clearer. A bar under Round Score shows how far you are from the target and turns gold once you reach it.',
+      'New: Ante and Round share one panel, and below them a strip of eight markers shows how far your run has come.',
+      'Improved: Hands, Discards and Money have colored stripes, Chips and Mult are labeled, and the Menu, Run Info and Deck buttons sit in one row.',
+    ],
+  },
   '0.11.1': {
     title: 'One Sort Button',
     items: [
