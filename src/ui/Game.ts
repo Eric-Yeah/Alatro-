@@ -25,8 +25,8 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
-import { cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen } from '../settings';
-import { SPEED_STEPS, type BgMood } from '../data/juice';
+import { tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen } from '../settings';
+import { type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
 import { collectionProgress, entryName, loadDiscovered, unseenKeys } from '../collection';
 import { nearMiss, newKeys, overkill } from '../report';
@@ -183,7 +183,6 @@ export class Game {
   private playBtn!: Button;
   private discardBtn!: Button;
   private sortBtn!: Button;
-  private speedBtn!: Button;
 
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
     // Tippen während einer laufenden Animation beschleunigt sie kurz
@@ -352,13 +351,10 @@ export class Game {
     const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
     infoBtn.position.set(270, 800);
     tb.addChild(menuBtn, infoBtn);
-    this.speedBtn = new Button('', 200, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
-    this.refreshSpeedBtn();
-    this.speedBtn.position.set(120, 872);
     // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
     const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
-    deckBtn.position.set(290, 872);
-    tb.addChild(this.speedBtn, deckBtn);
+    deckBtn.position.set(185, 872);
+    tb.addChild(deckBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -1768,7 +1764,6 @@ export class Game {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
     this.hooks.setMood('menu');
-    this.refreshSpeedBtn();
     this.clearOverlay();
     this.closeTooltip();
     // Ist der Home Bildschirm schon sichtbar (Rückkehr aus einem Nebenmenü), bleibt er stehen
@@ -1805,11 +1800,6 @@ export class Game {
   private hideHome() {
     this.setTableVisible(true);
     for (const c of [...this.homeLayer.children]) c.destroy({ children: true });
-  }
-
-  private refreshSpeedBtn() {
-    const st = SPEED_STEPS.find((x) => x.id === getSettings().speed) ?? SPEED_STEPS[0];
-    this.speedBtn.setText(t('Tempo {name}', { name: st.name }));
   }
 
   private showTutorial() {

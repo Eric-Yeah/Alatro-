@@ -179,7 +179,7 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 
 ## Tempo, Anleitung und Patch Notes (Version 0.2.0)
 
-* **Tempo Knopf:** In der Seitenleiste schaltet `cycleSpeed()` (`src/settings.ts`) die Stufen aus `SPEED_STEPS` (`src/data/juice.ts`, 1x bis 10x) weiter. Das Tempo selbst wirkt wie in M6 beschrieben in `tween` und `wait`.
+* **Tempo:** Seit 0.11.4 nur in den Optionen (Bereich Spiel, Stufen aus `SPEED_STEPS` in `src/data/juice.ts`, 1x bis 10x), der Tempo Knopf am Tisch ist entfernt. Das Tempo selbst wirkt wie in M6 beschrieben in `tween` und `wait`.
 * **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/patchnotes.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
 * **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit den Patch Notes). Bei Regeländerungen die Texte mitpflegen.
 

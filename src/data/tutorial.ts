@@ -121,7 +121,7 @@ export const TUTORIAL: readonly TutorialPage[] = [
       '* Prüfe vor jedem Boss Blind seine Sonderregel und passe deine Hand darauf an.',
       '* Ordne Jokers sinnvoll: Mult Boni zuerst, Multiplikatoren danach.',
       '* Nutze Discards, um nach starken Händen zu suchen, statt schwache Hände zu spielen.',
-      'Wenn dir die Animationen zu lang dauern, schalte in den Optionen oder mit dem Tempo Knopf am Tisch auf ein schnelleres Tempo.',
+      'Wenn dir die Animationen zu lang dauern, schalte in den Optionen unter Spiel auf ein schnelleres Tempo.',
     ],
   },
   {

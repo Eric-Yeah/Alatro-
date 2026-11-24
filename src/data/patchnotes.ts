@@ -8,6 +8,14 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.4',
+    date: '24.11.2026',
+    title: 'Tempo nur in den Optionen',
+    items: [
+      'Änderung: Der Tempo Knopf am Spieltisch ist weg. Das Animationstempo stellst Du jetzt nur noch in den Optionen unter Spiel ein.',
+    ],
+  },
+  {
     version: '0.11.3',
     date: '24.11.2026',
     title: 'Neue Optionen',

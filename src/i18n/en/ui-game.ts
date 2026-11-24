@@ -70,7 +70,6 @@ const dict: Record<string, string> = {
   '0 bis {n} Zeichen, leer lassen für einen Zufalls Seed': '0 to {n} characters, leave empty for a random seed',
 
   // Optionen
-  'Tempo {name}': 'Speed {name}',
   'An': 'On',
   'Aus': 'Off',
   'CRT Effekt': 'CRT effect',

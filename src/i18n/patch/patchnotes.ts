@@ -8,6 +8,12 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.4': {
+    title: 'Speed Only in Options',
+    items: [
+      'Changed: The speed button at the table is gone. You now set the animation speed only in the options under Game.',
+    ],
+  },
   '0.11.3': {
     title: 'New Options',
     items: [
