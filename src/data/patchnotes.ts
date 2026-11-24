@@ -8,6 +8,15 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.3',
+    date: '24.11.2026',
+    title: 'Neue Optionen',
+    items: [
+      'Neu: Die Optionen sind ein eigener Bildschirm statt eines Fensters. Links vier Bereiche (Anzeige, Ton, Spiel, Daten), rechts die Einstellungen als übersichtliche Karten.',
+      'Neu: Echte Schalter für An und Aus, Schieberegler für Lautstärke und Musiklautstärke (ziehen oder antippen) und Auswahlleisten für Grafik, Kartenfarben, Musik, Tempo und Sprache.',
+    ],
+  },
+  {
     version: '0.11.2',
     date: '24.11.2026',
     title: 'Layout Korrekturen',

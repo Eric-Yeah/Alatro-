@@ -8,6 +8,13 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.3': {
+    title: 'New Options',
+    items: [
+      'New: Options are now a screen of their own instead of a window. Four sections on the left (Display, Sound, Game, Data), the settings as clear cards on the right.',
+      'New: Real switches for on and off, sliders for volume and music volume (drag or tap) and selection bars for graphics, card colors, music, speed and language.',
+    ],
+  },
   '0.11.2': {
     title: 'Layout Fixes',
     items: [
