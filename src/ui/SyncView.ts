@@ -8,7 +8,7 @@ import { C } from './theme';
 import { Button, label, wrapText } from './widgets';
 
 export const SYNC_W = 800;
-export const SYNC_H = 760;
+export const SYNC_H = 790;
 
 type Screen = 'main' | 'enter' | 'show' | 'conflict';
 
@@ -115,28 +115,36 @@ export function buildSync(box: Container, onBack: () => void) {
     }
 
     if (screen === 'enter') {
+      // Aufbau von oben nach unten ohne Überlappung: Hinweis, Codefeld, Meldung, Tasten (4 Reihen), Aktionen, Abbrechen
       const hint = wrapText(t('Gib den Code ein, der auf dem anderen Gerät unter "Geräte koppeln" steht.'), W - 100, 22, C.textDim, 'center');
-      hint.position.set(W / 2, 110);
+      hint.position.set(W / 2, 96);
       dyn.addChild(hint);
-      const shown = entry.padEnd(SYNC.codeLength, '·');
-      const g = new Graphics().roundRect(40, 170, W - 80, 90, 12).fill(0x141d29).stroke({ width: 3, color: C.panelLine });
+      // Immer alle Gruppen zeigen (leere Stellen als Punkte), sonst springt das Feld beim Tippen.
+      // formatCode würde die Platzhalter verwerfen, darum wird von Hand in Gruppen geteilt.
+      const g = new Graphics().roundRect(40, 160, W - 80, 80, 12).fill(0x141d29).stroke({ width: 3, color: C.panelLine });
       dyn.addChild(g);
-      const groups = formatCode(shown.replace(/·/g, '_')).split('-');
-      groups.forEach((gr, i) => {
-        const tx = label(gr.replace(/_/g, '·'), 36, entry.length >= i * SYNC.codeGroup && entry.length > 0 ? C.text : C.textDim);
-        tx.position.set(W / 2 + (i - (groups.length - 1) / 2) * 140, 215);
+      const nGroups = Math.ceil(SYNC.codeLength / SYNC.codeGroup);
+      for (let i = 0; i < nGroups; i++) {
+        const typed = entry.slice(i * SYNC.codeGroup, (i + 1) * SYNC.codeGroup);
+        const txt = typed.padEnd(SYNC.codeGroup, '_');
+        const tx = label(txt, 34, typed.length > 0 ? C.text : C.textDim);
+        tx.position.set(W / 2 + (i - (nGroups - 1) / 2) * 140, 200);
         dyn.addChild(tx);
-      });
+      }
+      const KEY = 66;
+      const KEY_STEP = 80;
+      const KEY_COLS = 8;
       [...SYNC.codeAlphabet].forEach((ch, i) => {
-        const b = new Button(ch, 70, 70, 0x3b5068, () => { entry = normalizeCode(entry + ch).slice(0, SYNC.codeLength); render(); }, 30);
-        b.position.set(W / 2 + ((i % 8) - 3.5) * 84, 330 + Math.floor(i / 8) * 84);
+        const b = new Button(ch, KEY, KEY, 0x3b5068, () => { entry = normalizeCode(entry + ch).slice(0, SYNC.codeLength); render(); }, 30);
+        b.position.set(W / 2 + ((i % KEY_COLS) - (KEY_COLS - 1) / 2) * KEY_STEP, 345 + Math.floor(i / KEY_COLS) * KEY_STEP);
         b.enabled = entry.length < SYNC.codeLength && !busy;
         dyn.addChild(b);
       });
-      const del = new Button(t('Löschen'), 180, 62, C.mult, () => { entry = entry.slice(0, -1); render(); }, 24);
-      del.position.set(W / 2 - 220, 690 - 70);
+      const ACT_Y = 665;
+      const del = new Button(t('Löschen'), 180, 56, C.mult, () => { entry = entry.slice(0, -1); render(); }, 24);
+      del.position.set(W / 2 - 200, ACT_Y);
       del.enabled = entry.length > 0;
-      const paste = new Button(t('Einfügen'), 180, 62, 0x3b5068, async () => {
+      const paste = new Button(t('Einfügen'), 180, 56, 0x3b5068, async () => {
         try {
           entry = normalizeCode(await navigator.clipboard.readText()).slice(0, SYNC.codeLength);
         } catch {
@@ -145,8 +153,8 @@ export function buildSync(box: Container, onBack: () => void) {
         }
         render();
       }, 24);
-      paste.position.set(W / 2, 690 - 70);
-      const ok = new Button(busy ? t('Moment …') : t('Koppeln'), 180, 62, C.green, () => run(async () => {
+      paste.position.set(W / 2, ACT_Y);
+      const ok = new Button(busy ? t('Moment …') : t('Koppeln'), 180, 56, C.green, () => run(async () => {
         const r = await syncManager.joinCode(entry);
         if (r?.status === 'conflict') {
           conflict = { local: r.local, remote: r.remote };
@@ -160,12 +168,14 @@ export function buildSync(box: Container, onBack: () => void) {
           if (syncManager.phase === 'netz') syncManager.uncouple();
         }
       }), 24);
-      ok.position.set(W / 2 + 220, 690 - 70);
+      ok.position.set(W / 2 + 200, ACT_Y);
       ok.enabled = isValidCode(entry) && !busy;
-      const back = new Button(t('Abbrechen'), 260, 56, 0x3b5068, () => { screen = 'main'; entry = ''; render(); }, 22);
-      back.position.set(W / 2, 700);
-      const msg = wrapText(notice || ' ', W - 100, 20, noticeColor, 'center');
-      msg.position.set(W / 2, 285);
+      const back = new Button(t('Abbrechen'), 260, 50, 0x3b5068, () => { screen = 'main'; entry = ''; render(); }, 22);
+      back.position.set(W / 2, 735);
+      // Meldung zwischen Codefeld und Tasten, auf eine Zeile begrenzt (längere Texte schrumpfen)
+      const msg = label(notice || ' ', 20, noticeColor);
+      msg.position.set(W / 2, 268);
+      if (msg.width > W - 100) msg.scale.set((W - 100) / msg.width);
       dyn.addChild(del, paste, ok, back, msg);
       return;
     }

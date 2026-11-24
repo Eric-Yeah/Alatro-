@@ -94,7 +94,7 @@ const dict: Record<string, string> = {
   'Auf diesem Gerät nicht verfügbar (z. B. iPad)': 'Not available on this device (e.g. iPad)',
   'Kartenfarben': 'Card colors',
   'Spielstand': 'Save data',
-  'Sichern, auf ein anderes Gerät übertragen und zurückladen': 'Back up and move to another device',
+  'Sichern, übertragen und zurückladen': 'Back up and move to another device',
   'Gekoppelt, der Stand wird abgeglichen': 'Linked, your progress is synced',
   'Einen Spielstand auf mehreren Geräten nutzen': 'Use one save on several devices',
   'Gekoppelt': 'Linked',

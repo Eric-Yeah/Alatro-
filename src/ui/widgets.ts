@@ -1,7 +1,7 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
 import { sfx } from './audio';
 import { haptics } from './haptics';
-import { C, FONT, FONT_BODY, STYLE, shade } from './theme';
+import { C, FONT, FONT_BODY, STYLE, VIEW_BLEED, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
 /** Helle Textfarben bekommen einen harten dunklen Schatten (ein Schriftpixel), wie bei Pixel Spielen. Dunkler Text bleibt ohne. */
@@ -134,7 +134,7 @@ export function wrapText(text: string, width: number, size = 16, color = C.text,
 /** Full-screen dimmer that blocks input below it. */
 export function overlay(w: number, h: number): Container {
   const c = new Container();
-  const dim = new Graphics().rect(0, 0, w, h).fill({ color: 0x070b11, alpha: 0.72 });
+  const dim = new Graphics().rect(-VIEW_BLEED, -VIEW_BLEED, w + 2 * VIEW_BLEED, h + 2 * VIEW_BLEED).fill({ color: 0x070b11, alpha: 0.72 });
   dim.eventMode = 'static';
   c.addChild(dim);
   c.alpha = 0;

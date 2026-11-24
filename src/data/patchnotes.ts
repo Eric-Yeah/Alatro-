@@ -8,6 +8,17 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.2',
+    date: '24.11.2026',
+    title: 'Layout Korrekturen',
+    items: [
+      'Fix: Neuer Run: Seed und Start Knopf überlappen nicht mehr, der Start Knopf liegt im Fenster.',
+      'Fix: Die Optionen haben mehr Abstand zwischen den Zeilen, Knöpfe und Texte stoßen nicht mehr aneinander.',
+      'Fix: Geräte koppeln: Die Tasten überdecken die Knöpfe Löschen, Einfügen und Koppeln nicht mehr, das Codefeld zeigt immer alle fünf Gruppen und springt beim Tippen nicht.',
+      'Fix: Bei breiten Fenstern (Mac, iPad quer) endet die Abdunklung hinter Fenstern nicht mehr an einer harten Kante.',
+    ],
+  },
+  {
     version: '0.11.1',
     date: '22.11.2026',
     title: 'Ein Sortierknopf',

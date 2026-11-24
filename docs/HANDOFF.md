@@ -2,6 +2,14 @@
 
 Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
+## Version 0.11.2: Layout Korrekturen
+
+* **Neuer Run:** Panel 950 hoch, Seed und Start mit Abstand (`showRunSetup` in `src/ui/Game.ts`).
+* **Optionen:** Zeilenabstand 64, Knopfhöhe 48, feine Trennlinien (Konstanten `OPT_ROW_GAP`, `OPT_ROW_Y0`, `OPT_BTN_H` oben in `Game.ts`). Der Hinweistext bei "Spielstand" ist kürzer.
+* **Geräte koppeln, Code eingeben:** Tasten und Aktionsreihe überlappten (`src/ui/SyncView.ts`), Fenster jetzt 790 hoch. Das Codefeld zeigte nur getippte Gruppen, weil `formatCode` Platzhalter verwirft, jetzt feste fünf Gruppen mit `_`.
+* **Harte Kante bei breiten Fenstern:** Die Abdunklung (`overlay`, Home `blocker`) deckte nur 1440 mal 1000 ab. Sie reicht jetzt um `VIEW_BLEED` (`theme.ts`) darüber hinaus. Neue Vollbild Flächen immer mit `VIEW_BLEED` anlegen.
+* **Als Nächstes:** Auf dem iPad prüfen: Optionen und Koppeln Tastatur, Treffsicherheit der Tasten (66 Punkte).
+
 ## Version 0.11.1: ein Sortierknopf
 
 * Die zwei Knöpfe Rank und Suit unter den Handkarten sind ein Knopf (`sortBtn` in `src/ui/Game.ts`, `cycleSort`). Jeder Tipp wechselt zwischen Rank und Suit, die Beschriftung zeigt die aktive Sortierung. Auf dem iPad prüfen: Größe und Position (Mitte zwischen Play Hand und Discard).

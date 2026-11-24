@@ -64,7 +64,7 @@ import { levelUpBlock } from './levelUpView';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_BLEED, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
 import { languageButton, languageRowTexts } from './langSwitch';
 import { scoreTier, xMultShake } from './juiceMath';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
@@ -72,6 +72,10 @@ import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
+/** Optionen: Zeilenabstand, erste Zeile und Knopfhöhe (Knopf plus Unterkante müssen unter dem Abstand bleiben) */
+const OPT_ROW_GAP = 64;
+const OPT_ROW_Y0 = 125;
+const OPT_BTN_H = 48;
 const MX = 850; // centre of the play area
 const HAND_Y = 775;
 const PLAY_Y = 450;
@@ -241,7 +245,7 @@ export class Game {
     const tb = this.table;
 
     // Invisible catcher: tapping empty space closes tooltips
-    const catcher = new Graphics().rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0, alpha: 0.001 });
+    const catcher = new Graphics().rect(-VIEW_BLEED, -VIEW_BLEED, VIEW_W + 2 * VIEW_BLEED, VIEW_H + 2 * VIEW_BLEED).fill({ color: 0, alpha: 0.001 });
     catcher.eventMode = 'static';
     catcher.on('pointertap', () => this.closeTooltip());
     tb.addChild(catcher);
@@ -1580,7 +1584,7 @@ export class Game {
     let stakeIdx = prefStake >= 0 ? prefStake : 0;
     let level = clampScale(pref.level ?? recommended);
     const W = 800;
-    const { box } = this.modal(W, 880, C.panelDark);
+    const { box } = this.modal(W, 950, C.panelDark);
     const head = label(t('Neuer Run'), 44, C.text);
     head.position.set(W / 2, 48);
     const backBtn = new Button(t('Zurück'), 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
@@ -1702,17 +1706,17 @@ export class Game {
         body(parts.join('   ·   '), 690, 17, wonHere || seal ? C.money : C.textDim, 700);
       }
       const seedLbl = label('Seed', 20, C.textDim);
-      seedLbl.position.set(W / 2, 748);
+      seedLbl.position.set(W / 2, 756);
       const seedBtn = new Button(this.setupSeed || t('Zufällig'), 300, 52, 0x3b5068, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.showSeedEntry();
       }, 24);
-      seedBtn.position.set(W / 2, 790);
+      seedBtn.position.set(W / 2, 800);
       const start = new Button(t('Start'), 300, 66, C.chips, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.beginNewRun(deck.id, stakeId !== undefined ? { stakeId } : { level: levelOut });
       }, 30);
-      start.position.set(W / 2, 850);
+      start.position.set(W / 2, 880);
       content.addChild(seedLbl, seedBtn, start);
     };
     render();
@@ -1829,32 +1833,34 @@ export class Game {
   /** Optionen: werden sofort gespeichert und angewendet */
   private showOptions() {
     const W = 660;
-    const { box } = this.modal(W, 1030, C.panelDark);
+    const { box } = this.modal(W, 1040, C.panelDark);
     const head = label(t('Optionen'), 44, C.text);
-    head.position.set(W / 2, 56);
+    head.position.set(W / 2, 52);
     box.addChild(head);
     const dyn = new Container();
     box.addChild(dyn);
     const render = () => {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       const st = getSettings();
-      const gap = 60;
+      const gap = OPT_ROW_GAP;
       /** maxW: Platz bis zum Knopf rechts, längere Hinweise (englisch oft länger) schrumpfen */
       const row = (i: number, name: string, desc: string, maxW = 320) => {
-        const y = 140 + i * gap;
-        const n = label(name, 28, C.text);
+        const y = OPT_ROW_Y0 + i * gap;
+        const n = label(name, 26, C.text);
         n.anchor.set(0, 0.5);
-        n.position.set(50, y - 12);
+        n.position.set(50, y - 13);
         const d = label(desc, 16, C.textDim, { fontWeight: '600' });
         d.anchor.set(0, 0.5);
-        d.position.set(50, y + 20);
+        d.position.set(50, y + 15);
         if (d.width > maxW) d.scale.set(maxW / d.width);
-        dyn.addChild(n, d);
+        // feine Trennlinie zwischen den Zeilen
+        const sep = new Graphics().rect(40, y + gap / 2, W - 80, 1.5).fill({ color: C.holo, alpha: 0.12 });
+        dyn.addChild(sep, n, d);
         return y;
       };
       const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
         const y = row(i, name, desc, 410);
-        const b = new Button(on ? t('An') : t('Aus'), 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
+        const b = new Button(on ? t('An') : t('Aus'), 130, OPT_BTN_H, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
         b.position.set(W - 115, y);
         dyn.addChild(b);
       };
@@ -1864,34 +1870,34 @@ export class Game {
         this.fx.shake(6);
       });
       const vy = row(2, t('Lautstärke'), t('{n} Prozent', { n: Math.round(st.volume * 100) }));
-      const minus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      const minus = new Button('−', 60, OPT_BTN_H, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       minus.position.set(W - 175, vy);
-      const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
+      const plus = new Button('+', 60, OPT_BTN_H, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
       plus.position.set(W - 95, vy);
       const musicIds = [MUSIC_MIX, ...TRACK_IDS, MUSIC_OFF];
       const mi = Math.max(0, musicIds.indexOf(st.music));
       const mt = getTrack(st.music);
       const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : t('Aus');
       const my = row(3, t('Musik'), st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : t('Ruhige Hintergrundmusik, aus'));
-      const music = new Button(musicName, 230, 56, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
+      const music = new Button(musicName, 230, OPT_BTN_H, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
         updateSettings({ music: musicIds[(mi + 1) % musicIds.length] });
         render();
       }, 22);
       music.position.set(W - 170, my);
       const muy = row(4, t('Musiklautstärke'), t('{n} Prozent', { n: Math.round(st.musicVolume * 100) }));
-      const mMinus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume - VOLUME_STEP) }); render(); }, 30);
+      const mMinus = new Button('−', 60, OPT_BTN_H, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume - VOLUME_STEP) }); render(); }, 30);
       mMinus.position.set(W - 175, muy);
-      const mPlus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume + VOLUME_STEP) }); render(); }, 30);
+      const mPlus = new Button('+', 60, OPT_BTN_H, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume + VOLUME_STEP) }); render(); }, 30);
       mPlus.position.set(W - 95, muy);
       const sy = row(5, t('Animationstempo'), t('Zählen, Karten und Übergänge'));
       const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
-      const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x3b5068, () => {
+      const speed = new Button(SPEED_STEPS[si].name, 190, OPT_BTN_H, si ? C.chips : 0x3b5068, () => {
         updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
         render();
       }, 22);
       speed.position.set(W - 150, sy);
       const qy = row(6, t('Grafik'), st.quality === 'sparsam' ? t('30 FPS, ohne CRT und Edition Glanz') : t('Volle Effekte'));
-      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
+      const quality = new Button(QUALITY_NAMES[st.quality], 190, OPT_BTN_H, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
         updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
         render();
       }, 22);
@@ -1903,24 +1909,24 @@ export class Game {
         else haptics.victory();
       });
       const cpy = row(9, t('Kartenfarben'), CARD_PALETTES[st.cardPalette].description);
-      const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, 56, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
+      const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, OPT_BTN_H, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
         const at = Math.max(0, CARD_PALETTE_IDS.indexOf(st.cardPalette));
         updateSettings({ cardPalette: CARD_PALETTE_IDS[(at + 1) % CARD_PALETTE_IDS.length] });
         render();
       }, 22);
       cardPal.position.set(W - 170, cpy);
-      const bky = row(10, t('Spielstand'), t('Sichern, auf ein anderes Gerät übertragen und zurückladen'));
-      const backup = new Button(t('Sichern'), 230, 56, C.chips, () => this.showBackup(), 22);
+      const bky = row(10, t('Spielstand'), t('Sichern, übertragen und zurückladen'));
+      const backup = new Button(t('Sichern'), 230, OPT_BTN_H, C.chips, () => this.showBackup(), 22);
       backup.position.set(W - 170, bky);
       const cly = row(11, t('Geräte koppeln'), syncManager.isCoupled() ? t('Gekoppelt, der Stand wird abgeglichen') : t('Einen Spielstand auf mehreren Geräten nutzen'));
-      const cloud = new Button(syncManager.isCoupled() ? t('Gekoppelt') : t('Koppeln'), 230, 56, syncManager.isCoupled() ? C.green : C.chips, () => this.showSync(), 22);
+      const cloud = new Button(syncManager.isCoupled() ? t('Gekoppelt') : t('Koppeln'), 230, OPT_BTN_H, syncManager.isCoupled() ? C.green : C.chips, () => this.showSync(), 22);
       cloud.position.set(W - 170, cly);
       const lr = languageRowTexts();
       const lgy = row(12, lr.name, lr.desc);
-      const lang = languageButton(230, 56);
+      const lang = languageButton(230, OPT_BTN_H);
       lang.position.set(W - 170, lgy);
       const back = new Button(t('Zurück'), 300, 70, C.chips, () => this.showMainMenu(), 28);
-      back.position.set(W / 2, 940);
+      back.position.set(W / 2, 985);
       dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, backup, cloud, lang, back);
     };
     render();

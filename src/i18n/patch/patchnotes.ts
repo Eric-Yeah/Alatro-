@@ -8,6 +8,15 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.2': {
+    title: 'Layout Fixes',
+    items: [
+      'Fix: New Run: the Seed and Start buttons no longer overlap, and the Start button sits inside the window.',
+      'Fix: Options have more space between rows, so buttons and texts no longer touch.',
+      'Fix: Link Devices: the keys no longer cover the Delete, Paste and Link buttons, and the code field always shows all five groups instead of jumping while you type.',
+      'Fix: On wide windows (Mac, iPad landscape) the dimming behind windows no longer ends at a hard edge.',
+    ],
+  },
   '0.11.1': {
     title: 'One Sort Button',
     items: [

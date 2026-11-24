@@ -5,6 +5,8 @@ import { getLang } from '../i18n';
 
 export const VIEW_W = 1440;
 export const VIEW_H = 1000;
+/** Wie weit Abdunklungen über das Spielfeld hinausreichen, damit bei anderem Seitenverhältnis (Fenster, iPad quer) keine harte Kante entsteht */
+export const VIEW_BLEED = 4000;
 
 export const C = {
   bg: 0x14275a,
