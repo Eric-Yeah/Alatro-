@@ -1,7 +1,7 @@
 import { Container, Sprite, Text, Ticker } from 'pixi.js';
 import { QUALITY_PROFILE } from '../data/juice';
 import {
-  ABERRATION_MS, AURA, CALLOUTS, CALLOUT_FX, FIREWORK, FX_COLORS, HEAT, IMPACT, ORB, RAIN, POINTER, type Callout,
+  ABERRATION_MS, AURA, CALLOUTS, CALLOUT_FX, FIREWORK, FX_COLORS, HEAT, IMPACT, ORB, RAIN, type Callout,
 } from '../data/spektakel';
 import { getSettings, onSettings, speedFactor } from '../settings';
 import { t } from '../i18n';
@@ -11,7 +11,7 @@ import { Motes, Orbs, Particles, glowTexture } from './particles';
 import { PointerFx, pointer, setPointerSpace } from './pointerFx';
 import { addHeat, calloutFor, coolHeat, heatBoost, nextDensity, orbCount, totalFx } from './spektakelMath';
 import { sfx } from './audio';
-import { VIEW_H, VIEW_W, FONT } from './theme';
+import { VIEW_W, FONT } from './theme';
 import { easeOutBack } from './tween';
 
 // Fassade der Grafikstufe Supernova. Das Spiel ruft nur diese Methoden auf, alle tun nichts, solange die Stufe nicht gewählt ist.
@@ -38,7 +38,7 @@ class Spektakel {
   private readonly top = new Particles();
   private readonly orbs = new Orbs(this.fx);
   private readonly motes = new Motes();
-  private readonly pointerFx = new PointerFx(this.top, () => this.enabled(), (x, y, c, s) => this.ringAt(this.top, x, y, c, s));
+  private readonly pointerFx = new PointerFx(this.top, () => this.enabled());
   private readonly callouts: CalloutAnim[] = [];
   private readonly auras: Aura[] = [];
   private readonly delayed: Delayed[] = [];
@@ -294,11 +294,8 @@ class Spektakel {
   /** Ziel des Blinds erreicht */
   goal(at: P) {
     if (!this.enabled()) return;
-    this.ringAt(this.fx, at.x, at.y, FX_COLORS.goal, 2.4);
-    this.ringAt(this.fx, at.x, at.y, 0xffffff, 1.4);
     this.burst(at.x, at.y, [FX_COLORS.goal, 0xffffff, FX_COLORS.money], 30, [160, 420], [500, 900], 200, 18);
     this.confetti(at, 36);
-    this.impact(at, IMPACT.goal);
     this.kickAberration(0.003);
     this.warm(0.2, true);
   }
@@ -311,7 +308,6 @@ class Spektakel {
     for (let w = 0; w < waves; w++) {
       this.later((w / waves) * RAIN.spreadMs, () => this.rain(Math.round(n / waves)));
     }
-    this.impact({ x: VIEW_W / 2, y: VIEW_H / 2 }, IMPACT.won);
     this.kickAberration(0.005);
     this.warm(0.5, true);
   }
@@ -331,7 +327,6 @@ class Spektakel {
   select(at: P, on: boolean) {
     if (!this.enabled()) return;
     if (on) {
-      this.ringAt(this.fx, at.x, at.y, FX_COLORS.holo, AURA.select.ring);
       this.burst(at.x, at.y - 30, [FX_COLORS.holo, 0xffffff, FX_COLORS.money], AURA.select.sparks, [80, 240], [280, 520], 0, 14);
     } else {
       this.burst(at.x, at.y, [FX_COLORS.violet], 5, [40, 120], [220, 380], 0, 10);
@@ -445,9 +440,6 @@ class Spektakel {
     return this.heat;
   }
 
-  get tapRing(): number {
-    return POINTER.tapRing;
-  }
 }
 
 export const spektakel = new Spektakel();

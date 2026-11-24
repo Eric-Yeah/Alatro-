@@ -119,7 +119,7 @@ const EN: Record<string, EnPage> = {
       '* Check the special rule before every Boss Blind and adapt your hand to it.',
       '* Order your Jokers sensibly: Mult bonuses first, multipliers after.',
       '* Use Discards to dig for strong hands instead of playing weak ones.',
-      'If the animations take too long, switch to a faster speed in the options or with the speed button at the table.',
+      'If the animations take too long, switch to a faster speed in the options under Game.',
     ],
   },
   schwierigkeit: {

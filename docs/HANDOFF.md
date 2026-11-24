@@ -1,13 +1,36 @@
-# Übergabe: Stand nach der Grafikstufe Supernova (Version 0.12.0)
+# Übergabe: Stand nach der Grafikstufe Supernova und den neuen Optionen (Version 0.12.1)
 
 Stand: 24.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
+## Version 0.12.1: Supernova ruhiger, Menü Überarbeitung zusammengeführt
+
+* Der Branch `claude/amazing-allen-o41jfv` (0.11.2 bis 0.11.5: Optionen als eigener Bildschirm, kein Tempo und kein Deck Knopf in der Seitenleiste, Layout Korrekturen) ist in den Arbeitsbranch gemerged. Die Optionen (`src/ui/OptionsView.ts`) bieten Grafik jetzt mit drei Stufen.
+* Supernova: keine Ringe mehr beim Tippen, Wählen und Ziel erreicht, kein großer Kreis am Rundenende, keine Zeigerneigung der Karten, Schweben schwächer (0,6). Orbs, Funken, Konfetti, Callouts, Hintergrund und Staubwolke bleiben.
+
 ## Version 0.12.0: Grafikstufe Supernova
 
-* Dritte Grafikstufe in den Optionen (Sparsam, Voll, Supernova). Supernova ist Voll plus Spektakel: Orbs von Karte oder Joker zur Chips und Mult Anzeige, Schockwellen bei X Mult, Callout Wörter (Funke, Flamme, Komet, Supernova) und Feuerwerk bei großen Händen, Konfetti bei Ziel und gewonnener Runde, Sternenstaub Spur am Zeiger, Tipp Ringe, Karten neigen sich zum Zeiger, Funken Aura um gewählte Karten, Glühwürmchen, Hintergrund mit Nebel, Polarlicht, Sternschnuppen, Zeigerleuchten und Schockwellen, Hitze Aufbau, Zoom Stoß und CRT Farbversatz.
+* Dritte Grafikstufe in den Optionen (Sparsam, Voll, Supernova). Supernova ist Voll plus Spektakel: Orbs von Karte oder Joker zur Chips und Mult Anzeige, Schockwellen bei X Mult, Callout Wörter (Funke, Flamme, Komet, Supernova) und Feuerwerk bei großen Händen, Konfetti bei Ziel und gewonnener Runde, Sternenstaub Spur am Zeiger, Tipp Funken, Funken Aura um gewählte Karten, Glühwürmchen, Hintergrund mit Nebel, Polarlicht, Sternschnuppen, Zeigerleuchten und Schockwellen, Hitze Aufbau, Zoom Stoß und CRT Farbversatz.
 * **Wo:** Plan `docs/supernova-plan.md`, Zahlen `src/data/spektakel.ts`, Rechnung `src/ui/spektakelMath.ts` (getestet), Partikel `src/ui/particles.ts`, Zeiger `src/ui/pointerFx.ts`, Fassade `src/ui/spektakel.ts`, Einbau in `Game.ts` (Suche nach `spektakel.`), Shader Zusatz in `Background.ts` (`uFx`), `crt.ts` (`setPunch`), Bühne `stageFx.ts` (`punch`, Behälter `world` in `Game`). Einzelheiten und offene Punkte: `AUDIT.md` O113 bis O118.
 * **Neue Effekte anlegen:** Methode in `Spektakel` (Fassade) mit `if (!this.enabled()) return;`, Zahlen nach `data/spektakel.ts`, Aufruf im Spiel hinter `spektakel.enabled()`. Neue Texte mit `t()` und Eintrag in `src/i18n/en/`.
 * **Als Nächstes:** Auf dem iPad prüfen: Bildrate mit FPS Anzeige in Supernova (Dichte Regler, siehe O113), ob der Zoom Stoß und der Farbversatz angenehm sind (`TOTAL_FX`), Lesbarkeit der Callouts, ob die Zeigerspur beim Spielen stört.
+
+## Version 0.11.5: aufgeräumte Seitenleiste
+
+* Der Deck Knopf der Seitenleiste ist entfernt (Deck Ansicht über Stapel, Blind Auswahl, Run Info). Die Felder links liegen mit festem Abstand von 20 Punkten, die Zahlen stehen in `SIDE` oben in `src/ui/Game.ts`. Im Shop gibt es keinen direkten Deck Zugang mehr außer über Run Info.
+
+## Version 0.11.3: Optionen als eigener Bildschirm
+
+* `src/ui/OptionsView.ts` (`buildOptions`): Vollbild anstelle des Home Bildschirms (`Game.showOptions` leert `homeLayer`, Zurück baut Home neu). Links Seitenleiste mit vier Bereichen (Anzeige, Ton, Spiel, Daten) und Astrolabium als Zierde, rechts Karten je Einstellung. Der gewählte Bereich bleibt in `lastTab` erhalten. Sichern und Koppeln öffnen weiter als Fenster darüber.
+* Bedienelemente in `src/ui/optionWidgets.ts`: `switchToggle`, `slider` (Stufen `VOLUME_STEP`, Ziehen über `globalpointermove`), `segmented`. Zahlen in `src/data/optionsLayout.ts`. Neue Einstellung: im passenden Bereich in `renderTab` eine Zeile ergänzen, Texte mit `t()` und Eintrag in `src/i18n/en/ui-options.ts`.
+* **Als Nächstes:** Auf dem iPad prüfen: Ziehen der Schieberegler (Touch), Größe der Knöpfe, ob die rechte Fläche bei Bereichen mit wenigen Zeilen zu leer wirkt.
+
+## Version 0.11.2: Layout Korrekturen
+
+* **Neuer Run:** Panel 950 hoch, Seed und Start mit Abstand (`showRunSetup` in `src/ui/Game.ts`).
+* **Optionen:** in 0.11.3 durch einen eigenen Bildschirm ersetzt.
+* **Geräte koppeln, Code eingeben:** Tasten und Aktionsreihe überlappten (`src/ui/SyncView.ts`), Fenster jetzt 790 hoch. Das Codefeld zeigte nur getippte Gruppen, weil `formatCode` Platzhalter verwirft, jetzt feste fünf Gruppen mit `_`.
+* **Harte Kante bei breiten Fenstern:** Die Abdunklung (`overlay`, Home `blocker`) deckte nur 1440 mal 1000 ab. Sie reicht jetzt um `VIEW_BLEED` (`theme.ts`) darüber hinaus. Neue Vollbild Flächen immer mit `VIEW_BLEED` anlegen.
+* **Als Nächstes:** Auf dem iPad prüfen: Optionen und Koppeln Tastatur, Treffsicherheit der Tasten (66 Punkte).
 
 ## Version 0.11.1: ein Sortierknopf
 
@@ -28,7 +51,7 @@ Stand: 24.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/
 
 * **Deutsch und Englisch:** Wechsel in den Optionen ("Sprache"), die App lädt neu. Konzept: der deutsche Text ist der Schlüssel, `t('Text')` aus `src/i18n/index.ts`, Wörterbücher in `src/i18n/en/*.ts` (werden automatisch geladen). Inhalte aus `src/data/` (Jokers, Consumables, Erfolge, Einführung, Patch Notes usw.) werden bei Englisch beim Start durch Dateien in `src/i18n/patch/*.ts` an Ort und Stelle umgeschrieben (`applyDataLanguage`, `boot.ts`). Tests: `i18n.test.ts` (jeder `t()` Aufruf hat einen Eintrag), `dups.test.ts`, `contentEnA.test.ts`, `contentEnB.test.ts`. **Neuer sichtbarer Text:** immer `t('...')` und Eintrag in `src/i18n/en/`, neue Inhalte mit ID in den passenden Patch ergänzen. Einzelheiten, Begriffe und offene Punkte: `AUDIT.md`, Abschnitte "Mehrsprachigkeit".
 * **Karten schweben, Austeilen und Einziehen:** `src/ui/cardMotion.ts`, `cardMotionMath.ts`, `dealAnim.ts`, Zahlen `src/data/cardMotion.ts`. Feintuning auf dem iPad (siehe `AUDIT.md`, "Kartenbewegung").
-* **Deck Ansicht und Level up Vorschau:** `src/ui/DeckView.ts`, `levelUpView.ts`, reine Daten `deckLayout` und `levelUpPreview` in `src/core/runInfo.ts`. Zugang: Stapel antippen, Knopf "Deck" in der Seitenleiste, Blind Auswahl, Run Info.
+* **Deck Ansicht und Level up Vorschau:** `src/ui/DeckView.ts`, `levelUpView.ts`, reine Daten `deckLayout` und `levelUpPreview` in `src/core/runInfo.ts`. Zugang: Stapel antippen, Blind Auswahl, Run Info (der Knopf in der Seitenleiste ist seit 0.11.5 entfernt).
 * **Münzklang:** `sfx.coin` und `sfx.coins` (`audio.ts`, Zahlen `src/data/coinSound.ts`), beim Einkassieren, Auszahlungszeilen, Joker Geld und Verkaufen.
 * **Joker Tausch im Pack:** bei vollen Slots bietet ein Joker Pack "Tauschen" (`canSwapJoker`, `swapJokerFromPack` in `core/game.ts`, Ansicht in `Game.showPack`). Der alte Joker wird verkauft.
 * **Als Nächstes:** Auf dem iPad prüfen: Gefühl und Bildrate des Schwebens und der Austeil Animation, Lesbarkeit der englischen Texte, Münzklang Lautstärke. Offen: Kaufen im Shop bei vollen Joker Slots (dort muss man weiter erst verkaufen), Browsersprache als Standard.
@@ -172,7 +195,7 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 
 ## Tempo, Anleitung und Patch Notes (Version 0.2.0)
 
-* **Tempo Knopf:** In der Seitenleiste schaltet `cycleSpeed()` (`src/settings.ts`) die Stufen aus `SPEED_STEPS` (`src/data/juice.ts`, 1x bis 10x) weiter. Das Tempo selbst wirkt wie in M6 beschrieben in `tween` und `wait`.
+* **Tempo:** Seit 0.11.4 nur in den Optionen (Bereich Spiel, Stufen aus `SPEED_STEPS` in `src/data/juice.ts`, 1x bis 10x), der Tempo Knopf am Tisch ist entfernt. Das Tempo selbst wirkt wie in M6 beschrieben in `tween` und `wait`.
 * **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/patchnotes.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
 * **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit den Patch Notes). Bei Regeländerungen die Texte mitpflegen.
 

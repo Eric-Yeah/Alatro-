@@ -2,7 +2,7 @@ import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
 import { CARD_PALETTE_IDS, type CardPaletteId } from './data/cardArt/cardPalettes';
 import { MUSIC_MIX, MUSIC_OFF, TRACK_IDS } from './data/music';
 import { isLang, setLang, type Lang } from './i18n';
-import { DEFAULT_SETTINGS, QUALITY_IDS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
+import { DEFAULT_SETTINGS, QUALITY_IDS, SPEED_STEPS, VOLUME_STEP, type Quality } from './data/juice';
 
 export interface Settings {
   crt: boolean;
@@ -104,14 +104,6 @@ export function updateSettings(patch: Partial<Settings>): Settings {
 export function onSettings(l: Listener): () => void {
   listeners.add(l);
   return () => listeners.delete(l);
-}
-
-/** Schaltet das Animationstempo eine Stufe weiter (nach der letzten wieder auf die erste) und gibt die neue Stufe zurück. */
-export function cycleSpeed(): SpeedStep {
-  const i = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === getSettings().speed));
-  const next = SPEED_STEPS[(i + 1) % SPEED_STEPS.length];
-  updateSettings({ speed: next.id });
-  return next;
 }
 
 const SEEN_KEY = 'alatro.patchSeen.v1';

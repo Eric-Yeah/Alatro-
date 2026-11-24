@@ -1,4 +1,4 @@
-import { CALLOUTS, DENSITY, HEAT, MOTES, ORB, PARTICLES, POINTER, TOTAL_FX, type Callout, type TotalFx } from '../data/spektakel';
+import { CALLOUTS, DENSITY, HEAT, MOTES, ORB, PARTICLES, TOTAL_FX, type Callout, type TotalFx } from '../data/spektakel';
 
 // Reine Rechnung für die Grafikstufe Supernova, ohne Pixi und ohne DOM (damit testbar).
 
@@ -113,24 +113,6 @@ export function calloutFor(ratio: number): Callout | null {
 /** Wirkung der Gesamtpunkte für eine Stufe (Index in SCORE_TIERS), außerhalb des Bereichs wird die nächste Stufe genommen */
 export function totalFx(tierIndex: number): TotalFx {
   return TOTAL_FX[clamp(Math.round(tierIndex), 0, TOTAL_FX.length - 1)];
-}
-
-/** Wirkung der Nähe des Zeigers auf eine Karte: Anheben, Drehung zum Zeiger, Vergrößerung (alles 0 außerhalb der Reichweite) */
-export function nearEffect(dx: number, dy: number): { k: number; lift: number; rot: number; scale: number } {
-  const n = POINTER.near;
-  const d = Math.hypot(dx, dy);
-  if (d >= n.radius) return { k: 0, lift: 0, rot: 0, scale: 0 };
-  const u = 1 - d / n.radius;
-  const k = u * u * (3 - 2 * u);
-  // Zeiger links der Karte (dx > 0): Oberkante neigt sich nach links, also gegen den Uhrzeigersinn
-  const side = clamp(dx / (n.radius * 0.5), -1, 1);
-  return { k, lift: -n.lift * k, rot: -side * n.lean * k, scale: n.scale * k };
-}
-
-/** Nächster Wert einer geglätteten Größe */
-export function ease(cur: number, target: number, rate: number = POINTER.near.ease): number {
-  const v = cur + (target - cur) * rate;
-  return Math.abs(v - target) < 0.0005 ? target : v;
 }
 
 /** Schub einer Mote weg vom Zeiger: Richtung und Stärke fallen zum Rand der Reichweite auf 0 */

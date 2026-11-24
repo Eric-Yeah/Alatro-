@@ -1,10 +1,8 @@
-import type { Container } from 'pixi.js';
 import { POINTER } from '../data/spektakel';
 import type { Particles } from './particles';
-import { nearEffect } from './spektakelMath';
 
-// Zeiger Effekte der Grafikstufe Supernova: Sternenstaub Spur hinter Finger und Maus, Ringe und Funken beim Tippen.
-// Dazu der gemeinsame Zeigerzustand, den Hintergrund, Staubwolke und Kartenneigung lesen.
+// Zeiger Effekte der Grafikstufe Supernova: Sternenstaub Spur hinter Finger und Maus, Funken beim Tippen (keine Ringe).
+// Dazu der gemeinsame Zeigerzustand, den Hintergrund und Staubwolke lesen.
 
 export const pointer = {
   /** Position in Spielfeld Koordinaten (Ebene der Partikel) */
@@ -25,15 +23,6 @@ export function setPointerSpace(fn: (x: number, y: number) => { x: number; y: nu
   toLocalFn = fn;
 }
 
-/** Wirkung des Zeigers auf ein Objekt (Karte, Joker): Anheben, Drehung, 0 wenn der Zeiger fehlt */
-export function nearFor(obj: Container): { k: number; lift: number; rot: number } {
-  if (!pointer.active || !toLocalFn) return { k: 0, lift: 0, rot: 0 };
-  const g = obj.getGlobalPosition();
-  const p = toLocalFn(g.x, g.y);
-  const e = nearEffect(p.x - pointer.x, p.y - pointer.y);
-  return { k: e.k, lift: e.lift, rot: e.rot };
-}
-
 export class PointerFx {
   private lastX = 0;
   private lastY = 0;
@@ -46,7 +35,6 @@ export class PointerFx {
   constructor(
     private particles: Particles,
     private enabled: () => boolean,
-    private ring: (x: number, y: number, color: number, size: number) => void,
   ) {}
 
   attach() {
@@ -142,7 +130,6 @@ export class PointerFx {
     this.lastY = p.y;
     this.hasLast = true;
     this.carry = 0;
-    this.ring(p.x, p.y, POINTER.trailColors[0], POINTER.tapRing);
     const n = this.particles.count(POINTER.tapSparks);
     const [v0, v1] = POINTER.tapSpeed;
     for (let i = 0; i < n; i++) {

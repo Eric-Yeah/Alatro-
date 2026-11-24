@@ -5,7 +5,7 @@ import { scaleName } from '../data/difficulty';
 import type { RunState } from '../core/run';
 import { cardBack } from './CardView';
 import { t } from '../i18n';
-import { C, VIEW_H, VIEW_W, fmt } from './theme';
+import { C, VIEW_BLEED, VIEW_H, VIEW_W, fmt } from './theme';
 import { easeOutCubic, loop, tween } from './tween';
 import { buildTitleCards } from './TitleCards';
 import { Button, label } from './widgets';
@@ -109,7 +109,7 @@ export function buildHome(input: HomeInput): Container {
   const root = new Container();
 
   // Fängt Berührungen ab, damit nichts vom Spieltisch dahinter reagiert
-  const blocker = new Graphics().rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0x0b0814, alpha: 0.4 });
+  const blocker = new Graphics().rect(-VIEW_BLEED, -VIEW_BLEED, VIEW_W + 2 * VIEW_BLEED, VIEW_H + 2 * VIEW_BLEED).fill({ color: 0x0b0814, alpha: 0.4 });
   blocker.eventMode = 'static';
   root.addChild(blocker, buildStars(), buildFan(HOME.fanX, false), buildFan(VIEW_W - HOME.fanX, true));
 

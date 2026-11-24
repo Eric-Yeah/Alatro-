@@ -77,8 +77,6 @@ export const IMPACT = {
   /** Stärke je Anlass */
   xmult: 0.8,
   total: [0, 0.35, 0.55, 0.8, 1] as readonly number[],
-  goal: 0.6,
-  won: 1,
 };
 
 /** Wirkung der Gesamtpunkte nach Stufe (gleicher Index wie SCORE_TIERS in data/juice.ts) */
@@ -152,7 +150,7 @@ export const RAIN = {
   coins: 18,
 };
 
-/** Zeiger Effekte: Spur, Tipp Ring, Neigung der Karten in der Nähe */
+/** Zeiger Effekte: Spur und Tipp Funken (keine Ringe) */
 export const POINTER = {
   /** Abstand der Spurpunkte in Spielfeld Einheiten */
   trailEveryPx: 11,
@@ -161,21 +159,18 @@ export const POINTER = {
   trailLife: [380, 700] as [number, number],
   trailSize: [0.45, 1.05] as [number, number],
   trailColors: [0x7fe9ff, 0xb48cff, 0xffd37a, 0xffffff] as readonly number[],
-  /** Tipp: Ring und Funken */
-  tapRing: 0.9,
+  /** Tipp: Funken */
   tapSparks: 9,
   tapSpeed: [90, 260] as [number, number],
   /** Wie lange der Zeiger nach dem Loslassen (Finger) noch als aktiv gilt */
   holdMs: 450,
-  /** Karten in der Nähe: Reichweite, Anheben, Neigung zum Zeiger, Vergrößerung, Glättung je Bild (0 bis 1) */
-  near: { radius: 190, lift: 16, lean: 0.07, scale: 0.06, ease: 0.18 },
 };
 
 /** Funken Aura um gewählte Karten und Burst beim Wählen */
 export const AURA = {
   everyMs: 70,
   life: [420, 760] as [number, number],
-  select: { sparks: 12, ring: 0.6 },
+  select: { sparks: 12 },
   discard: { puff: 8 },
 };
 

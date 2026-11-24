@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { SCORE_TIERS, QUALITY_IDS, QUALITY_NAMES, QUALITY_PROFILE } from '../data/juice';
-import { CALLOUTS, DENSITY, HEAT, MOTES, ORB, PARTICLES, POINTER, TOTAL_FX } from '../data/spektakel';
+import { CALLOUTS, DENSITY, HEAT, MOTES, ORB, PARTICLES, TOTAL_FX } from '../data/spektakel';
 import { FLOAT_QUALITY } from '../data/cardMotion';
 import { parseSettings } from '../settings';
 import {
-  addHeat, bezier, bowControl, calloutFor, coolHeat, ease, heatBoost, motePush, nearEffect, newParticle,
+  addHeat, bezier, bowControl, calloutFor, coolHeat, heatBoost, motePush, newParticle,
   nextDensity, orbCount, orbEase, particleLook, scaledCount, stepParticle, totalFx,
 } from './spektakelMath';
 
@@ -23,7 +23,9 @@ describe('Supernova: Grafikstufe', () => {
     expect(voll.spektakel).toBe(false);
     expect(sparsam.spektakel).toBe(false);
     expect({ ...supernova, spektakel: false }).toEqual(voll);
-    expect(FLOAT_QUALITY.supernova).toBeGreaterThanOrEqual(FLOAT_QUALITY.voll);
+    // Karten sollen in Supernova ruhiger schweben als in Voll, aber nicht stillstehen
+    expect(FLOAT_QUALITY.supernova).toBeGreaterThan(0);
+    expect(FLOAT_QUALITY.supernova).toBeLessThan(FLOAT_QUALITY.voll);
   });
 
   it('Wirkung der Gesamtpunkte wächst mit der Stufe und hat für jede Stufe einen Eintrag', () => {
@@ -153,29 +155,7 @@ describe('Supernova: Callouts', () => {
   });
 });
 
-describe('Supernova: Zeiger und Karten', () => {
-  it('Karte in Reichweite hebt sich und neigt sich zum Zeiger, außerhalb passiert nichts', () => {
-    const far = nearEffect(POINTER.near.radius + 1, 0);
-    expect(far).toEqual({ k: 0, lift: 0, rot: 0, scale: 0 });
-    const on = nearEffect(0, 0);
-    expect(on.k).toBe(1);
-    expect(on.lift).toBeLessThan(0);
-    expect(on.scale).toBeGreaterThan(0);
-    expect(on.rot).toBeCloseTo(0, 10);
-    const rightOfPointer = nearEffect(80, 0);
-    const leftOfPointer = nearEffect(-80, 0);
-    expect(rightOfPointer.rot).toBeLessThan(0);
-    expect(leftOfPointer.rot).toBeGreaterThan(0);
-    expect(nearEffect(40, 0).k).toBeGreaterThan(nearEffect(150, 0).k);
-  });
-
-  it('Glättung nähert sich dem Ziel und rastet ein', () => {
-    let v = 0;
-    for (let i = 0; i < 80; i++) v = ease(v, 1);
-    expect(v).toBe(1);
-    expect(ease(0, 1, 0.5)).toBe(0.5);
-  });
-
+describe('Supernova: Staubwolke', () => {
   it('Motten weichen dem Zeiger aus und bleiben außerhalb der Reichweite ruhig', () => {
     const near = motePush(30, 0);
     expect(near.x).toBeGreaterThan(0);

@@ -25,10 +25,8 @@ import { DECKS } from '../data/decks';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { APP_VERSION } from '../data/patchnotes';
 import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
-import { MUSIC_MIX, MUSIC_MIX_INFO, MUSIC_MIX_NAME, MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
-import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
-import { CARD_PALETTES, CARD_PALETTE_IDS } from '../data/cardArt/cardPalettes';
-import { QUALITY_IDS, QUALITY_NAMES, SCORE_TIERS, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
+import { tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen } from '../settings';
+import { SCORE_TIERS, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
 import { collectionProgress, entryName, loadDiscovered, unseenKeys } from '../collection';
 import { nearMiss, newKeys, overkill } from '../report';
@@ -56,6 +54,7 @@ import { syncManager } from './syncManager';
 import { buildCollection, COLLECTION_H, COLLECTION_W } from './CollectionView';
 import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_W } from './InfoViews';
 import { buildHome } from './HomeView';
+import { buildOptions } from './OptionsView';
 import { ScreenTransition } from './ScreenTransition';
 import { JokerView } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
@@ -64,8 +63,7 @@ import { levelUpBlock } from './levelUpView';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
-import { languageButton, languageRowTexts } from './langSwitch';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_BLEED, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
 import { spektakel } from './spektakel';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
@@ -73,6 +71,8 @@ import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
+/** Seitenleiste links: obere Kante der Felder, gleicher Abstand von 20 Punkten dazwischen. `buttons` ist die Mitte von Menü und Run Info. */
+const SIDE = { score: 200, hand: 296, counters: 486, money: 590, info: 694, buttons: 850 };
 const MX = 850; // centre of the play area
 const HAND_Y = 775;
 const PLAY_Y = 450;
@@ -188,7 +188,6 @@ export class Game {
   private playBtn!: Button;
   private discardBtn!: Button;
   private sortBtn!: Button;
-  private speedBtn!: Button;
 
   constructor(private hooks: GameHooks = { setMood: () => {} }) {
     // Tippen während einer laufenden Animation beschleunigt sie kurz
@@ -250,7 +249,7 @@ export class Game {
     const tb = this.table;
 
     // Invisible catcher: tapping empty space closes tooltips
-    const catcher = new Graphics().rect(0, 0, VIEW_W, VIEW_H).fill({ color: 0, alpha: 0.001 });
+    const catcher = new Graphics().rect(-VIEW_BLEED, -VIEW_BLEED, VIEW_W + 2 * VIEW_BLEED, VIEW_H + 2 * VIEW_BLEED).fill({ color: 0, alpha: 0.001 });
     catcher.eventMode = 'static';
     catcher.on('pointertap', () => this.closeTooltip());
     tb.addChild(catcher);
@@ -286,7 +285,7 @@ export class Game {
 
     // Round score
     const sp = panel(330, 76, C.panelDark);
-    sp.position.set(20, 192);
+    sp.position.set(20, SIDE.score);
     const sLbl = label('Round Score', 20, C.textDim);
     sLbl.anchor.set(0, 0.5);
     sLbl.position.set(20, 38);
@@ -299,7 +298,7 @@ export class Game {
 
     // Hand panel: name, level, chips × mult
     const hp = panel(330, 170, C.panelDark);
-    hp.position.set(20, 284);
+    hp.position.set(20, SIDE.hand);
     this.handName = label('', 28);
     this.handName.position.set(165, 34);
     this.handLevel = label('', 18, C.textDim);
@@ -323,7 +322,7 @@ export class Game {
     // Hands / discards
     const counter = (title: string, color: number, px: number) => {
       const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 470);
+      p.position.set(px, SIDE.counters);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('0', 38, color);
@@ -337,7 +336,7 @@ export class Game {
 
     // Money
     const mp = panel(330, 84, C.panelDark);
-    mp.position.set(20, 570);
+    mp.position.set(20, SIDE.money);
     this.moneyText = label('$0', 48, C.money);
     this.moneyText.position.set(165, 42);
     mp.addChild(this.moneyText);
@@ -346,7 +345,7 @@ export class Game {
     // Ante / round
     const info = (title: string, px: number) => {
       const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 670);
+      p.position.set(px, SIDE.info);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('', 32, C.money);
@@ -358,18 +357,11 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button(t('Menü'), 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
-    menuBtn.position.set(100, 800);
-    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
-    infoBtn.position.set(270, 800);
+    const menuBtn = new Button(t('Menü'), 156, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
+    menuBtn.position.set(98, SIDE.buttons);
+    const infoBtn = new Button('Run Info', 156, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    infoBtn.position.set(272, SIDE.buttons);
     tb.addChild(menuBtn, infoBtn);
-    this.speedBtn = new Button('', 200, 54, 0x2f6fd0, () => { cycleSpeed(); this.refreshSpeedBtn(); }, 24);
-    this.refreshSpeedBtn();
-    this.speedBtn.position.set(120, 872);
-    // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
-    const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
-    deckBtn.position.set(290, 872);
-    tb.addChild(this.speedBtn, deckBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -438,7 +430,7 @@ export class Game {
   /** Vorschau im Shop: nächster Blind und Boss der Ante, damit sich Käufe darauf abstimmen lassen */
   private buildNextPanel() {
     const np = panel(330, 262, C.panelDark);
-    np.position.set(20, 192);
+    np.position.set(20, SIDE.score);
     np.visible = false;
     const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);
@@ -1613,7 +1605,7 @@ export class Game {
     let stakeIdx = prefStake >= 0 ? prefStake : 0;
     let level = clampScale(pref.level ?? recommended);
     const W = 800;
-    const { box } = this.modal(W, 880, C.panelDark);
+    const { box } = this.modal(W, 950, C.panelDark);
     const head = label(t('Neuer Run'), 44, C.text);
     head.position.set(W / 2, 48);
     const backBtn = new Button(t('Zurück'), 150, 56, 0x4a3f6b, () => this.showMainMenu(), 24);
@@ -1735,17 +1727,17 @@ export class Game {
         body(parts.join('   ·   '), 690, 17, wonHere || seal ? C.money : C.textDim, 700);
       }
       const seedLbl = label('Seed', 20, C.textDim);
-      seedLbl.position.set(W / 2, 748);
+      seedLbl.position.set(W / 2, 756);
       const seedBtn = new Button(this.setupSeed || t('Zufällig'), 300, 52, 0x3b5068, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.showSeedEntry();
       }, 24);
-      seedBtn.position.set(W / 2, 790);
+      seedBtn.position.set(W / 2, 800);
       const start = new Button(t('Start'), 300, 66, C.chips, () => {
         saveSetupPref({ deckId: deck.id, stakeId: STAKES[stakeIdx].id, mode, level });
         this.beginNewRun(deck.id, stakeId !== undefined ? { stakeId } : { level: levelOut });
       }, 30);
-      start.position.set(W / 2, 850);
+      start.position.set(W / 2, 880);
       content.addChild(seedLbl, seedBtn, start);
     };
     render();
@@ -1803,7 +1795,6 @@ export class Game {
     const saved = this.run ?? loadRun();
     const canResume = !!saved && saved.phase !== 'gameOver';
     this.hooks.setMood('menu');
-    this.refreshSpeedBtn();
     this.clearOverlay();
     this.closeTooltip();
     // Ist der Home Bildschirm schon sichtbar (Rückkehr aus einem Nebenmenü), bleibt er stehen
@@ -1842,11 +1833,6 @@ export class Game {
     for (const c of [...this.homeLayer.children]) c.destroy({ children: true });
   }
 
-  private refreshSpeedBtn() {
-    const st = SPEED_STEPS.find((x) => x.id === getSettings().speed) ?? SPEED_STEPS[0];
-    this.speedBtn.setText(t('Tempo {name}', { name: st.name }));
-  }
-
   private showTutorial() {
     const { box } = this.modal(TUTORIAL_W, TUTORIAL_H, C.panelDark);
     buildTutorial(box, () => this.showMainMenu());
@@ -1859,104 +1845,21 @@ export class Game {
     buildPatchNotes(box, () => this.showMainMenu());
   }
 
-  /** Optionen: werden sofort gespeichert und angewendet */
+  /** Optionen: eigener Vollbild Bildschirm anstelle des Home Bildschirms, alles wird sofort gespeichert und angewendet */
   private showOptions() {
-    const W = 660;
-    const { box } = this.modal(W, 1030, C.panelDark);
-    const head = label(t('Optionen'), 44, C.text);
-    head.position.set(W / 2, 56);
-    box.addChild(head);
-    const dyn = new Container();
-    box.addChild(dyn);
-    const render = () => {
-      for (const c of [...dyn.children]) c.destroy({ children: true });
-      const st = getSettings();
-      const gap = 60;
-      /** maxW: Platz bis zum Knopf rechts, längere Hinweise (englisch oft länger) schrumpfen */
-      const row = (i: number, name: string, desc: string, maxW = 320) => {
-        const y = 140 + i * gap;
-        const n = label(name, 28, C.text);
-        n.anchor.set(0, 0.5);
-        n.position.set(50, y - 12);
-        const d = label(desc, 16, C.textDim, { fontWeight: '600' });
-        d.anchor.set(0, 0.5);
-        d.position.set(50, y + 20);
-        if (d.width > maxW) d.scale.set(maxW / d.width);
-        dyn.addChild(n, d);
-        return y;
-      };
-      const onOff = (i: number, name: string, desc: string, on: boolean, toggle: () => void) => {
-        const y = row(i, name, desc, 410);
-        const b = new Button(on ? t('An') : t('Aus'), 130, 56, on ? C.green : 0x3b5068, () => { toggle(); render(); }, 24);
-        b.position.set(W - 115, y);
-        dyn.addChild(b);
-      };
-      onOff(0, t('CRT Effekt'), t('Feine Scanlines und wandernder Hologramm Glanz'), st.crt, () => updateSettings({ crt: !st.crt }));
-      onOff(1, t('Screen Shake'), t('Wackeln und Aufblitzen bei hohen Punkten'), st.shake, () => {
-        updateSettings({ shake: !st.shake });
-        this.fx.shake(6);
-      });
-      const vy = row(2, t('Lautstärke'), t('{n} Prozent', { n: Math.round(st.volume * 100) }));
-      const minus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume - VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
-      minus.position.set(W - 175, vy);
-      const plus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ volume: clampVolume(st.volume + VOLUME_STEP) }); sfx.chips(2); render(); }, 30);
-      plus.position.set(W - 95, vy);
-      const musicIds = [MUSIC_MIX, ...TRACK_IDS, MUSIC_OFF];
-      const mi = Math.max(0, musicIds.indexOf(st.music));
-      const mt = getTrack(st.music);
-      const musicName = st.music === MUSIC_MIX ? MUSIC_MIX_NAME : mt ? mt.name : t('Aus');
-      const my = row(3, t('Musik'), st.music === MUSIC_MIX ? MUSIC_MIX_INFO : mt ? mt.info : t('Ruhige Hintergrundmusik, aus'));
-      const music = new Button(musicName, 230, 56, st.music === MUSIC_OFF ? 0x3b5068 : C.chips, () => {
-        updateSettings({ music: musicIds[(mi + 1) % musicIds.length] });
-        render();
-      }, 22);
-      music.position.set(W - 170, my);
-      const muy = row(4, t('Musiklautstärke'), t('{n} Prozent', { n: Math.round(st.musicVolume * 100) }));
-      const mMinus = new Button('−', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume - VOLUME_STEP) }); render(); }, 30);
-      mMinus.position.set(W - 175, muy);
-      const mPlus = new Button('+', 60, 56, 0x3b5068, () => { updateSettings({ musicVolume: clampVolume(st.musicVolume + VOLUME_STEP) }); render(); }, 30);
-      mPlus.position.set(W - 95, muy);
-      const sy = row(5, t('Animationstempo'), t('Zählen, Karten und Übergänge'));
-      const si = Math.max(0, SPEED_STEPS.findIndex((x) => x.id === st.speed));
-      const speed = new Button(SPEED_STEPS[si].name, 190, 56, si ? C.chips : 0x3b5068, () => {
-        updateSettings({ speed: SPEED_STEPS[(si + 1) % SPEED_STEPS.length].id });
-        render();
-      }, 22);
-      speed.position.set(W - 150, sy);
-      const qy = row(6, t('Grafik'), st.quality === 'sparsam' ? t('30 FPS, ohne CRT und Edition Glanz') : st.quality === 'supernova' ? t('Funken, Schockwellen, Sternenstaub, reagiert auf Berührung') : t('Volle Effekte'));
-      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : st.quality === 'supernova' ? RARITY_COLORS.legendary : 0x3b5068, () => {
-        updateSettings({ quality: QUALITY_IDS[(QUALITY_IDS.indexOf(st.quality) + 1) % QUALITY_IDS.length] });
-        render();
-      }, 22);
-      quality.position.set(W - 150, qy);
-      onOff(7, t('FPS Anzeige'), t('Bildrate oben rechts, zum Prüfen der Leistung'), st.fps, () => updateSettings({ fps: !st.fps }));
-      onOff(8, t('Vibration'), haptics.supported ? t('Rückmeldung bei Berührung und Punkten') : t('Auf diesem Gerät nicht verfügbar (z. B. iPad)'), st.haptics, () => {
-        updateSettings({ haptics: !st.haptics });
-        if (st.haptics) haptics.stop();
-        else haptics.victory();
-      });
-      const cpy = row(9, t('Kartenfarben'), CARD_PALETTES[st.cardPalette].description);
-      const cardPal = new Button(CARD_PALETTES[st.cardPalette].name, 230, 56, st.cardPalette === 'kontrast' ? C.money : 0x3b5068, () => {
-        const at = Math.max(0, CARD_PALETTE_IDS.indexOf(st.cardPalette));
-        updateSettings({ cardPalette: CARD_PALETTE_IDS[(at + 1) % CARD_PALETTE_IDS.length] });
-        render();
-      }, 22);
-      cardPal.position.set(W - 170, cpy);
-      const bky = row(10, t('Spielstand'), t('Sichern, auf ein anderes Gerät übertragen und zurückladen'));
-      const backup = new Button(t('Sichern'), 230, 56, C.chips, () => this.showBackup(), 22);
-      backup.position.set(W - 170, bky);
-      const cly = row(11, t('Geräte koppeln'), syncManager.isCoupled() ? t('Gekoppelt, der Stand wird abgeglichen') : t('Einen Spielstand auf mehreren Geräten nutzen'));
-      const cloud = new Button(syncManager.isCoupled() ? t('Gekoppelt') : t('Koppeln'), 230, 56, syncManager.isCoupled() ? C.green : C.chips, () => this.showSync(), 22);
-      cloud.position.set(W - 170, cly);
-      const lr = languageRowTexts();
-      const lgy = row(12, lr.name, lr.desc);
-      const lang = languageButton(230, 56);
-      lang.position.set(W - 170, lgy);
-      const back = new Button(t('Zurück'), 300, 70, C.chips, () => this.showMainMenu(), 28);
-      back.position.set(W / 2, 940);
-      dyn.addChild(minus, plus, music, mMinus, mPlus, speed, quality, cardPal, backup, cloud, lang, back);
-    };
-    render();
+    this.clearOverlay();
+    this.closeTooltip();
+    for (const c of [...this.homeLayer.children]) c.destroy({ children: true });
+    this.homeLayer.addChild(buildOptions({
+      version: APP_VERSION,
+      onBack: () => {
+        for (const c of [...this.homeLayer.children]) c.destroy({ children: true });
+        this.openHome();
+      },
+      onBackup: () => this.showBackup(),
+      onSync: () => this.showSync(),
+      shakePreview: () => this.fx.shake(6),
+    }));
   }
 
   /** Spielstand sichern und laden, Zurück führt in die Optionen */

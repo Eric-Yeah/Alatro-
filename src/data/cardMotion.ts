@@ -20,7 +20,7 @@ export const CARD_FLOAT: Record<'hand' | 'joker' | 'consumable' | 'shop', FloatS
 };
 
 /** Stärke des Schwebens je Grafikstufe (0 = aus, 1 = voll). Sparsam rechnet gar nichts. */
-export const FLOAT_QUALITY: Record<Quality, number> = { voll: 1, sparsam: 0, supernova: 1.4 };
+export const FLOAT_QUALITY: Record<Quality, number> = { voll: 1, sparsam: 0, supernova: 0.6 };
 
 /** Neue Karten lassen das Schweben langsam einsetzen, damit nichts springt (ms) */
 export const FLOAT_RAMP_MS = 600;

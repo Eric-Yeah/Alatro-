@@ -70,7 +70,6 @@ const dict: Record<string, string> = {
   '0 bis {n} Zeichen, leer lassen für einen Zufalls Seed': '0 to {n} characters, leave empty for a random seed',
 
   // Optionen
-  'Tempo {name}': 'Speed {name}',
   'An': 'On',
   'Aus': 'Off',
   'CRT Effekt': 'CRT effect',
@@ -87,7 +86,7 @@ const dict: Record<string, string> = {
   'Grafik': 'Graphics',
   '30 FPS, ohne CRT und Edition Glanz': '30 FPS, no CRT and no Edition sheen',
   'Volle Effekte': 'Full effects',
-  'Funken, Schockwellen, Sternenstaub, reagiert auf Berührung': 'Sparks, shockwaves, stardust, reacts to touch',
+  'Funken, Orbs und Sternenstaub': 'Sparks, orbs and stardust',
   'Funke': 'Spark',
   'Flamme': 'Flame',
   'Komet': 'Comet',
@@ -99,7 +98,7 @@ const dict: Record<string, string> = {
   'Auf diesem Gerät nicht verfügbar (z. B. iPad)': 'Not available on this device (e.g. iPad)',
   'Kartenfarben': 'Card colors',
   'Spielstand': 'Save data',
-  'Sichern, auf ein anderes Gerät übertragen und zurückladen': 'Back up and move to another device',
+  'Sichern, übertragen und zurückladen': 'Back up and move to another device',
   'Gekoppelt, der Stand wird abgeglichen': 'Linked, your progress is synced',
   'Einen Spielstand auf mehreren Geräten nutzen': 'Use one save on several devices',
   'Gekoppelt': 'Linked',

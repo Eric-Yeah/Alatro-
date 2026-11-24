@@ -8,6 +8,15 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.12.1': {
+    title: 'Calmer Supernova, New Options',
+    items: [
+      'Changed: Supernova is calmer. Tapping no longer throws rings, only sparks. There are also no circles when you select a card or reach the goal, and no big circle at the end of a round.',
+      'Changed: The cards wiggle less. They no longer lean toward the pointer, and the gentle floating is weaker in Supernova. The extra effects (orbs, sparks, confetti, callouts, background) stay.',
+      'New: In the new options, Supernova is the third choice under Graphics (Lite, Full, Supernova).',
+      'Also included are the changes of versions 0.11.2 to 0.11.5: new options as their own screen, no speed button and no Deck button in the sidebar any more, layout fixes.',
+    ],
+  },
   '0.12.0': {
     title: 'Supernova Graphics',
     items: [
@@ -17,6 +26,35 @@ const EN: Record<string, { title: string; items: Item[] }> = {
       'New: The picture plays along. Finger and mouse leave stardust, tapping throws rings, nearby cards lift and lean toward the pointer, selected cards sparkle, and fireflies drift away from the pointer.',
       'New: The background gains nebula veils, aurora, shooting stars, a glow at the pointer and shockwaves with distortion.',
       'Note: Supernova needs more power. If the frame rate drops, the number of particles falls automatically. On older devices Full or Lite is the better choice. The zoom punch and flash follow the Screen Shake option.',
+    ],
+  },
+  '0.11.5': {
+    title: 'Tidier Sidebar',
+    items: [
+      'Changed: The Deck button in the sidebar is gone. Open the deck from the pile at the table, from the Blind selection or from Run Info.',
+      'Improved: The fields of the left sidebar have even spacing, and Menu and Run Info sit with room below them.',
+    ],
+  },
+  '0.11.4': {
+    title: 'Speed Only in Options',
+    items: [
+      'Changed: The speed button at the table is gone. You now set the animation speed only in the options under Game.',
+    ],
+  },
+  '0.11.3': {
+    title: 'New Options',
+    items: [
+      'New: Options are now a screen of their own instead of a window. Four sections on the left (Display, Sound, Game, Data), the settings as clear cards on the right.',
+      'New: Real switches for on and off, sliders for volume and music volume (drag or tap) and selection bars for graphics, card colors, music, speed and language.',
+    ],
+  },
+  '0.11.2': {
+    title: 'Layout Fixes',
+    items: [
+      'Fix: New Run: the Seed and Start buttons no longer overlap, and the Start button sits inside the window.',
+      'Fix: Options have more space between rows, so buttons and texts no longer touch.',
+      'Fix: Link Devices: the keys no longer cover the Delete, Paste and Link buttons, and the code field always shows all five groups instead of jumping while you type.',
+      'Fix: On wide windows (Mac, iPad landscape) the dimming behind windows no longer ends at a hard edge.',
     ],
   },
   '0.11.1': {

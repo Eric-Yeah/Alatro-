@@ -8,6 +8,17 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.12.1',
+    date: '24.11.2026',
+    title: 'Supernova ruhiger, neue Optionen',
+    items: [
+      'Änderung: Supernova ist ruhiger. Tippen wirft keine Ringe mehr, nur noch Funken. Auch beim Wählen einer Karte und beim Erreichen des Ziels gibt es keine Kreise mehr, und am Ende einer Runde keinen großen Kreis.',
+      'Änderung: Die Karten wackeln weniger. Sie neigen sich nicht mehr zum Zeiger, und das leichte Schweben ist in Supernova schwächer. Die Extra Effekte (Orbs, Funken, Konfetti, Callouts, Hintergrund) bleiben.',
+      'Neu: In den neuen Optionen steht Supernova als dritte Auswahl bei Grafik (Sparsam, Voll, Supernova).',
+      'Dazu kommen die Änderungen der Versionen 0.11.2 bis 0.11.5: neue Optionen als eigener Bildschirm, kein Tempo Knopf und kein Deck Knopf mehr in der Seitenleiste, Layout Korrekturen.',
+    ],
+  },
+  {
     version: '0.12.0',
     date: '24.11.2026',
     title: 'Grafikstufe Supernova',
@@ -18,6 +29,43 @@ export const PATCH_NOTES: readonly PatchNote[] = [
       'Neu: Das Bild spielt mit. Finger und Maus hinterlassen Sternenstaub, Tippen wirft Ringe, Karten in der Nähe heben sich und neigen sich zum Zeiger, gewählte Karten funkeln, Glühwürmchen weichen dem Zeiger aus.',
       'Neu: Der Hintergrund bekommt Nebelschleier, Polarlicht, Sternschnuppen, ein Leuchten am Zeiger und Schockwellen mit Verzerrung.',
       'Hinweis: Supernova braucht mehr Leistung. Sinkt die Bildrate, nimmt die Zahl der Partikel automatisch ab. Auf älteren Geräten bleibt Voll oder Sparsam die bessere Wahl. Zoom Stoß und Blitz folgen der Option Screen Shake.',
+    ],
+  },
+  {
+    version: '0.11.5',
+    date: '24.11.2026',
+    title: 'Aufgeräumte Seitenleiste',
+    items: [
+      'Änderung: Der Deck Knopf in der Seitenleiste ist weg. Das Deck öffnest Du über den Stapel am Tisch, in der Blind Auswahl oder in der Run Info.',
+      'Besser: Die Felder der linken Seitenleiste haben gleichmäßige Abstände, Menü und Run Info sitzen mit Luft darunter.',
+    ],
+  },
+  {
+    version: '0.11.4',
+    date: '24.11.2026',
+    title: 'Tempo nur in den Optionen',
+    items: [
+      'Änderung: Der Tempo Knopf am Spieltisch ist weg. Das Animationstempo stellst Du jetzt nur noch in den Optionen unter Spiel ein.',
+    ],
+  },
+  {
+    version: '0.11.3',
+    date: '24.11.2026',
+    title: 'Neue Optionen',
+    items: [
+      'Neu: Die Optionen sind ein eigener Bildschirm statt eines Fensters. Links vier Bereiche (Anzeige, Ton, Spiel, Daten), rechts die Einstellungen als übersichtliche Karten.',
+      'Neu: Echte Schalter für An und Aus, Schieberegler für Lautstärke und Musiklautstärke (ziehen oder antippen) und Auswahlleisten für Grafik, Kartenfarben, Musik, Tempo und Sprache.',
+    ],
+  },
+  {
+    version: '0.11.2',
+    date: '24.11.2026',
+    title: 'Layout Korrekturen',
+    items: [
+      'Fix: Neuer Run: Seed und Start Knopf überlappen nicht mehr, der Start Knopf liegt im Fenster.',
+      'Fix: Die Optionen haben mehr Abstand zwischen den Zeilen, Knöpfe und Texte stoßen nicht mehr aneinander.',
+      'Fix: Geräte koppeln: Die Tasten überdecken die Knöpfe Löschen, Einfügen und Koppeln nicht mehr, das Codefeld zeigt immer alle fünf Gruppen und springt beim Tippen nicht.',
+      'Fix: Bei breiten Fenstern (Mac, iPad quer) endet die Abdunklung hinter Fenstern nicht mehr an einer harten Kante.',
     ],
   },
   {
