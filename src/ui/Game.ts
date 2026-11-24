@@ -70,6 +70,8 @@ import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 
+/** Seitenleiste links: obere Kante der Felder, gleicher Abstand von 20 Punkten dazwischen. `buttons` ist die Mitte von Menü und Run Info. */
+const SIDE = { score: 200, hand: 296, counters: 486, money: 590, info: 694, buttons: 850 };
 const MX = 850; // centre of the play area
 const HAND_Y = 775;
 const PLAY_Y = 450;
@@ -274,7 +276,7 @@ export class Game {
 
     // Round score
     const sp = panel(330, 76, C.panelDark);
-    sp.position.set(20, 192);
+    sp.position.set(20, SIDE.score);
     const sLbl = label('Round Score', 20, C.textDim);
     sLbl.anchor.set(0, 0.5);
     sLbl.position.set(20, 38);
@@ -287,7 +289,7 @@ export class Game {
 
     // Hand panel: name, level, chips × mult
     const hp = panel(330, 170, C.panelDark);
-    hp.position.set(20, 284);
+    hp.position.set(20, SIDE.hand);
     this.handName = label('', 28);
     this.handName.position.set(165, 34);
     this.handLevel = label('', 18, C.textDim);
@@ -311,7 +313,7 @@ export class Game {
     // Hands / discards
     const counter = (title: string, color: number, px: number) => {
       const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 470);
+      p.position.set(px, SIDE.counters);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('0', 38, color);
@@ -325,7 +327,7 @@ export class Game {
 
     // Money
     const mp = panel(330, 84, C.panelDark);
-    mp.position.set(20, 570);
+    mp.position.set(20, SIDE.money);
     this.moneyText = label('$0', 48, C.money);
     this.moneyText.position.set(165, 42);
     mp.addChild(this.moneyText);
@@ -334,7 +336,7 @@ export class Game {
     // Ante / round
     const info = (title: string, px: number) => {
       const p = panel(160, 84, C.panelDark);
-      p.position.set(px, 670);
+      p.position.set(px, SIDE.info);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('', 32, C.money);
@@ -346,15 +348,11 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button(t('Menü'), 160, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
-    menuBtn.position.set(100, 800);
-    const infoBtn = new Button('Run Info', 160, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
-    infoBtn.position.set(270, 800);
+    const menuBtn = new Button(t('Menü'), 156, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
+    menuBtn.position.set(98, SIDE.buttons);
+    const infoBtn = new Button('Run Info', 156, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    infoBtn.position.set(272, SIDE.buttons);
     tb.addChild(menuBtn, infoBtn);
-    // Deck Ansicht auch im Shop, wo der Stapel am Tisch verdeckt ist
-    const deckBtn = deckButton(120, 54, 24, () => this.openDeck(() => this.clearOverlay()));
-    deckBtn.position.set(185, 872);
-    tb.addChild(deckBtn);
 
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
     this.seedText.position.set(185, 960);
@@ -423,7 +421,7 @@ export class Game {
   /** Vorschau im Shop: nächster Blind und Boss der Ante, damit sich Käufe darauf abstimmen lassen */
   private buildNextPanel() {
     const np = panel(330, 262, C.panelDark);
-    np.position.set(20, 192);
+    np.position.set(20, SIDE.score);
     np.visible = false;
     const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);

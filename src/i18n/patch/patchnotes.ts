@@ -8,6 +8,13 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.11.5': {
+    title: 'Tidier Sidebar',
+    items: [
+      'Changed: The Deck button in the sidebar is gone. Open the deck from the pile at the table, from the Blind selection or from Run Info.',
+      'Improved: The fields of the left sidebar have even spacing, and Menu and Run Info sit with room below them.',
+    ],
+  },
   '0.11.4': {
     title: 'Speed Only in Options',
     items: [

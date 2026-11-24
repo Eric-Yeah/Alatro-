@@ -8,6 +8,15 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.11.5',
+    date: '24.11.2026',
+    title: 'Aufgeräumte Seitenleiste',
+    items: [
+      'Änderung: Der Deck Knopf in der Seitenleiste ist weg. Das Deck öffnest Du über den Stapel am Tisch, in der Blind Auswahl oder in der Run Info.',
+      'Besser: Die Felder der linken Seitenleiste haben gleichmäßige Abstände, Menü und Run Info sitzen mit Luft darunter.',
+    ],
+  },
+  {
     version: '0.11.4',
     date: '24.11.2026',
     title: 'Tempo nur in den Optionen',

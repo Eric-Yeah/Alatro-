@@ -2,6 +2,10 @@
 
 Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
+## Version 0.11.5: aufgeräumte Seitenleiste
+
+* Der Deck Knopf der Seitenleiste ist entfernt (Deck Ansicht über Stapel, Blind Auswahl, Run Info). Die Felder links liegen mit festem Abstand von 20 Punkten, die Zahlen stehen in `SIDE` oben in `src/ui/Game.ts`. Im Shop gibt es keinen direkten Deck Zugang mehr außer über Run Info.
+
 ## Version 0.11.3: Optionen als eigener Bildschirm
 
 * `src/ui/OptionsView.ts` (`buildOptions`): Vollbild anstelle des Home Bildschirms (`Game.showOptions` leert `homeLayer`, Zurück baut Home neu). Links Seitenleiste mit vier Bereichen (Anzeige, Ton, Spiel, Daten) und Astrolabium als Zierde, rechts Karten je Einstellung. Der gewählte Bereich bleibt in `lastTab` erhalten. Sichern und Koppeln öffnen weiter als Fenster darüber.
@@ -35,7 +39,7 @@ Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/
 
 * **Deutsch und Englisch:** Wechsel in den Optionen ("Sprache"), die App lädt neu. Konzept: der deutsche Text ist der Schlüssel, `t('Text')` aus `src/i18n/index.ts`, Wörterbücher in `src/i18n/en/*.ts` (werden automatisch geladen). Inhalte aus `src/data/` (Jokers, Consumables, Erfolge, Einführung, Patch Notes usw.) werden bei Englisch beim Start durch Dateien in `src/i18n/patch/*.ts` an Ort und Stelle umgeschrieben (`applyDataLanguage`, `boot.ts`). Tests: `i18n.test.ts` (jeder `t()` Aufruf hat einen Eintrag), `dups.test.ts`, `contentEnA.test.ts`, `contentEnB.test.ts`. **Neuer sichtbarer Text:** immer `t('...')` und Eintrag in `src/i18n/en/`, neue Inhalte mit ID in den passenden Patch ergänzen. Einzelheiten, Begriffe und offene Punkte: `AUDIT.md`, Abschnitte "Mehrsprachigkeit".
 * **Karten schweben, Austeilen und Einziehen:** `src/ui/cardMotion.ts`, `cardMotionMath.ts`, `dealAnim.ts`, Zahlen `src/data/cardMotion.ts`. Feintuning auf dem iPad (siehe `AUDIT.md`, "Kartenbewegung").
-* **Deck Ansicht und Level up Vorschau:** `src/ui/DeckView.ts`, `levelUpView.ts`, reine Daten `deckLayout` und `levelUpPreview` in `src/core/runInfo.ts`. Zugang: Stapel antippen, Knopf "Deck" in der Seitenleiste, Blind Auswahl, Run Info.
+* **Deck Ansicht und Level up Vorschau:** `src/ui/DeckView.ts`, `levelUpView.ts`, reine Daten `deckLayout` und `levelUpPreview` in `src/core/runInfo.ts`. Zugang: Stapel antippen, Blind Auswahl, Run Info (der Knopf in der Seitenleiste ist seit 0.11.5 entfernt).
 * **Münzklang:** `sfx.coin` und `sfx.coins` (`audio.ts`, Zahlen `src/data/coinSound.ts`), beim Einkassieren, Auszahlungszeilen, Joker Geld und Verkaufen.
 * **Joker Tausch im Pack:** bei vollen Slots bietet ein Joker Pack "Tauschen" (`canSwapJoker`, `swapJokerFromPack` in `core/game.ts`, Ansicht in `Game.showPack`). Der alte Joker wird verkauft.
 * **Als Nächstes:** Auf dem iPad prüfen: Gefühl und Bildrate des Schwebens und der Austeil Animation, Lesbarkeit der englischen Texte, Münzklang Lautstärke. Offen: Kaufen im Shop bei vollen Joker Slots (dort muss man weiter erst verkaufen), Browsersprache als Standard.
