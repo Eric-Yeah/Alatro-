@@ -8,6 +8,19 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.12.0',
+    date: '24.11.2026',
+    title: 'Grafikstufe Supernova',
+    items: [
+      'Neu: Dritte Grafikstufe "Supernova" in den Optionen unter Grafik (Sparsam, Voll, Supernova). Sie ist Voll plus ein ganzes Feuerwerk an Effekten und reagiert auf Berührung.',
+      'Neu: Beim Zählen fliegen leuchtende Kugeln von der Karte oder dem Joker zur Chips und Mult Anzeige. Der Einschlag lässt die Anzeige pulsieren, X Mult löst eine Schockwelle aus. Je länger die Kette, desto heißer wird das Bild.',
+      'Neu: Große Hände zünden ein Callout Wort (Funke, Flamme, Komet, Supernova) mit Ringen, Feuerwerk, Konfetti, Zoom Stoß und Farbversatz. Ziel erreicht und gewonnene Runde bekommen Konfetti.',
+      'Neu: Das Bild spielt mit. Finger und Maus hinterlassen Sternenstaub, Tippen wirft Ringe, Karten in der Nähe heben sich und neigen sich zum Zeiger, gewählte Karten funkeln, Glühwürmchen weichen dem Zeiger aus.',
+      'Neu: Der Hintergrund bekommt Nebelschleier, Polarlicht, Sternschnuppen, ein Leuchten am Zeiger und Schockwellen mit Verzerrung.',
+      'Hinweis: Supernova braucht mehr Leistung. Sinkt die Bildrate, nimmt die Zahl der Partikel automatisch ab. Auf älteren Geräten bleibt Voll oder Sparsam die bessere Wahl. Zoom Stoß und Blitz folgen der Option Screen Shake.',
+    ],
+  },
+  {
     version: '0.11.1',
     date: '22.11.2026',
     title: 'Ein Sortierknopf',

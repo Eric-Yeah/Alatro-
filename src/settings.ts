@@ -2,7 +2,7 @@ import { TAP_BOOST, TAP_BOOST_MS } from './data/report';
 import { CARD_PALETTE_IDS, type CardPaletteId } from './data/cardArt/cardPalettes';
 import { MUSIC_MIX, MUSIC_OFF, TRACK_IDS } from './data/music';
 import { isLang, setLang, type Lang } from './i18n';
-import { DEFAULT_SETTINGS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
+import { DEFAULT_SETTINGS, QUALITY_IDS, SPEED_STEPS, VOLUME_STEP, type Quality, type SpeedStep } from './data/juice';
 
 export interface Settings {
   crt: boolean;
@@ -35,7 +35,7 @@ export function parseSettings(raw: unknown): Settings {
     music: typeof o.music === 'string' && (o.music === MUSIC_OFF || o.music === MUSIC_MIX || TRACK_IDS.includes(o.music)) ? o.music : DEFAULT_SETTINGS.music,
     musicVolume: clampVolume(mvol),
     speed: typeof o.speed === 'string' && SPEED_STEPS.some((x) => x.id === o.speed) ? o.speed : DEFAULT_SETTINGS.speed,
-    quality: o.quality === 'voll' || o.quality === 'sparsam' ? o.quality : DEFAULT_SETTINGS.quality,
+    quality: QUALITY_IDS.find((x) => x === o.quality) ?? DEFAULT_SETTINGS.quality,
     fps: typeof o.fps === 'boolean' ? o.fps : DEFAULT_SETTINGS.fps,
     haptics: typeof o.haptics === 'boolean' ? o.haptics : DEFAULT_SETTINGS.haptics,
     cardPalette: CARD_PALETTE_IDS.find((x) => x === o.cardPalette) ?? DEFAULT_SETTINGS.cardPalette,

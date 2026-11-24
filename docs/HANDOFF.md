@@ -1,6 +1,13 @@
-# Übergabe: Stand nach 150 Jokers und neuen Consumables (Version 0.11.0)
+# Übergabe: Stand nach der Grafikstufe Supernova (Version 0.12.0)
 
-Stand: 21.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+Stand: 24.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.12.0: Grafikstufe Supernova
+
+* Dritte Grafikstufe in den Optionen (Sparsam, Voll, Supernova). Supernova ist Voll plus Spektakel: Orbs von Karte oder Joker zur Chips und Mult Anzeige, Schockwellen bei X Mult, Callout Wörter (Funke, Flamme, Komet, Supernova) und Feuerwerk bei großen Händen, Konfetti bei Ziel und gewonnener Runde, Sternenstaub Spur am Zeiger, Tipp Ringe, Karten neigen sich zum Zeiger, Funken Aura um gewählte Karten, Glühwürmchen, Hintergrund mit Nebel, Polarlicht, Sternschnuppen, Zeigerleuchten und Schockwellen, Hitze Aufbau, Zoom Stoß und CRT Farbversatz.
+* **Wo:** Plan `docs/supernova-plan.md`, Zahlen `src/data/spektakel.ts`, Rechnung `src/ui/spektakelMath.ts` (getestet), Partikel `src/ui/particles.ts`, Zeiger `src/ui/pointerFx.ts`, Fassade `src/ui/spektakel.ts`, Einbau in `Game.ts` (Suche nach `spektakel.`), Shader Zusatz in `Background.ts` (`uFx`), `crt.ts` (`setPunch`), Bühne `stageFx.ts` (`punch`, Behälter `world` in `Game`). Einzelheiten und offene Punkte: `AUDIT.md` O113 bis O118.
+* **Neue Effekte anlegen:** Methode in `Spektakel` (Fassade) mit `if (!this.enabled()) return;`, Zahlen nach `data/spektakel.ts`, Aufruf im Spiel hinter `spektakel.enabled()`. Neue Texte mit `t()` und Eintrag in `src/i18n/en/`.
+* **Als Nächstes:** Auf dem iPad prüfen: Bildrate mit FPS Anzeige in Supernova (Dichte Regler, siehe O113), ob der Zoom Stoß und der Farbversatz angenehm sind (`TOTAL_FX`), Lesbarkeit der Callouts, ob die Zeigerspur beim Spielen stört.
 
 ## Version 0.11.1: ein Sortierknopf
 

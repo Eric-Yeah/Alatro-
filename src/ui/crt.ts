@@ -20,6 +20,7 @@ uniform float uNoise;
 uniform float uSweep;
 uniform float uPeriod;
 uniform float uTint;
+uniform float uPunch;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
@@ -34,7 +35,7 @@ void main(void) {
     return;
   }
   // Farbversatz wächst zum Rand
-  vec2 off = c * uAberr * (0.3 + dot(c, c));
+  vec2 off = c * (uAberr + uPunch) * (0.3 + dot(c, c) + uPunch * 12.0);
   float r = texture(uTexture, st + off).r;
   vec4 mid = texture(uTexture, st);
   float b = texture(uTexture, st - off).b;
@@ -79,6 +80,7 @@ export class CrtFilter {
           uSweep: { value: CRT.sweep, type: 'f32' },
           uPeriod: { value: CRT.sweepPeriod, type: 'f32' },
           uTint: { value: CRT.tint, type: 'f32' },
+          uPunch: { value: 0, type: 'f32' },
         },
       },
     });
@@ -90,6 +92,11 @@ export class CrtFilter {
     u.uRes[0] = pxW;
     u.uRes[1] = pxH;
     u.uPitch = CRT.scanPitch * resolution;
+  }
+
+  /** Farbversatz Impuls (Grafikstufe Supernova), 0 = aus */
+  setPunch(v: number) {
+    this.filter.resources.crtUniforms.uniforms.uPunch = v;
   }
 
   update(deltaMS: number) {

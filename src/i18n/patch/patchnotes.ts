@@ -8,6 +8,17 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.12.0': {
+    title: 'Supernova Graphics',
+    items: [
+      'New: A third graphics setting, "Supernova", in the options under Graphics (Lite, Full, Supernova). It is Full plus a whole firework of effects, and it reacts to touch.',
+      'New: While counting, glowing orbs fly from the card or Joker to the Chips and Mult display. The impact makes the display pulse, and X Mult sets off a shockwave. The longer the chain, the hotter the picture gets.',
+      'New: Big hands light up a callout word (Spark, Flame, Comet, Supernova) with rings, fireworks, confetti, a zoom punch and a color shift. Reaching the goal and winning a round bring confetti.',
+      'New: The picture plays along. Finger and mouse leave stardust, tapping throws rings, nearby cards lift and lean toward the pointer, selected cards sparkle, and fireflies drift away from the pointer.',
+      'New: The background gains nebula veils, aurora, shooting stars, a glow at the pointer and shockwaves with distortion.',
+      'Note: Supernova needs more power. If the frame rate drops, the number of particles falls automatically. On older devices Full or Lite is the better choice. The zoom punch and flash follow the Screen Shake option.',
+    ],
+  },
   '0.11.1': {
     title: 'One Sort Button',
     items: [

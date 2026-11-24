@@ -2,6 +2,9 @@ import { Ticker, type Container } from 'pixi.js';
 import { CARD_FLOAT, FLOAT_QUALITY, FLOAT_RAMP_MS, type FloatSpec } from '../data/cardMotion';
 import { getSettings, onSettings } from '../settings';
 import { floatOffset, floatRamp } from './cardMotionMath';
+import { nearFor } from './pointerFx';
+import { ease } from './spektakelMath';
+import { QUALITY_PROFILE } from '../data/juice';
 
 // Leichtes Schweben der Karten auf dem Tisch. Alle Karten laufen über EINEN Ticker Eintrag.
 // Das Schweben wirkt nur auf einen inneren Container (face, body), nie auf die Karte selbst. So bleiben alle Tweens auf
@@ -15,6 +18,9 @@ interface Entry {
   spec: FloatSpec;
   /** Zeit seit dem Anmelden (ms), für das sanfte Einsetzen */
   age: number;
+  /** Nähe des Zeigers (Grafikstufe Supernova), geglättet: Anheben und Drehung */
+  nearLift: number;
+  nearRot: number;
 }
 
 const entries = new Set<Entry>();
@@ -38,6 +44,14 @@ function shown(c: Container | null): boolean {
 function reset(e: Entry) {
   e.inner.y = 0;
   e.inner.rotation = 0;
+  e.nearLift = 0;
+  e.nearRot = 0;
+}
+
+/** Zeigernähe nur in der Grafikstufe Supernova */
+let nearOn = false;
+function readNear() {
+  nearOn = QUALITY_PROFILE[getSettings().quality].spektakel;
 }
 
 function tick(t: Ticker) {
@@ -55,8 +69,14 @@ function tick(t: Ticker) {
     if (!shown(e.inner)) continue;
     e.age += t.deltaMS;
     const o = floatOffset(time, e.seed, e.spec, quality * floatRamp(e.age, FLOAT_RAMP_MS));
-    e.inner.y = o.y;
-    e.inner.rotation = o.rot;
+    if (nearOn || e.nearLift !== 0 || e.nearRot !== 0) {
+      // Karten in der Nähe von Finger oder Maus heben sich und neigen sich zum Zeiger
+      const n = nearOn ? nearFor(e.inner) : { lift: 0, rot: 0 };
+      e.nearLift = ease(e.nearLift, n.lift);
+      e.nearRot = ease(e.nearRot, n.rot);
+    }
+    e.inner.y = o.y + e.nearLift;
+    e.inner.rotation = o.rot + e.nearRot;
   }
 }
 
@@ -68,10 +88,11 @@ export function attachFloat(inner: Container, seed: number, kind: FloatKind): ()
   if (!hooked) {
     hooked = true;
     readQuality();
-    onSettings(readQuality);
+    readNear();
+    onSettings(() => { readQuality(); readNear(); });
     Ticker.shared.add(tick);
   }
-  const e: Entry = { inner, seed, spec: CARD_FLOAT[kind], age: 0 };
+  const e: Entry = { inner, seed, spec: CARD_FLOAT[kind], age: 0, nearLift: 0, nearRot: 0 };
   entries.add(e);
   return () => {
     entries.delete(e);

@@ -28,7 +28,7 @@ import { BEGINNER_STAKE_ID, STAKES } from '../data/stakes';
 import { MUSIC_MIX, MUSIC_MIX_INFO, MUSIC_MIX_NAME, MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
 import { clampVolume, cycleSpeed, getSettings, tapBoost, hintSeen, loadPatchSeen, markHintSeen, savePatchSeen, updateSettings } from '../settings';
 import { CARD_PALETTES, CARD_PALETTE_IDS } from '../data/cardArt/cardPalettes';
-import { QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
+import { QUALITY_IDS, QUALITY_NAMES, SCORE_TIERS, SPEED_STEPS, VOLUME_STEP, type BgMood } from '../data/juice';
 import { loadRun, saveRun } from '../save';
 import { collectionProgress, entryName, loadDiscovered, unseenKeys } from '../collection';
 import { nearMiss, newKeys, overkill } from '../report';
@@ -67,6 +67,7 @@ import { buildShop, buildShopSign } from './ShopView';
 import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
 import { languageButton, languageRowTexts } from './langSwitch';
 import { scoreTier, xMultShake } from './juiceMath';
+import { spektakel } from './spektakel';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
@@ -100,6 +101,8 @@ export interface GameHooks {
 
 export class Game {
   readonly root = new Container();
+  /** Behälter des ganzen Spielfelds (ohne Blitz, Banner und Blende), wird für den Zoom Stoß um die Mitte skaliert */
+  private world = new Container();
   private fx: StageFx;
 
   private run: RunState | null = null;
@@ -192,11 +195,17 @@ export class Game {
     if (typeof window !== 'undefined') window.addEventListener('pointerdown', () => { if (this.busy) tapBoost(); }, { passive: true });
     this.handLayer.sortableChildren = true;
     this.jokerLayer.sortableChildren = true;
-    this.root.addChild(this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer, this.flashLayer, this.achLayer, this.trans.root);
+    this.world.pivot.set(VIEW_W / 2, VIEW_H / 2);
+    this.world.position.set(VIEW_W / 2, VIEW_H / 2);
+    this.world.addChild(spektakel.moteLayer, this.table, this.jokerLayer, this.playLayer, this.handLayer, this.screenLayer, spektakel.layer, this.fxLayer, this.homeLayer, this.overlayLayer, this.guideLayer);
+    this.root.addChild(this.world, this.flashLayer, this.achLayer, spektakel.topLayer, this.trans.root);
+    // Grafikstufe Supernova: Zeiger Koordinaten im Spielfeld und Mitte des Callouts
+    spektakel.attachSpace((x, y) => spektakel.layer.toLocal({ x, y }));
+    spektakel.calloutX = MX;
     this.guide = new Guide(() => this.exitGuide(false));
     this.guideLayer.addChild(this.guide.root);
     Ticker.shared.add((t) => this.guide.update(t.deltaMS));
-    this.fx = new StageFx(this.root, this.flashLayer);
+    this.fx = new StageFx(this.root, this.flashLayer, this.world);
     this.buildTable();
     // Beim Öffnen ist die Kuppel zu und öffnet sich über dem Home Bildschirm, danach erst Angebote und Patch Notes
     this.trans.cover();
@@ -609,6 +618,10 @@ export class Game {
     sfx.select(v.selected);
     haptics.select(v.selected);
     tween(v, { y: v.homeY - (v.selected ? 40 : 0) }, 160, easeOutBack);
+    if (spektakel.enabled()) {
+      spektakel.select(this.spk(v), v.selected);
+      if (v.selected) spektakel.aura(v, () => v.selected && !v.destroyed);
+    }
     this.updatePreview();
     this.updateButtons();
     this.updateHint();
@@ -1049,6 +1062,10 @@ export class Game {
     haptics.total(tier.boom);
     this.fx.shake(tier.shake);
     this.fx.flash(tier.flash);
+    if (spektakel.enabled()) {
+      const spk = spektakel.total(SCORE_TIERS.indexOf(tier), r.target > 0 ? result.total / r.target : 0, this.spk(this.totalText));
+      this.fx.punch(spk.punch);
+    }
     await tween(this.totalText, { 'scale.x': 1, 'scale.y': 1 }, 260, easeOutBack);
     const before = r.score - result.total;
     let goalHit = before >= r.target;
@@ -1059,6 +1076,10 @@ export class Game {
         sfx.goal();
         haptics.goal();
         this.fx.flash(0.14, C.money);
+        if (spektakel.enabled()) {
+          spektakel.goal(this.spk(this.scoreText));
+          this.fx.punch(0.01);
+        }
         juice(this.scoreText);
       }
     }, before, r.score, 500);
@@ -1094,12 +1115,23 @@ export class Game {
     this.refreshInfo();
   }
 
+  /** Mitte eines Objekts in Koordinaten der Effekt Ebene der Grafikstufe Supernova */
+  private spk(c: Container) {
+    return spektakel.layer.toLocal(c.getGlobalPosition());
+  }
+
   private async animateEvent(ev: ScoreEvent, step = 0) {
     this.playEventSound(ev, step);
     let target: Container | undefined;
     if (ev.source.kind === 'card' || ev.source.kind === 'held') target = this.cardViews.get(ev.source.cardId);
     else if (ev.source.kind === 'joker') target = this.jokerViews.get(ev.source.jokerUid);
     else if (ev.source.kind === 'consumable') target = this.consumableViews.get(ev.source.uid);
+    if (spektakel.enabled() && (ev.chips || ev.mult || ev.xMult || ev.money)) {
+      // Orbs fliegen vom Auslöser zur Chips oder Mult Anzeige, der Einschlag lässt die Anzeige pulsieren
+      spektakel.scoreEvent(ev, this.spk(target ?? this.chipsBox), { chips: this.spk(this.chipsBox), mult: this.spk(this.multBox) }, (kind) => {
+        juice(kind === 'chips' ? this.chipsBox : this.multBox, kind === 'xmult' ? 1 : 0.5);
+      });
+    }
     if (target) {
       juice(target);
       const g = target.getGlobalPosition();
@@ -1176,6 +1208,7 @@ export class Game {
     this.discardsText.text = String(run.round.discardsLeft);
     juice(this.discardsText);
     this.updateButtons();
+    if (spektakel.enabled()) for (const v of sel.slice(0, 5)) spektakel.puff(this.spk(v), 0xb48cff);
     this.layoutHand();
     await this.flyAway(sel);
     const drawn = afterHand(run);
@@ -1890,9 +1923,9 @@ export class Game {
         render();
       }, 22);
       speed.position.set(W - 150, sy);
-      const qy = row(6, t('Grafik'), st.quality === 'sparsam' ? t('30 FPS, ohne CRT und Edition Glanz') : t('Volle Effekte'));
-      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : 0x3b5068, () => {
-        updateSettings({ quality: st.quality === 'voll' ? 'sparsam' : 'voll' });
+      const qy = row(6, t('Grafik'), st.quality === 'sparsam' ? t('30 FPS, ohne CRT und Edition Glanz') : st.quality === 'supernova' ? t('Funken, Schockwellen, Sternenstaub, reagiert auf Berührung') : t('Volle Effekte'));
+      const quality = new Button(QUALITY_NAMES[st.quality], 190, 56, st.quality === 'sparsam' ? C.money : st.quality === 'supernova' ? RARITY_COLORS.legendary : 0x3b5068, () => {
+        updateSettings({ quality: QUALITY_IDS[(QUALITY_IDS.indexOf(st.quality) + 1) % QUALITY_IDS.length] });
         render();
       }, 22);
       quality.position.set(W - 150, qy);
@@ -2144,6 +2177,10 @@ export class Game {
     sfx.win(run.round!.blind, !!over && over.ratio >= OVERKILL_BIG);
     haptics.win();
     this.fx.flash(over ? 0.26 : 0.18, 0xffd23f);
+    if (spektakel.enabled()) {
+      spektakel.roundWon(!!over && over.ratio >= OVERKILL_BIG);
+      this.fx.punch(0.02);
+    }
     const lines: [string, number][] = [
       [t('Blind Belohnung'), e.blindReward],
       [t('Übrige Hands ({n})', { n: run.round!.handsLeft }), e.handsBonus],

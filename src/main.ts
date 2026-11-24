@@ -9,6 +9,7 @@ import { Background } from './ui/Background';
 import { sfx } from './ui/audio';
 import { CrtFilter } from './ui/crt';
 import { Game } from './ui/Game';
+import { spektakel } from './ui/spektakel';
 import { FpsMeter } from './ui/perf';
 import { setTextResolution } from './ui/textRes';
 import { FONT } from './ui/theme';
@@ -63,6 +64,7 @@ async function main() {
     app.stage.filters = st.crt && QUALITY_PROFILE[st.quality].crt ? [crt.filter] : [];
   };
   applyCrt();
+  spektakel.attachStage({ bg, crt });
 
   // Grafikstufe: Bildrate und Auflösung deckeln (sparsam), Änderungen gelten sofort
   const applyQuality = () => {

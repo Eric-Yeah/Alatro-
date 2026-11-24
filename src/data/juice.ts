@@ -122,12 +122,17 @@ export const HAPTICS = {
   consumable: { sternbild: [12, 40, 12, 40, 25], elixir: [10, 25, 10, 25, 10, 25, 30], omen: [110, 70, 50] },
 } as const;
 
-/** Grafikstufe. "sparsam" für ältere Geräte: Bildrate und Auflösung gedeckelt, kein CRT, keine Edition Shader */
-export type Quality = 'voll' | 'sparsam';
-export const QUALITY_NAMES: Record<Quality, string> = { voll: 'Voll', sparsam: 'Sparsam' };
-export const QUALITY_PROFILE: Record<Quality, { maxFps: number; maxResolution: number; crt: boolean; editionFx: boolean }> = {
-  voll: { maxFps: 0, maxResolution: 2, crt: true, editionFx: true },
-  sparsam: { maxFps: 30, maxResolution: 1, crt: false, editionFx: false },
+/**
+ * Grafikstufe. "sparsam" für ältere Geräte: Bildrate und Auflösung gedeckelt, kein CRT, keine Edition Shader.
+ * "supernova" ist "voll" plus Spektakel (Partikel, Schockwellen, Zeiger Effekte, Hintergrund Zusatz, siehe data/spektakel.ts).
+ */
+export type Quality = 'voll' | 'sparsam' | 'supernova';
+export const QUALITY_IDS: readonly Quality[] = ['sparsam', 'voll', 'supernova'];
+export const QUALITY_NAMES: Record<Quality, string> = { voll: 'Voll', sparsam: 'Sparsam', supernova: 'Supernova' };
+export const QUALITY_PROFILE: Record<Quality, { maxFps: number; maxResolution: number; crt: boolean; editionFx: boolean; spektakel: boolean }> = {
+  voll: { maxFps: 0, maxResolution: 2, crt: true, editionFx: true, spektakel: false },
+  sparsam: { maxFps: 30, maxResolution: 1, crt: false, editionFx: false, spektakel: false },
+  supernova: { maxFps: 0, maxResolution: 2, crt: true, editionFx: true, spektakel: true },
 };
 
 /** FPS Anzeige: Messfenster in ms */

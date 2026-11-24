@@ -215,6 +215,12 @@ class Sfx {
       [523, 659, 784].forEach((f, i) => this.tone(f, 0.5, 'triangle', 0.12 * boom, { delay: 0.05 + i * 0.05 }));
     }
   }
+  /** Callout Wort der Grafikstufe Supernova: aufsteigendes Glitzern, höher und voller je Stufe (0 bis 3) */
+  callout(level: number) {
+    const n = 3 + level * 2;
+    for (let i = 0; i < n; i++) this.tone(784 * Math.pow(2, [0, 4, 7, 12, 16, 19, 24, 28][i % 8] / 12), 0.32, 'triangle', 0.07 + 0.01 * level, { delay: i * 0.045 });
+    if (level >= 2) this.tone(98, 0.5, 'sine', 0.22, { slideTo: 49 });
+  }
   /** Kurzes Zählen der Rundenpunkte */
   tick() { this.tone(900, 0.03, 'square', 0.04); }
 

@@ -208,7 +208,7 @@ describe('Inhalte Teil B auf Englisch: Musik, Tempo, Sammlung', () => {
       expect(s.name).not.toContain(',');
     });
     expect(SPEED_STEPS.find((s) => s.id === 'schnell')!.name).toBe('1.5x');
-    expect(QUALITY_NAMES).toEqual({ voll: 'Full', sparsam: 'Lite' });
+    expect(QUALITY_NAMES).toEqual({ voll: 'Full', sparsam: 'Lite', supernova: 'Supernova' });
   });
 
   it('Reiter und Hinweise der Sammlung haben englische Einträge', () => {
