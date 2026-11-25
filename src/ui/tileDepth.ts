@@ -135,9 +135,9 @@ export function bottomRounded(g: Graphics, x: number, y: number, w: number, h: n
   return g;
 }
 
-/** Erhabene kleine Marke (Pille) mit Verlauf und Lichtkante, Mitte im Ursprung */
-export function drawPill(g: Graphics, x: number, y: number, w: number, h: number, color: number, radius = 4): Graphics {
-  g.roundRect(x, y, w, h, radius).fill(vGradient(lighten(color, 0.28), shade(color, 0.78)));
-  g.roundRect(x + 1, y + 1, w - 2, Math.max(1, h * 0.4), Math.max(1, radius - 1)).fill(vGradient(WHITE(0.28), WHITE(0)));
+/** Erhabene kleine Marke (Pille) mit Verlauf und Lichtkante, Fläche (x, y, w, h). `light` hellt oben auf, `sheen` ist das Lichtband. */
+export function drawPill(g: Graphics, x: number, y: number, w: number, h: number, color: number, radius = 4, o: { light?: number; sheen?: number } = {}): Graphics {
+  g.roundRect(x, y, w, h, radius).fill(vGradient(lighten(color, o.light ?? 0.22), shade(color, 0.78)));
+  g.roundRect(x + 1, y + 1, w - 2, Math.max(1, h * 0.4), Math.max(1, radius - 1)).fill(vGradient(WHITE(o.sheen ?? 0.26), WHITE(0)));
   return g;
 }

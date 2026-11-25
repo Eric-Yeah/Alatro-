@@ -164,11 +164,13 @@ export interface PlateOpts {
   sheen?: number;
   /** feine Hologramm Linie innen */
   holo?: boolean;
+  /** helle Randlinie außen (Fenster, große Platten) */
+  rim?: boolean;
   /** Fläche heller oder dunkler als der Standard (Faktor auf BEVEL.faceTop und faceBottom) */
   contrast?: number;
 }
 
-/** Zeichnet eine erhabene Platte mit Verlauf, Unterrand, Licht und Schattenkante in ein Graphics (Fläche (x, y, w, h), Unterrand liegt darunter). */
+/** Zeichnet eine erhabene Platte im Comic Stil: dunkle Kontur, kräftiger Unterrand, flache Fläche mit Lichtstreifen oben (Fläche (x, y, w, h), Unterrand liegt darunter). */
 export function drawPlate(g: Graphics, x: number, y: number, w: number, h: number, color: number, o: PlateOpts = {}): Graphics {
   const r = o.radius ?? STYLE.radius;
   const ol = o.outline ?? STYLE.outline;
@@ -176,21 +178,26 @@ export function drawPlate(g: Graphics, x: number, y: number, w: number, h: numbe
   const line = o.line ?? C.panelLine;
   const k = o.contrast ?? 1;
   const alpha = o.alpha ?? 1;
-  const sheen = o.sheen ?? BEVEL.sheenH;
-  g.roundRect(x - ol, y - ol, w + 2 * ol, h + edge + 2 * ol, r + ol).fill(line);
+  const T = BEVEL.topLight;
+  if (o.rim) {
+    // dünne dunkle Kontur, darin ein heller Ring um die Fläche
+    const rw = BEVEL.rim.width;
+    g.roundRect(x - ol - rw, y - ol - rw, w + 2 * (ol + rw), h + edge + 2 * (ol + rw), r + ol + rw).fill(line);
+    g.roundRect(x - rw, y - rw, w + 2 * rw, h + edge + 2 * rw, r + rw).fill({ color: BEVEL.rim.color, alpha: BEVEL.rim.alpha });
+  } else {
+    g.roundRect(x - ol, y - ol, w + 2 * ol, h + edge + 2 * ol, r + ol).fill(line);
+  }
   if (edge > 0) g.roundRect(x, y, w, h + edge, r).fill(shade(color, BEVEL.edgeShade));
   g.roundRect(x, y, w, h, r).fill({ fill: vGradient(lighten(color, BEVEL.faceTop * k), shade(color, 1 - (1 - BEVEL.faceBottom) * k)), alpha });
-  // Licht oben, Schatten unten als Kantenlinie
-  g.roundRect(x + 1, y + 1, w - 2, h - 2, Math.max(1, r - 1)).stroke({ width: 1.5, fill: vGradient3(WHITE(BEVEL.rimLight), WHITE(0), BLACK(BEVEL.rimDark), 0.5) });
-  if (sheen > 0) {
-    const sh = Math.min(h - 6, h * sheen);
-    if (sh > 4) g.roundRect(x + 3, y + 3, w - 6, sh, Math.max(2, r - 3)).fill(vGradient(WHITE(BEVEL.sheenAlpha * 0.55), WHITE(0.01)));
+  // Lichtstreifen oben, wie im Comic ein kleiner Glanz
+  if (h > 2 * T.h + 6 && w > 2 * T.inset + 8 && (o.sheen ?? 1) > 0) {
+    g.roundRect(x + T.inset, y + 3, w - 2 * T.inset, T.h, T.h / 2).fill({ color: 0xffffff, alpha: T.alpha });
   }
   if (o.holo) g.roundRect(x + 5, y + 5, w - 10, h - 10, Math.max(2, r - 4)).stroke({ width: 1, color: C.holo, alpha: 0.22 });
   return g;
 }
 
-/** Vertieftes Feld: dunkler Verlauf, Schatten am oberen Rand innen, helle Lippe unten (Wert Felder, Fächer, Plätze) */
+/** Vertieftes Feld im Comic Stil: flache dunkle Fläche, harter Schattenstreifen oben innen, helle Lippe unten (Wert Felder, Fächer, Plätze) */
 export function drawInset(g: Graphics, x: number, y: number, w: number, h: number, color: number, o: { radius?: number; line?: number; outline?: number; alpha?: number } = {}): Graphics {
   const r = o.radius ?? STYLE.radius;
   const ol = o.outline ?? STYLE.outline;
@@ -201,7 +208,7 @@ export function drawInset(g: Graphics, x: number, y: number, w: number, h: numbe
   g.roundRect(x - ol, y - ol, w + 2 * ol, h + 2 * ol, r + ol).fill(line);
   g.roundRect(x, y, w, h, r).fill({ fill: vGradient(shade(color, I.top), shade(color, I.bottom)), alpha: o.alpha ?? 1 });
   const sh = Math.min(h, I.shadowH + r);
-  g.roundRect(x, y, w, sh, r).fill(vGradient(BLACK(I.shadowAlpha), BLACK(0)));
+  g.roundRect(x, y, w, sh, r).fill(vGradient(BLACK(I.shadowAlpha), BLACK(I.shadowAlpha * 0.35)));
   return g;
 }
 
@@ -224,13 +231,13 @@ export function sunken(w: number, h: number, color: number, o: { radius?: number
 }
 
 /**
- * Glanz für Kacheln und Karten (Jokers, Packs, Vouchers): helle Kante oben, dunkle unten, Lichtband oben.
+ * Glanz für Kacheln und Karten (Jokers, Packs, Vouchers) im Comic Stil: heller Lichtstreifen oben links, feine helle Kante oben.
  * Ursprung links oben, strength 0 bis 1.
  */
-export function gloss(w: number, h: number, radius = STYLE.radius, strength = 1): Graphics {
+export function gloss(w: number, _h: number, radius = STYLE.radius, strength = 1): Graphics {
   const g = new Graphics();
-  g.roundRect(1, 1, w - 2, h - 2, Math.max(1, radius - 1)).stroke({ width: 2, fill: vGradient3(WHITE(0.5 * strength), WHITE(0), BLACK(0.3 * strength), 0.5) });
-  g.roundRect(3, 3, w - 6, h * 0.34, Math.max(2, radius - 3)).fill(vGradient(WHITE(0.22 * strength), WHITE(0)));
+  const T = BEVEL.topLight;
+  g.roundRect(radius, 3, Math.max(8, (w - 2 * radius) * 0.55), T.h - 1, (T.h - 1) / 2).fill({ color: 0xffffff, alpha: T.alpha * 1.3 * strength });
   g.eventMode = 'none';
   return g;
 }
@@ -248,7 +255,7 @@ export function drawMeterFill(g: Graphics, x: number, y: number, w: number, h: n
   if (w <= 0 || h <= 0) return g;
   const r = h / 2;
   g.roundRect(x, y, w, h, r).fill(vGradient(lighten(color, METER.fillTop), shade(color, METER.fillBottom)));
-  if (h >= 6 && w >= 8) g.roundRect(x + 2, y + 1, w - 4, Math.max(2, h * 0.42), Math.max(1, r - 1)).fill(vGradient(WHITE(METER.sheenAlpha), WHITE(0.03)));
+  if (h >= 6 && w >= 8) g.roundRect(x + 3, y + 2, w - 6, Math.max(2, h * 0.24), 1.5).fill({ color: 0xffffff, alpha: METER.sheenAlpha });
   return g;
 }
 

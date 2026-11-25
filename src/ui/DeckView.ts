@@ -1,18 +1,23 @@
-import { Container, Graphics, Rectangle, Sprite, Text } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Text, type NineSliceSprite } from 'pixi.js';
 import { SUIT_NAMES, SUIT_SYMBOLS, chipValue, isRankless, rankLabel } from '../core/cards';
 import type { Card } from '../core/types';
 import { cardMods, deckLayout, deckStats, type CardMod, type DeckSort } from '../core/runInfo';
 import type { RunState } from '../core/run';
 import { RANKS, SUITS } from '../data/cards';
 import { CARD_PX_H, CARD_PX_W } from '../data/cardArt/cardGlyphs';
+import { CARD_BODY } from '../data/depth';
 import { DECK_VIEW } from '../data/deckView';
+import { TILE_DEPTH } from '../data/tileDepth';
 import { SEALS } from '../data/modifiers';
 import { t } from '../i18n';
 import { getSettings } from '../settings';
 import { cardTexture } from './cardArt/cardTextures';
+import { drawInset, dropShadow, setShadowLift, sunken } from './depth';
 import { richText } from './richText';
+import { tabTrough } from './tileDepth';
+import { easeOutBack, tween } from './tween';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS, SUIT_COLORS } from './theme';
-import { Button, label, panel } from './widgets';
+import { Button, label } from './widgets';
 
 export const DECK_VIEW_W = DECK_VIEW.w;
 export const DECK_VIEW_H = DECK_VIEW.h;
@@ -25,6 +30,10 @@ const TILE_W = CARD_PX_W * DECK_VIEW.pxScale;
 const TILE_H = CARD_PX_H * DECK_VIEW.pxScale;
 /** Rand über der ersten Zeile, damit Auswahlrahmen und Edition Rand nicht abgeschnitten werden */
 const GRID_PAD = 8;
+/** Eckenradius der Kartentextur (Schatten und Körper) */
+const TILE_R = 8;
+/** so weit steigt die gewählte Karte (Pixel) */
+const SELECT_RISE = 6;
 const KIND_COLORS: Record<CardMod['kind'], number> = { enhancement: C.accent, seal: 0xff7a8c, edition: 0x9fd8ff };
 const KIND_NAMES: Record<CardMod['kind'], string> = { enhancement: 'Enhancement', seal: 'Seal', edition: 'Edition' };
 
@@ -47,9 +56,15 @@ function pill(text: string, color: number, maxW: number, size = DECK_VIEW.markFo
  * Karte des Decks als Pixel Textur in Originalgröße (nearest, scharf) mit Marken für Enhancement (Name unten),
  * Seal (Siegel mit Anfangsbuchstabe) und Edition (Rand und Name oben). Mittelpunkt ist der Ursprung.
  */
-function cardTile(card: Card): Container {
+function cardTile(card: Card): { view: Container; shadow: NineSliceSprite } {
   const c = new Container();
   const rankless = isRankless(card);
+  // schlanker weicher Schatten und Kartendicke (wie auf dem Tisch, nur kleiner)
+  const shadow = dropShadow(TILE_W, TILE_H, TILE_DEPTH.gridShadow, { radius: TILE_R });
+  shadow.x -= TILE_W / 2;
+  shadow.y -= TILE_H / 2;
+  const body = new Graphics().roundRect(-TILE_W / 2, -TILE_H / 2 + CARD_BODY.dy, TILE_W, TILE_H, TILE_R).fill(CARD_BODY.color);
+  c.addChild(shadow, body);
   const face = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] : undefined;
   const art = new Sprite(cardTexture(card.suit, card.rank, getSettings().cardPalette, { face, rankless }));
   art.anchor.set(0.5);
@@ -84,7 +99,7 @@ function cardTile(card: Card): Container {
   c.hitArea = new Rectangle(-TILE_W / 2, -TILE_H / 2, TILE_W, TILE_H);
   c.eventMode = 'static';
   c.cursor = 'pointer';
-  return c;
+  return { view: c, shadow };
 }
 
 /** Segmentierter Umschalter aus zwei oder mehr Knöpfen, der aktive ist farbig. Mitte jedes Knopfs auf y. */
@@ -93,6 +108,11 @@ function segmented<T extends string>(items: { id: T; text: string; w: number }[]
   const gap = 10;
   const total = items.reduce((a, i) => a + i.w, 0) + gap * (items.length - 1);
   let at = align === 'left' ? x : x - total;
+  // Rinne hinter den Schaltern, der aktive (farbig) liegt darin
+  const trough = tabTrough(total, DECK_VIEW.toggleH);
+  trough.x += at;
+  trough.y += y - DECK_VIEW.toggleH / 2;
+  c.addChild(trough);
   for (const i of items) {
     const b = new Button(i.text, i.w, DECK_VIEW.toggleH, i.id === current ? 0xf2711c : 0x3b5068, () => pick(i.id), 22);
     b.position.set(at + i.w / 2, y);
@@ -139,14 +159,16 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
   content.mask = mask;
   const bar = new Graphics();
   bar.position.set(DECK_VIEW.gridX + gw + 4, DECK_VIEW.gridY);
-  box.addChild(viewport, bar);
+  // das Raster liegt in einer vertieften Mulde, die Karten werfen ihren Schatten darauf
+  const well = drawInset(new Graphics(), DECK_VIEW.gridX - 10, DECK_VIEW.gridY - 8, gw + 26, DECK_VIEW.gridH + 16, 0x1d2a3a, { radius: 14 });
+  box.addChild(well, viewport, bar);
 
   const header = new Container();
   const detail = new Container();
   detail.position.set(DECK_VIEW.gridX, DECK_VIEW.detailY);
   box.addChild(header, detail);
 
-  let tiles: { id: number; view: Container; x: number; y: number }[] = [];
+  let tiles: { id: number; view: Container; shadow: NineSliceSprite; x: number; y: number; up: boolean }[] = [];
   let contentH = 0;
   const ring = new Graphics();
 
@@ -194,9 +216,17 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
   const select = (id: number | null) => {
     selected = id;
     ring.clear();
+    // gewählte Karte steigt, ihr Schatten bleibt liegen und wird weicher
+    for (const x of tiles) {
+      const up = x.id === id;
+      if (up === x.up) continue;
+      x.up = up;
+      setShadowLift(x.shadow, up ? 1 : 0);
+      void tween(x.view, { y: up ? x.y - SELECT_RISE : x.y }, 120, easeOutBack);
+    }
     const tl = tiles.find((x) => x.id === id);
     if (tl) {
-      ring.roundRect(tl.x - TILE_W / 2 - 4, tl.y - TILE_H / 2 - 4, TILE_W + 8, TILE_H + 8, 9).stroke({ width: 4, color: C.money });
+      ring.roundRect(tl.x - TILE_W / 2 - 4, tl.y - SELECT_RISE - TILE_H / 2 - 4, TILE_W + 8, TILE_H + 8, 9).stroke({ width: 4, color: C.money });
     }
     renderDetail();
   };
@@ -206,14 +236,14 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
     tiles = [];
     const layout = deckLayout(run, sort, onlyPile);
     for (const cell of layout.cells) {
-      const view = cardTile(cell.card);
+      const { view, shadow } = cardTile(cell.card);
       const x = cell.col * DECK_VIEW.colPitch + DECK_VIEW.colPitch / 2;
       const y = GRID_PAD + cell.row * DECK_VIEW.rowPitch + TILE_H / 2;
       view.position.set(x, y);
       if (!cell.inPile) view.alpha = DECK_VIEW.usedAlpha;
       view.on('pointertap', () => { if (!dragged) select(selected === cell.card.id ? null : cell.card.id); });
       content.addChild(view);
-      tiles.push({ id: cell.card.id, view, x, y });
+      tiles.push({ id: cell.card.id, view, shadow, x, y, up: false });
     }
     content.addChild(ring);
     if (!layout.cells.length) {
@@ -247,7 +277,7 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
     let sx = DECK_VIEW.gridX;
     const sy = DECK_VIEW.suitY + DECK_VIEW.suitH / 2;
     const box1 = (w: number) => {
-      const g = new Graphics().roundRect(sx, DECK_VIEW.suitY, w, DECK_VIEW.suitH, 10).fill({ color: C.panel, alpha: 0.9 }).stroke({ width: 2, color: C.panelLine });
+      const g = drawInset(new Graphics(), sx, DECK_VIEW.suitY, w, DECK_VIEW.suitH, C.panel, { radius: 10, outline: 2 });
       header.addChild(g);
     };
     for (const suit of SUITS) {
@@ -294,7 +324,7 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
   const renderDetail = () => {
     for (const c of [...detail.children]) c.destroy({ children: true });
     const w = DECK_VIEW.detailW;
-    detail.addChild(panel(w, DECK_VIEW.detailH, C.panel, 14));
+    detail.addChild(sunken(w, DECK_VIEW.detailH, C.panel, { radius: 14 }));
     const card = run.deck.find((c) => c.id === selected);
     if (!card) {
       const hint = label(t('Tippe eine Karte an, um Details zu sehen.'), 21, C.textDim);

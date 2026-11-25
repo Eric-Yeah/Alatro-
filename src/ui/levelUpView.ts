@@ -3,6 +3,7 @@ import type { LevelUpPreview } from '../core/runInfo';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { COLORS } from './richText';
 import { levelUpSegments, type LevelSegKind } from './levelUpTokens';
+import { drawPill } from './tileDepth';
 import { C, FONT_BODY } from './theme';
 
 export interface LevelUpBlockOptions {
@@ -29,7 +30,7 @@ export function levelUpBlock(p: LevelUpPreview, width: number, opts: LevelUpBloc
       const text = new Text({ text: s.text, style: { fontFamily: FONT_BODY, fontSize: size, fontWeight: s.kind === 'plain' || s.kind === 'dim' ? '700' : '900', fill: color(s.kind) } });
       const pill = s.kind === 'xmult';
       if (pill) {
-        line.addChild(new Graphics().roundRect(x, 1, text.width + pad * 2, size * 1.22, 4).fill(0xd8281c));
+        line.addChild(drawPill(new Graphics(), x, 1, text.width + pad * 2, size * 1.22, 0xd8281c, 4, { light: 0.18, sheen: 0.22 }));
         x += pad;
       }
       text.position.set(x, 0);

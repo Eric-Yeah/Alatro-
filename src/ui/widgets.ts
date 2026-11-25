@@ -25,7 +25,7 @@ export function label(text: string, size: number, color = C.text, extra: Partial
 
 /** Platte mit weichem Schatten, Verlauf, Lichtkante und Unterrand (siehe `depth.ts`). Ursprung links oben. */
 export function panel(w: number, h: number, color = C.panel, radius = STYLE.radius, line = C.panelLine): Container {
-  return raised(w, h, color, { radius, line, alpha: 0.96, holo: true, shadow: SHADOW.panel });
+  return raised(w, h, color, { radius, line, alpha: 1, rim: true, shadow: SHADOW.plate });
 }
 
 export class Button extends Container {
@@ -99,7 +99,7 @@ export class Button extends Container {
       .roundRect(-o, -o, w + o * 2, h + edge + o * 2, STYLE.radius + o).fill(C.panelLine)
       .roundRect(0, 0, w, h + edge, STYLE.radius).fill(shade(this.color, BEVEL.edgeShade));
     this.faceG.clear();
-    drawPlate(this.faceG, 0, 0, w, h, color, { edge: 0, outline: 0, line: C.panelLine, sheen: BEVEL.sheenH });
+    drawPlate(this.faceG, 0, 0, w, h, color, { edge: 0, outline: 0, line: C.panelLine });
     // Kontur der Fläche, damit sie sich beim Drücken vom Unterrand abhebt
     this.faceG.roundRect(0, 0, w, h, STYLE.radius).stroke({ width: 2, color: shade(this.color, 0.4), alpha: 0.9 });
   }

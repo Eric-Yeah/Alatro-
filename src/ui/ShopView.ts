@@ -1,4 +1,6 @@
 import { Container, Graphics, Rectangle, Ticker } from 'pixi.js';
+import { BEVEL, SHADOW } from '../data/depth';
+import { SHOP_DEPTH, SIGN_DEPTH } from '../data/tileDepth';
 import { SUIT_NAMES, isRankless, rankLabel } from '../core/cards';
 import { canBuyAndUse, canBuyCard, PACK_BY_ID, rerollCost, VOUCHER_BY_ID } from '../core/game';
 import { getJoker, jokerDescription } from '../core/jokers';
@@ -18,9 +20,12 @@ import { PackView, packPixelSize } from './PackView';
 import { attachPop } from './artFx';
 import { VOUCHER_H, VOUCHER_W, VoucherView } from './VoucherView';
 import { JokerView } from './JokerView';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES } from './theme';
+import { drawInset, drawPlate, dropShadow, radialGradient, raised, sunken, vGradient } from './depth';
+import { lighten } from './depthMath';
+import { bottomRounded, drawPill, liftTo } from './tileDepth';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, shade } from './theme';
 import { easeOutBack, tween, wait } from './tween';
-import { Button, label, panel, wrapText } from './widgets';
+import { Button, label, wrapText } from './widgets';
 
 export interface ShopCallbacks {
   buyCard(index: number): void;
@@ -64,39 +69,56 @@ const L = {
   calloutW: 290,
 };
 
-const INSET = 0x141b27;
-const INSET_LINE = 0x0b1018;
-const SHOP_FRAME = 0xc8412f;
+const SHOP_FRAME = SHOP_DEPTH.frame;
+const WHITE = (a: number) => `rgba(255,255,255,${a})`;
+const BLACK = (a: number) => `rgba(0,0,0,${a})`;
 
-/** Preis Fahne: dunkles Schild mit Goldrand, sitzt mit der Unterkante auf dem Artikel. */
+/** Preis Plakette: erhabene dunkle Platte mit Verlauf, Kante und Goldrand, sitzt mit der Unterkante auf dem Artikel. */
 function priceTag(price: number, affordable: boolean): Container {
   const c = new Container();
-  const txt = label(price === 0 ? t('Gratis') : `$${price}`, 24, affordable ? C.money : 0x8a7f99);
+  const txt = label(price === 0 ? t('Gratis') : `$${price}`, 24, affordable ? C.money : SHOP_DEPTH.tagTextOff);
+  const h = SHOP_DEPTH.tagH;
   const w = Math.max(60, txt.width + 26);
-  const line = affordable ? C.money : 0x3b5068;
-  c.addChild(
-    new Graphics()
-      .roundRect(-w / 2, -L.tagH + 4, w, L.tagH, 10).fill(0x1b2230).stroke({ width: 3, color: C.panelLine })
-      .roundRect(-w / 2 + 3, -L.tagH + 7, w - 6, L.tagH - 6, 8).stroke({ width: 1.5, color: line, alpha: 0.9 }),
-    txt,
-  );
-  txt.y = -L.tagH / 2 + 5;
+  const x = -w / 2;
+  const y = -h + 4;
+  const line = affordable ? SHOP_DEPTH.tagLineOn : SHOP_DEPTH.tagLineOff;
+  const shadow = dropShadow(w, h + 3, SHOP_DEPTH.tagShadow, { radius: 10 });
+  shadow.x += x;
+  shadow.y += y;
+  const plate = drawPlate(new Graphics(), x, y, w, h, SHOP_DEPTH.tagColor, { radius: 10, edge: 3, sheen: 0.35, outline: 3 });
+  // feiner Goldrand innen, bei zu wenig Geld matt
+  plate.roundRect(x + 3, y + 3, w - 6, h - 6, 8).stroke({ width: 1.5, color: line, alpha: affordable ? 0.95 : 0.8 });
+  c.addChild(shadow, plate, txt);
+  txt.y = y + h / 2 + 1;
   return c;
 }
 
-/** Vertiefte Ablage (dunkle Fläche mit Innenschatten), wie ein Fach im Shop. */
-function inset(x: number, y: number, w: number, h: number): Graphics {
-  return new Graphics()
-    .roundRect(x, y, w, h, 14).fill(INSET).stroke({ width: 3, color: INSET_LINE })
-    .roundRect(x + 3, y + 3, w - 6, 8, 5).fill({ color: 0x000000, alpha: 0.35 });
+/** Fach (vertieft, mit Innenschatten) mit Regalboden unten: die Kacheln stehen darauf und werfen ihren Schatten. Ursprung links oben. */
+function shelf(x: number, y: number, w: number, h: number, floorH: number): Container {
+  const D = SHOP_DEPTH;
+  const c = new Container();
+  c.addChild(drawInset(new Graphics(), 0, 0, w, h, D.shelf, { radius: D.radius, line: D.shelfLine }));
+  const g = new Graphics();
+  const fy = h - 3 - floorH;
+  bottomRounded(g, 3, fy, w - 6, floorH, D.radius - 3, D.floorTop, D.floorBottom);
+  // Vorderkante: dunkle Fuge zur Wand, helle Lippe
+  g.rect(3, fy, w - 6, 2).fill(BLACK(0.45));
+  g.rect(3, fy + 2, w - 6, D.floorLipH).fill(vGradient(D.floorLip, D.floorTop));
+  c.addChild(g);
+  c.position.set(x, y);
+  c.boundsArea = new Rectangle(0, 0, w, h);
+  return c;
 }
 
-function emptySlot(x: number, y: number, w: number, h: number): Graphics {
-  return new Graphics().roundRect(x - w / 2, y - h / 2, w, h, 10).stroke({ width: 2, color: 0x3b5068, alpha: 0.7 });
+/** Leerer Platz: kleine Mulde in der Größe des Artikels (Mitte x, y) */
+function emptySlot(x: number, y: number, w: number, h: number): Container {
+  const c = sunken(w, h, SHOP_DEPTH.hollow, { radius: 10, outline: 2, alpha: SHOP_DEPTH.hollowAlpha });
+  c.position.set(x - w / 2, y - h / 2);
+  return c;
 }
 
 /** Zahlen des Leuchtschilds in der Seitenleiste */
-const SIGN = { w: 330, h: 160, bulbStep: 22, blinkMs: 520 };
+const SIGN = SIGN_DEPTH;
 
 /**
  * Leuchtschild "SHOP" für die Seitenleiste: Rahmen mit Glühbirnen, die abwechselnd blinken.
@@ -104,14 +126,17 @@ const SIGN = { w: 330, h: 160, bulbStep: 22, blinkMs: 520 };
  */
 export function buildShopSign(): Container {
   const { w, h } = SIGN;
+  const edge = BEVEL.panelEdge;
   const sign = new Container();
-  sign.addChild(
-    new Graphics()
-      .roundRect(0, 4, w, h, 12).fill(0x070b11)
-      .roundRect(0, 0, w, h, 12).fill(0x8f2a28).stroke({ width: 3, color: C.panelLine })
-      .roundRect(15, 15, w - 30, h - 30, 8).fill(0x151b27).stroke({ width: 3, color: C.panelLine })
-      .roundRect(19, 19, w - 38, 6, 3).fill({ color: 0x000000, alpha: 0.35 }),
-  );
+  // weicher Schatten, erhabener roter Rahmen, vertieftes dunkles Feld, Halo hinter dem Titel und Glasglanz oben
+  sign.addChild(dropShadow(w, h + edge, SHADOW.panel, { radius: 12 }));
+  const body = new Graphics();
+  drawPlate(body, 0, 0, w, h, SIGN.frameColor, { radius: 12, edge, sheen: 0.3 });
+  drawInset(body, 15, 15, w - 30, h - 30, SIGN.displayColor, { radius: 8 });
+  body.ellipse(w / 2, 72, 140, 46).fill(radialGradient(`rgba(255,200,90,${SIGN.titleGlowAlpha})`, 'rgba(255,200,90,0)'));
+  body.roundRect(19, 19, w - 38, (h - 38) * 0.36, 6).fill(vGradient(WHITE(0.09), WHITE(0)));
+  sign.addChild(body);
+  sign.boundsArea = new Rectangle(0, 0, w, h + edge);
   // Glühbirnen entlang des Rahmens, gerade und ungerade im Wechsel
   const pts: [number, number][] = [];
   for (let x = 14; x <= w - 14; x += SIGN.bulbStep) { pts.push([x, 7.5]); }
@@ -122,8 +147,10 @@ export function buildShopSign(): Container {
   frames.forEach((g, f) => {
     pts.forEach(([x, y], i) => {
       const on = i % 2 === f;
-      g.circle(x, y, 5).fill(on ? 0xfff0c2 : 0x6b2220).stroke({ width: 1.5, color: on ? 0xffc85a : 0x4a1614 });
-      if (on) g.circle(x, y, 8).fill({ color: 0xffd36b, alpha: 0.25 });
+      const look = on ? SIGN.on : SIGN.off;
+      // leuchtende Birnen haben einen Halo, jede Birne eine kleine Kugel aus Mitte und Rand
+      if (on) g.circle(x, y, SIGN.haloR).fill(radialGradient(`rgba(255,211,107,${SIGN.haloAlpha})`, 'rgba(255,211,107,0)', 0.25));
+      g.circle(x, y, SIGN.bulbR).fill(radialGradient(look.core, look.edge, 0)).stroke({ width: 1.5, color: look.line });
     });
   });
   frames[1].visible = false;
@@ -139,15 +166,17 @@ export function buildShopSign(): Container {
 
   let acc = 0;
   let on = 0;
-  Ticker.shared.add((tk) => {
-    if (!sign.visible || sign.destroyed) return;
+  const blink = (tk: Ticker) => {
+    if (sign.destroyed) { Ticker.shared.remove(blink); return; }
+    if (!sign.visible) return;
     acc += tk.deltaMS;
     if (acc < SIGN.blinkMs) return;
     acc = 0;
     on = 1 - on;
     frames[0].visible = on === 0;
     frames[1].visible = on === 1;
-  });
+  };
+  Ticker.shared.add(blink);
   return sign;
 }
 
@@ -175,6 +204,7 @@ interface Detail {
 
 interface Slot {
   item: Container;
+  view: Container;
   homeY: number;
   /** Mitte des Artikels und halbe Höhe (für die Platzierung der Detail Karte) */
   x: number;
@@ -196,19 +226,26 @@ function buildCallout(d: Detail, tailX: number, up: boolean): { box: Container; 
   if (extra) extra.position.set(0, 82 + desc.height + LEVEL_UP_VIEW.gap);
   if (hint) hint.position.set(0, below + 8);
   const h = below + (hint ? hint.height + 16 : 8) + 78;
-  const bg = new Graphics()
-    .poly(up ? [tailX - 14, h, tailX, h + 14, tailX + 14, h] : [tailX - 14, 0, tailX, -14, tailX + 14, 0]).fill(C.text).stroke({ width: 3, color: C.cardEdge })
-    .roundRect(-w / 2, 5, w, h, 14).fill({ color: 0x000000, alpha: 0.4 })
-    .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
+  // erhabene Platte (Pergament) mit weichem Schatten, die Spitze wächst unter der Platte hervor
+  const D = SHOP_DEPTH;
+  const edge = BEVEL.panelEdge;
+  const k = D.calloutContrast;
+  const tailY = up ? h + edge : 0;
+  const tailColor = up ? shade(D.calloutColor, 1 - (1 - BEVEL.faceBottom) * k) : lighten(D.calloutColor, BEVEL.faceTop * k);
+  const tail = new Graphics()
+    .poly(up ? [tailX - 14, tailY, tailX, tailY + 14, tailX + 14, tailY] : [tailX - 14, tailY, tailX, tailY - 14, tailX + 14, tailY]).fill(tailColor).stroke({ width: 3, color: C.cardEdge });
+  const shadow = dropShadow(w, h + edge, SHADOW.panel, { radius: D.calloutRadius });
+  shadow.x -= w / 2;
+  const bg = drawPlate(new Graphics(), -w / 2, 0, w, h, D.calloutColor, { radius: D.calloutRadius, line: C.cardEdge, edge, sheen: 0.28, contrast: k });
   bg.eventMode = 'static';
   const name = label(d.name, 24, C.cardEdge);
   name.position.set(0, 26);
   if (name.width > w - 30) name.scale.set((w - 30) / name.width);
   const badge = label(d.badge, 14, d.badgeText ?? 0xffffff);
   const bw = Math.max(110, badge.width + 28);
-  const pill = new Graphics().roundRect(-bw / 2, 46, bw, 24, 12).fill(d.badgeColor);
+  const pill = drawPill(new Graphics(), -bw / 2, 46, bw, 24, d.badgeColor, 12, { light: 0.12, sheen: 0.16 });
   badge.position.set(0, 58);
-  box.addChild(bg, name, pill, badge, desc);
+  box.addChild(shadow, tail, bg, name, pill, badge, desc);
   if (extra) box.addChild(extra);
   if (hint) box.addChild(hint);
   const n = d.actions.length;
@@ -231,7 +268,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   root.position.set(SHOP_X, SHOP_Y);
 
   // Rahmen: dunkle Fläche mit roter Kante und feiner Leuchtlinie
-  const frame = panel(SHOP_W, SHOP_H, C.panelDark, 20, SHOP_FRAME);
+  const frame = raised(SHOP_W, SHOP_H, C.panelDark, { radius: 20, line: SHOP_FRAME, alpha: 0.96, holo: true, shadow: SHADOW.plate });
   root.addChild(frame);
   // Tipp ins Leere schließt die Detail Karte
   const catcher = new Graphics().rect(0, 0, SHOP_W, SHOP_H).fill({ color: 0, alpha: 0.001 });
@@ -257,20 +294,23 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   }
 
   // Ablagen
-  const cardsInset = inset(L.cardsX, L.cardsY, L.cardsW, L.cardsH);
-  const voucherInset = inset(L.pad, L.rowY, L.voucherW, L.rowH);
+  const floorLow = SHOP_DEPTH.floorHLow;
+  const cardsInset = shelf(L.cardsX, L.cardsY, L.cardsW, L.cardsH, SHOP_DEPTH.floorH);
+  const voucherInset = shelf(L.pad, L.rowY, L.voucherW, L.rowH, floorLow);
   const packsX = L.pad + L.voucherW + 20;
   const packsW = SHOP_W - L.pad - packsX;
-  const packsInset = inset(packsX, L.rowY, packsW, L.rowH);
+  const packsInset = shelf(packsX, L.rowY, packsW, L.rowH, floorLow);
   root.addChild(cardsInset, voucherInset, packsInset);
 
-  // Senkrechte Aufschrift im Voucher Fach
-  const vLabel = label(`Ante ${run.ante} Voucher`, 24, 0x5a6c82, { letterSpacing: 3 });
+  // Senkrechte Aufschrift im Voucher Fach (über dem Regalboden), Beschriftung der Packs auf dem Regalboden
+  const vLabel = label(`Ante ${run.ante} Voucher`, 22, 0x6f84a0, { letterSpacing: 3 });
+  const vMax = L.rowH - floorLow - 30;
+  if (vLabel.width > vMax) vLabel.scale.set(vMax / vLabel.width);
   vLabel.rotation = -Math.PI / 2;
-  vLabel.position.set(L.pad + 28, L.rowY + L.rowH / 2);
+  vLabel.position.set(L.pad + 28, L.rowY + (L.rowH - floorLow) / 2);
   root.addChild(vLabel);
-  const pLabel = label('Booster Packs', 18, 0x5a6c82, { letterSpacing: 2 });
-  pLabel.position.set(packsX + packsW / 2, L.rowY + L.rowH - 24);
+  const pLabel = label('Booster Packs', 18, 0x8da2c0, { letterSpacing: 2 });
+  pLabel.position.set(packsX + packsW / 2, L.rowY + L.rowH - floorLow / 2 + 4);
   root.addChild(pLabel);
 
   const slots: Slot[] = [];
@@ -302,11 +342,16 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     item.hitArea = new Rectangle(-w / 2, -h / 2 - L.tagH, w, h + L.tagH);
     item.eventMode = 'static';
     item.cursor = 'pointer';
-    // Aufprall beim Berühren: das Fach fängt die Berührung auf, die Ansicht stellt nur ihren inneren Container (body) bereit
+    // Aufprall beim Berühren: das Fach fängt die Berührung auf, die Ansicht stellt nur ihren inneren Container (body) bereit.
+    // Ansichten mit `lift` heben dabei ihren Schatten mit (gewählte Artikel bleiben gehoben).
     const popBody = (view as { body?: Container }).body;
-    if (popBody) attachPop(item, popBody);
+    const liftable = 'lift' in view;
+    const rest = () => (selected === slot ? 1 : 0);
+    const hover = (on: boolean) => { if (liftable) liftTo(view as unknown as { lift: number; destroyed: boolean }, on ? 1 : rest()); };
+    if (popBody) attachPop(item, popBody, { onHover: hover });
+    else if (liftable) { item.on('pointerover', () => hover(true)); item.on('pointerout', () => hover(false)); }
     itemLayer.addChild(item);
-    const slot: Slot = { item, homeY: y, x, top: y - h / 2 - L.tagH, bottom: y + h / 2, dir, detail };
+    const slot: Slot = { item, view, homeY: y, x, top: y - h / 2 - L.tagH, bottom: y + h / 2, dir, detail };
     slots.push(slot);
     item.on('pointertap', () => select(selected === slot ? null : slot));
     return slot;
@@ -315,7 +360,10 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
   let selected: Slot | null = null;
   let callout: Container | null = null;
   const select = (slot: Slot | null) => {
-    if (selected) tween(selected.item, { y: selected.homeY }, 140);
+    if (selected) {
+      tween(selected.item, { y: selected.homeY }, 140);
+      if ('lift' in selected.view) liftTo(selected.view as unknown as { lift: number; destroyed: boolean }, 0);
+    }
     callout?.destroy({ children: true });
     callout = null;
     selected = slot;
@@ -323,6 +371,7 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     sfx.click();
     haptics.tap();
     tween(slot.item, { y: slot.homeY - L.lift }, 140, easeOutBack);
+    if ('lift' in slot.view) liftTo(slot.view as unknown as { lift: number; destroyed: boolean }, 1);
     const w = L.calloutW;
     const cx = Math.max(w / 2 + 14, Math.min(SHOP_W - w / 2 - 14, slot.x));
     let up = slot.dir === 'above';

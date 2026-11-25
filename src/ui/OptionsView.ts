@@ -120,7 +120,7 @@ export function buildOptions(deps: OptionsDeps): Container {
   const motto = label(t('Sternwarte der Alchemisten'), 18, C.money, { fontWeight: '600' });
   motto.position.set(L.side.w / 2, 120);
   if (motto.width > L.side.w - 40) motto.scale.set((L.side.w - 40) / motto.width);
-  const sideGroove = sunken(L.side.w - 2 * L.side.groovePad, L.side.grooveH, C.panelDark, { radius: L.side.grooveH / 2, outline: 1 });
+  const sideGroove = sunken(L.side.w - 2 * L.side.groovePad, L.side.grooveH, L.astrolabe.grooveColor, { radius: L.side.grooveH / 2, outline: 1, line: L.astrolabe.grooveLine });
   sideGroove.position.set(L.side.groovePad, L.side.grooveY);
   side.addChild(title, motto, sideGroove);
 
@@ -267,7 +267,7 @@ export function buildOptions(deps: OptionsDeps): Container {
     const sub = label(info.sub(), 20, C.textDim, { fontWeight: '600' });
     sub.anchor.set(0, 0.5);
     sub.position.set(L.row.pad, 126);
-    const line = sunken(rowW, L.row.grooveH, C.panelDark, { radius: L.row.grooveH / 2, outline: 1 });
+    const line = sunken(rowW, L.row.grooveH, L.astrolabe.grooveColor, { radius: L.row.grooveH / 2, outline: 1, line: L.astrolabe.grooveLine });
     line.position.set(L.row.pad, L.row.grooveY);
     content.addChild(head, sub, line);
     startRows();

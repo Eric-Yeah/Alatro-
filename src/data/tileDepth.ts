@@ -74,6 +74,10 @@ export const SHOP_DEPTH = {
   tagLineOn: 0xf5b32b,
   tagLineOff: 0x3b5068,
   tagTextOff: 0x8a7f99,
+  /** weicher Schatten unter der Plakette */
+  tagShadow: { blur: 6, dy: 4, dx: 0, alpha: 0.55 },
+  /** Boden des unteren Fachs (Voucher und Packs) ist höher, die Beschriftung "Booster Packs" liegt darauf */
+  floorHLow: 75,
   /** Detail Karte: Plattenfarbe (warmes Pergament), Kontrast der Fläche, Radius */
   calloutColor: 0xf3ecd8,
   calloutContrast: 0.4,

@@ -2,8 +2,11 @@ import { richText } from './richText';
 import { t } from '../i18n';
 import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
-import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult } from './theme';
+import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult, shade } from './theme';
 import { Button, label, tabBar } from './widgets';
+import { drawInset, drawPlate, vGradient } from './depth';
+import { lighten } from './depthMath';
+import { tabTrough } from './tileDepth';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
 import { VoucherView } from './VoucherView';
@@ -73,9 +76,13 @@ export function buildCollection(box: Container, close: () => void) {
 
   const render = () => {
     for (const c of [...dyn.children]) c.destroy({ children: true });
+    // Rinne hinter den Reitern (aktiver Reiter farbig)
+    const barHolder = new Container();
+    barHolder.position.set(40, 88);
+    barHolder.addChild(tabTrough(W - 80));
     const bar = tabBar(COLLECTION_TABS.map((tb) => ({ id: tb.id, name: collectionEntries(tb.id).some((e) => fresh.has(e.key)) ? `${tb.name} *` : tb.name })), W - 80, tab, (id) => { tab = id; page = 0; render(); }, 16);
-    bar.position.set(40, 88);
-    dyn.addChild(bar);
+    barHolder.addChild(bar);
+    dyn.addChild(barHolder);
 
     const entries = collectionEntries(tab);
     const seen = entries.filter((e) => found.has(e.key)).length;
@@ -91,10 +98,9 @@ export function buildCollection(box: Container, close: () => void) {
       const y = 190 + Math.floor(i / COLS) * (CELL_H + GAP);
       const known = found.has(e.key);
       const color = entryColor(e);
-      dyn.addChild(new Graphics()
-        .roundRect(x, y + 4, CELL_W, CELL_H, 14).fill({ color: 0, alpha: 0.35 })
-        .roundRect(x, y, CELL_W, CELL_H, 14).fill(known ? C.panel : 0x141d29).stroke({ width: 3, color: known ? color : C.panelLine }));
-      if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(color));
+      // Vitrine: vertieftes Fach, bei entdeckten Einträgen mit Rand und Lichtband in der Farbe des Eintrags
+      dyn.addChild(drawInset(new Graphics(), x, y, CELL_W, CELL_H, known ? C.panel : 0x141d29, { radius: 14, outline: 3, line: known ? shade(color, 0.8) : C.panelLine }));
+      if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(vGradient(lighten(color, 0.3), shade(color, 0.8))));
       const tile = known ? tileFor(e) : null;
       // Textbereich: mit Kachel rechts von ihr, sonst über die ganze Zelle
       const tx = tile ? x + COLLECTION_TILE.pad * 2 + tile.w : x;
@@ -113,7 +119,7 @@ export function buildCollection(box: Container, close: () => void) {
       if (known && fresh.has(e.key)) {
         const badge = label(t('NEU'), 14, 0x1a1a1a);
         const bw = badge.width + 16;
-        const bg = new Graphics().roundRect(x + CELL_W - bw - 10, y + 22, bw, 22, 6).fill(C.money);
+        const bg = drawPlate(new Graphics(), x + CELL_W - bw - 10, y + 22, bw, 22, C.money, { radius: 6, edge: 2, sheen: 0.4, outline: 2 });
         badge.position.set(x + CELL_W - bw / 2 - 10, y + 33);
         dyn.addChild(bg, badge);
       }

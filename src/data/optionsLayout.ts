@@ -2,7 +2,7 @@
 
 export const OPTIONS_LAYOUT = {
   /** Seitenleiste links: Titel, Bereiche, Zurück */
-  side: { x: 40, y: 40, w: 360, h: 920, groovePad: 40, grooveH: 6, grooveY: 154 },
+  side: { x: 40, y: 40, w: 360, h: 920, groovePad: 40, grooveH: 5, grooveY: 154 },
   /** Inhaltsfläche rechts */
   main: { x: 430, y: 40, w: 970, h: 920 },
   /** Bereichsknöpfe in der Seitenleiste */
@@ -16,7 +16,7 @@ export const OPTIONS_LAYOUT = {
     edge: 4,
     shadow: { blur: 9, dy: 5, dx: 0, alpha: 0.45 },
     markX: 12,
-    grooveH: 6,
+    grooveH: 5,
     grooveY: 158,
   },
   /** Bedienelemente */
@@ -40,13 +40,16 @@ export const OPTIONS_LAYOUT = {
   },
   /** Sternwarten Zierde unten in der Seitenleiste (Astrolabium) */
   astrolabe: {
-    cx: 220, cy: 738, r: 62, spinMs: 120000,
+    cx: 220, cy: 722, r: 62, spinMs: 120000,
     /** Schale um die Ringe: Abstand, Farben von Mitte zu Rand; Schein des Kerns */
-    wellPad: 14,
+    wellPad: 9,
     wellInner: 0x1c2c42,
     wellOuter: 0x0a111b,
     glowR: 34,
     glowAlpha: 0.45,
+    /** Rille unter Überschriften: Füllfarbe und Konturfarbe (heller als die Plattenkontur, damit sie nicht schwarz wirkt) */
+    grooveColor: 0x34506f,
+    grooveLine: 0x111a26,
   },
 } as const;
 

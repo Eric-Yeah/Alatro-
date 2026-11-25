@@ -8,7 +8,11 @@ import { BOSS_BY_ID, type RunState } from '../core/run';
 import { blindRows, deckStats, handRows } from '../core/runInfo';
 import { FINAL_ANTE } from '../data/blinds';
 import { RANKS, SUITS } from '../data/cards';
-import { C, SUIT_COLORS, fmt, fmtMult } from './theme';
+import { SHADOW } from '../data/depth';
+import { drawInset, drawPlate, raised, vGradient } from './depth';
+import { lighten } from './depthMath';
+import { drawRow, tabTrough } from './tileDepth';
+import { C, SUIT_COLORS, fmt, fmtMult, shade } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
 export type RunInfoTab = 'hands' | 'blinds' | 'vouchers' | 'deck';
@@ -36,8 +40,10 @@ export function buildRunInfo(box: Container, run: RunState, close: () => void, s
 
   const show = (tab: RunInfoTab) => {
     bar?.destroy({ children: true });
-    bar = tabBar(tabs(), W - 80, tab, show);
+    // Rinne hinter den Reitern: der aktive Reiter (farbig) liegt wie ein Schalter darin
+    bar = new Container();
     bar.position.set(40, 82);
+    bar.addChild(tabTrough(W - 80), tabBar(tabs(), W - 80, tab, show));
     box.addChild(bar);
     for (const c of [...content.children]) c.destroy({ children: true });
     if (tab === 'hands') hands(content, run);
@@ -63,7 +69,8 @@ function hands(c: Container, run: RunState) {
   }
   handRows(run).forEach((r, i) => {
     const y = 26 + i * 43;
-    const bg = new Graphics().roundRect(0, y, 1020, 38, 10).fill({ color: r.hidden ? 0x141d29 : C.panel, alpha: 0.9 });
+    // Listenzeile vertieft; Hände mit Level über 1 bekommen einen goldenen Schimmer am Rand
+    const bg = drawRow(new Graphics(), 0, y, 1020, 38, r.hidden ? 0x141d29 : C.panel, { radius: 10, alpha: 0.95, line: !r.hidden && r.level > 1 ? shade(C.money, 0.45) : C.panelLine });
     const lv = label(r.hidden ? '?' : t('Lv {n}', { n: r.level }), 22, r.level > 1 ? C.money : C.text);
     lv.anchor.set(0, 0.5);
     lv.position.set(colX.level, y + 19);
@@ -98,9 +105,10 @@ function blinds(c: Container, run: RunState) {
   rows.forEach((r, i) => {
     const x = i * 345;
     const boss = r.bossId ? BOSS_BY_ID[r.bossId] : undefined;
-    const bg = new Graphics()
-      .roundRect(x, 36, 330, 190, 14).fill(r.state === 'current' ? (boss?.color ?? 0x2a7f8f) : C.panel)
-      .stroke({ width: 2, color: r.state === 'current' ? 0xffffff : C.panelLine, alpha: 0.6 });
+    // erhabene Karte mit weichem Schatten, die aktuelle Blind in Farbe des Bosses mit heller Kante
+    const color = r.state === 'current' ? (boss?.color ?? 0x2a7f8f) : C.panel;
+    const bg = raised(330, 190, color, { radius: 14, line: r.state === 'current' ? lighten(color, 0.6) : C.panelLine, shadow: SHADOW.panel, sheen: 0.3 });
+    bg.position.set(x, 36);
     const nm = label(r.name, 24);
     nm.position.set(x + 165, 66);
     if (nm.width > 300) nm.scale.set(300 / nm.width);
@@ -115,9 +123,11 @@ function blinds(c: Container, run: RunState) {
     if (r.state === 'done') bg.alpha = 0.5;
   });
   // Ziele aller Antes bis zum Final Ante
+  // vertiefte Tafel hinter der Tabelle
+  c.addChild(drawInset(new Graphics(), -12, 230, 1044, 322, 0x1d2a3a, { radius: 14 }));
   const th = label(t('Ziele je Ante'), 20, C.textDim);
   th.anchor.set(0, 0.5);
-  th.position.set(0, 250);
+  th.position.set(8, 250);
   c.addChild(th);
   [t('Ante'), BLIND_NAMES.small, BLIND_NAMES.big, BLIND_NAMES.boss].forEach((n, i) => {
     const l = label(n.trim(), 17, C.textDim);
@@ -126,7 +136,8 @@ function blinds(c: Container, run: RunState) {
   });
   for (let a = 1; a <= FINAL_ANTE; a++) {
     const y = 294 + (a - 1) * 32;
-    if (a === run.ante) c.addChild(new Graphics().roundRect(0, y, 1020, 28, 8).fill({ color: C.accent, alpha: 0.35 }));
+    // aktuelle Ante: erhabene orange Leiste
+    if (a === run.ante) c.addChild(drawPlate(new Graphics(), 0, y, 1020, 28, shade(C.accent, 0.62), { radius: 8, edge: 2, sheen: 0.4, outline: 2 }));
     const opts = { scaling: run.rules.scaling, deckFactor: run.rules.blindTargetFactor };
     const vals = [String(a), ...(['small', 'big', 'boss'] as const).map((k) => fmt(blindTarget(a, k, opts)))];
     vals.forEach((v, i) => {
@@ -137,7 +148,8 @@ function blinds(c: Container, run: RunState) {
   }
   const note = label(t('Boss Ziele ohne Boss Faktor. Belohnung: Small {small}, Big {big}, Boss {boss}', { small: '$' + blindReward(run.ante, 'small', run.rules.smallBlindReward), big: '$' + blindReward(run.ante, 'big', null), boss: '$' + blindReward(run.ante, 'boss', null) }), 14, C.textDim);
   note.anchor.set(0, 0.5);
-  note.position.set(0, 294 + FINAL_ANTE * 32 + 10);
+  note.position.set(0, 294 + FINAL_ANTE * 32 + 24);
+  if (note.width > 1020) note.scale.set(1020 / note.width);
   c.addChild(note);
 }
 
@@ -156,7 +168,7 @@ function vouchers(c: Container, run: RunState) {
     const v = VOUCHER_BY_ID[id];
     const x = (i % 2) * 515;
     const y = 36 + Math.floor(i / 2) * 78;
-    c.addChild(new Graphics().roundRect(x, y, 500, 68, 12).fill(C.panel).stroke({ width: 2, color: C.panelLine }));
+    c.addChild(drawRow(new Graphics(), x, y, 500, 68, C.panel, { radius: 12, line: shade(C.money, 0.4) }));
     const n = label(v.name, 20, C.money);
     n.anchor.set(0, 0.5);
     n.position.set(x + 16, y + 20);
@@ -179,8 +191,9 @@ function vouchers(c: Container, run: RunState) {
     const tag = TAG_BY_ID[id];
     const l = label(`${tag.name}: ${tag.description}`, 18, C.text);
     l.anchor.set(0, 0.5);
-    l.position.set(0, ty + 42 + i * 34);
-    c.addChild(l);
+    l.position.set(14, ty + 42 + i * 34);
+    if (l.width > 990) l.scale.set(990 / l.width);
+    c.addChild(drawRow(new Graphics(), 0, ty + 42 + i * 34 - 15, 1020, 30, C.panel, { radius: 8 }), l);
   });
 }
 
@@ -199,9 +212,17 @@ function deck(c: Container, run: RunState, openDeck?: () => void) {
     const x = 20 + i * 78;
     const n = s.byRank[r];
     const h = (n / max) * barH;
-    c.addChild(new Graphics().roundRect(x, 60 + barH - h, 56, h, 6).fill(C.chips));
+    // Rinne und glänzender Balken
+    const bar = new Graphics();
+    drawInset(bar, x - 3, 60 - 4, 62, barH + 10, 0x1d2a3a, { radius: 8, outline: 2 });
+    if (h > 0) {
+      const bh = Math.max(8, h);
+      bar.roundRect(x, 60 + barH - bh, 56, bh, 6).fill(vGradient(lighten(C.chips, 0.3), shade(C.chips, 0.75)));
+      bar.roundRect(x + 3, 60 + barH - bh + 2, 14, Math.max(2, bh - 4), 4).fill({ color: 0xffffff, alpha: 0.16 });
+    }
+    c.addChild(bar);
     const cnt = label(String(n), 20, C.text);
-    cnt.position.set(x + 28, 60 + barH - h - 14);
+    cnt.position.set(x + 28, 40);
     const rl = label(rankLabel(r), 24, C.textDim);
     rl.position.set(x + 28, 60 + barH + 24);
     c.addChild(cnt, rl);
@@ -213,7 +234,8 @@ function deck(c: Container, run: RunState, openDeck?: () => void) {
     sym.position.set(x, 400);
     const n = label(String(s.bySuit[suit]), 34, C.text);
     n.position.set(x + 70, 402);
-    c.addChild(sym, n);
+    // vertieftes Wertfeld hinter Zeichen und Zahl
+    c.addChild(drawInset(new Graphics(), x - 46, 368, 174, 66, 0x1d2a3a, { radius: 12 }), sym, n);
   });
   if (openDeck) {
     const btn = new Button(t('Deck ansehen'), 320, 60, C.chips, openDeck, 24);
