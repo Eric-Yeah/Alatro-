@@ -124,14 +124,14 @@ function blinds(c: Container, run: RunState) {
   });
   // Ziele aller Antes bis zum Final Ante
   // vertiefte Tafel hinter der Tabelle
-  c.addChild(drawInset(new Graphics(), -12, 230, 1044, 322, 0x1d2a3a, { radius: 14 }));
+  c.addChild(drawInset(new Graphics(), -12, 242, 1044, 312, 0x1d2a3a, { radius: 14 }));
   const th = label(t('Ziele je Ante'), 20, C.textDim);
   th.anchor.set(0, 0.5);
-  th.position.set(8, 250);
+  th.position.set(8, 260);
   c.addChild(th);
   [t('Ante'), BLIND_NAMES.small, BLIND_NAMES.big, BLIND_NAMES.boss].forEach((n, i) => {
     const l = label(n.trim(), 17, C.textDim);
-    l.position.set(80 + i * 250, 278);
+    l.position.set(80 + i * 250, 282);
     c.addChild(l);
   });
   for (let a = 1; a <= FINAL_ANTE; a++) {

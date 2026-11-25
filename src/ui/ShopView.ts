@@ -408,7 +408,6 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     const can = canBuyCard(run, i);
     const why = !affordable ? t('Zu wenig Geld') : t('Kein freier Platz');
     const buy: Action = { text: t('Kaufen'), color: C.green, enabled: can, run: () => cb.buyCard(i) };
-    slotLayer.addChild(emptySlot(x, cardsCy, w, h));
     if (item.kind === 'joker') {
       const def = getJoker(item.defId)!;
       const view = new JokerView({ uid: -1, defId: item.defId, vars: {}, edition: item.edition }, 'shop');
@@ -490,7 +489,6 @@ export function buildShop(run: RunState, cb: ShopCallbacks, animate = true): Con
     const color = def.kind === 'joker' ? C.mult : def.kind === 'karten' ? C.chips : CONSUMABLE_COLORS[def.kind];
     const can = run.money >= p.price;
     const { w: pw0, h: ph0 } = packPixelSize(def);
-    slotLayer.addChild(emptySlot(x, rowCy, L.packSlotW, L.packSlotH));
     const pv = new PackView(def);
     addSlot(pv, x, rowCy, pw0, ph0, p, 'above', {
       name: def.name,
