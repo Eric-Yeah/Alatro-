@@ -72,8 +72,7 @@ import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
 import { BEVEL, SHADOW } from '../data/depth';
 import { BLIND_PLATE, BLIND_TILE, CARD_LIFT, CONTROL_BAND, FIELD, HAND_TILE, PAYOUT, SIDEBAR, SLOT, TIP, TRAY, WINDOW } from '../data/tableSurface';
-import { drawInset, drawPlate, dropShadow, raised, sunken, vGradient } from './depth';
-import { lighten } from './depthMath';
+import { drawInset, drawPlate, dropShadow, raised, sunken } from './depth';
 import { buildDeckStack, buildTableSurface, slotOutline, type DeckStack } from './tableSurface';
 
 /** Seitenleiste links: obere Kante der Felder, gleicher Abstand von 20 Punkten dazwischen. `buttons` ist die Mitte von Menü und Run Info. */
@@ -271,7 +270,7 @@ export class Game {
     tb.addChild(buildTableSurface({ mx: MX, playY: PLAY_Y, deckX: DECK_X, deckY: DECK_Y }));
 
     // Seitenleiste: große erhabene Platte, darauf vertiefte Felder
-    const side = raised(SIDEBAR.w, SIDEBAR.h, SIDEBAR.color, { radius: SIDEBAR.radius, shadow: SHADOW.plate, alpha: SIDEBAR.alpha, holo: true, sheen: SIDEBAR.sheen });
+    const side = raised(SIDEBAR.w, SIDEBAR.h, SIDEBAR.color, { radius: SIDEBAR.radius, shadow: SHADOW.plate, alpha: SIDEBAR.alpha, holo: true });
     side.position.set(SIDEBAR.x, SIDEBAR.y);
     tb.addChild(side);
     /** Vertieftes Feld der Seitenleiste, `bounds` gleich Feldgröße (Ziel der Einführung) */
@@ -330,7 +329,7 @@ export class Game {
       const sh = dropShadow(T.w, T.h + T.edge, SHADOW.button, { radius: T.radius, ...T.shadow });
       sh.x -= T.w / 2;
       sh.y -= T.h / 2;
-      const g = drawPlate(new Graphics(), -T.w / 2, -T.h / 2, T.w, T.h, color, { radius: T.radius, edge: T.edge, outline: T.outline, sheen: T.sheen });
+      const g = drawPlate(new Graphics(), -T.w / 2, -T.h / 2, T.w, T.h, color, { radius: T.radius, edge: T.edge, outline: T.outline });
       c.addChild(sh, g);
       c.position.set(x, 122 - T.edge / 2);
       const tx = label('0', 38, C.text);
@@ -585,7 +584,7 @@ export class Game {
     this.blindBgColor = color;
     const P = BLIND_PLATE;
     const g = this.blindBg.clear();
-    drawPlate(g, 0, 0, P.w, P.h, color, { radius: P.radius, edge: P.edge, outline: P.outline, sheen: P.sheen });
+    drawPlate(g, 0, 0, P.w, P.h, color, { radius: P.radius, edge: P.edge, outline: P.outline });
     drawInset(g, P.well.x, P.well.y, P.well.w, P.well.h, shade(color, P.well.shade), { radius: P.well.radius, outline: P.well.outline });
   }
 
@@ -847,7 +846,7 @@ export class Game {
 
   /** Helle Tooltip Karte als erhabene Platte (Ursprung oben Mitte), fängt Taps ab, damit der Tisch dahinter sie nicht schließt */
   private tipPlate(w: number, h: number): Container {
-    const c = raised(w, h, C.text, { radius: TIP.radius, line: C.cardEdge, shadow: SHADOW.plate, edge: TIP.edge, contrast: TIP.contrast, sheen: TIP.sheen });
+    const c = raised(w, h, C.text, { radius: TIP.radius, line: C.cardEdge, shadow: SHADOW.plate, edge: TIP.edge, rim: true });
     c.position.set(-w / 2, 0);
     c.eventMode = 'static';
     c.hitArea = new Rectangle(0, 0, w, h + TIP.edge);
@@ -871,7 +870,7 @@ export class Game {
     const rowW = tagW.reduce((x, y) => x + y, 0) + (tags.length - 1) * 6;
     let tx = -rowW / 2;
     tags.forEach((tg, i) => {
-      const pill = drawPlate(new Graphics(), tx, 0, tagW[i], 24, tg.color, { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
+      const pill = drawPlate(new Graphics(), tx, 0, tagW[i], 24, tg.color, { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge });
       const pt = label(tg.name, 13, 0xffffff);
       pt.position.set(tx + tagW[i] / 2, 12);
       tagRow.addChild(pill, pt);
@@ -883,7 +882,7 @@ export class Game {
     const headBand = new Graphics().roundRect(-w / 2 + 3, 3, w - 6, 72, 11).fill({ color: RARITY_COLORS[def.rarity], alpha: 0.28 });
     const name = label(def.name, 24, C.cardEdge);
     name.position.set(0, 24);
-    const rar = drawPlate(new Graphics(), -60, 44, 120, 24, RARITY_COLORS[def.rarity], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
+    const rar = drawPlate(new Graphics(), -60, 44, 120, 24, RARITY_COLORS[def.rarity], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge });
     const rarT = label(RARITY_NAMES[def.rarity], 14, 0xffffff);
     rarT.position.set(0, 56);
     tagRow.position.set(0, 82);
@@ -980,7 +979,7 @@ export class Game {
     const bg = this.tipPlate(w, h);
     const name = label(def.name, 24, C.cardEdge);
     name.position.set(0, 24);
-    const badge = drawPlate(new Graphics(), -60, 44, 120, 24, CONSUMABLE_COLORS[def.type], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
+    const badge = drawPlate(new Graphics(), -60, 44, 120, 24, CONSUMABLE_COLORS[def.type], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge });
     const badgeT = label(CONSUMABLE_TYPE_NAMES[def.type], 14, 0xffffff);
     badgeT.position.set(0, 56);
     const use = new Button(t('Benutzen'), 230, 56, C.chips, () => this.useConsumableUI(uid), 20);
@@ -1337,7 +1336,7 @@ export class Game {
     this.closeTooltip();
     const o = overlay(VIEW_W, VIEW_H);
     const box = new Container();
-    box.addChild(raised(w, h, color, { radius: WINDOW.radius, alpha: WINDOW.alpha, holo: true, shadow: SHADOW.plate, sheen: Math.min(BEVEL.sheenH, WINDOW.sheenMax / h) }));
+    box.addChild(raised(w, h, color, { radius: WINDOW.radius, alpha: WINDOW.alpha, rim: true, shadow: SHADOW.plate }));
     box.pivot.set(w / 2, h / 2);
     box.position.set(VIEW_W / 2, VIEW_H / 2);
     // Hohe Fenster (lange Rückschau) werden so verkleinert, dass sie auf den Bildschirm passen
@@ -1782,7 +1781,7 @@ export class Game {
           const color = scaleBand(l).color;
           // gefüllte Stufen sind erhabene farbige Plättchen, die übrigen vertiefte Mulden
           const g = new Graphics();
-          if (l <= level) drawPlate(g, 0, 0, segW, 44, color, { radius: 6, edge: 3, outline: 2, sheen: 0.4 });
+          if (l <= level) drawPlate(g, 0, 0, segW, 44, color, { radius: 6, edge: 3, outline: 2 });
           else drawInset(g, 0, 0, segW, 44, 0x1d2a3a, { radius: 6, outline: 2 });
           if (l === level) g.roundRect(-3, -3, segW + 6, 44 + 3 + 6, 8).stroke({ width: 3, color: C.text });
           seg.addChild(g);
@@ -2065,7 +2064,7 @@ export class Game {
       const base = current ? color : C.panel;
       col.addChild(
         dropShadow(TW, TH + BEVEL.panelEdge, current ? SHADOW.plate : SHADOW.panel, { radius: BLIND_TILE.radius }),
-        raised(TW, TH, base, { radius: BLIND_TILE.radius, shadow: false, sheen: BLIND_TILE.sheen }),
+        raised(TW, TH, base, { radius: BLIND_TILE.radius, shadow: false }),
       );
       const name = label(boss ? boss.name : BLIND_NAMES[kind], 26);
       name.position.set(150, 36);
@@ -2074,8 +2073,7 @@ export class Game {
       const socket = new Graphics()
         .circle(150, 110, 43).fill({ color: 0xffffff, alpha: 0.16 })
         .circle(150, 108, 43).fill(C.panelLine)
-        .circle(150, 108, 39).fill(vGradient(shade(color, 0.3), shade(color, 0.6)))
-        .circle(150, 108, 39).stroke({ width: 1.5, color: lighten(color, 0.35), alpha: 0.5 });
+        .circle(150, 108, 39).fill(shade(color, 0.45));
       const chipT = label(kind === 'boss' ? '☠' : kind === 'big' ? '◆' : '●', 38, 0xffffff);
       chipT.position.set(150, 108);
       col.addChild(name, socket, chipT);
@@ -2232,7 +2230,7 @@ export class Game {
     // Gesamtbetrag: dunkle Plakette mit Goldrand
     const totalY = rowsTop + rowH * lines.length + PAYOUT.totalGap;
     const total = new Container();
-    total.addChild(raised(532, PAYOUT.totalH, PAYOUT.color, { radius: FIELD.radius + 2, line: C.money, shadow: SHADOW.button, sheen: 0.4 }));
+    total.addChild(raised(532, PAYOUT.totalH, PAYOUT.color, { radius: FIELD.radius + 2, line: C.money, shadow: SHADOW.button }));
     const tl = label('Total', 24, C.text);
     tl.anchor.set(0, 0.5);
     tl.position.set(16, PAYOUT.totalH / 2);

@@ -1,8 +1,10 @@
 import { Container, Graphics } from 'pixi.js';
+import { METER } from '../data/depth';
 import { TRANSITION as T } from '../data/transition';
 import { CARD_H, cardBack } from './CardView';
 import { cardFront } from './TitleCards';
-import { C, STYLE, VIEW_H, VIEW_W } from './theme';
+import { C, VIEW_H, VIEW_W } from './theme';
+import { drawMeter, drawMeterFill } from './depth';
 import { easeInOutCubic, easeOutBack, easeOutCubic, tween, wait } from './tween';
 
 /** Einfacher, wiederholbarer Zufall, damit die Sterne bei jedem Start gleich stehen */
@@ -45,12 +47,11 @@ export class ScreenTransition {
   constructor() {
     this.blocker.rect(-T.margin, -T.margin, VIEW_W + T.margin * 2, VIEW_H + T.margin * 2).fill({ color: 0x000000, alpha: 0.001 });
     this.blocker.eventMode = 'static';
-    // Ladebalken: dunkle Schiene, goldene Füllung wächst von links
-    const track = new Graphics()
-      .roundRect(-T.barW / 2, 3, T.barW, T.barH, 5).fill(STYLE.shadowColor)
-      .roundRect(-T.barW / 2, 0, T.barW, T.barH, 5).fill(0x1d2a3a).stroke({ width: 2, color: C.panelLine });
-    this.fill.roundRect(0, 0, T.barW - 6, T.barH - 6, 3).fill(C.money);
-    this.fill.position.set(-T.barW / 2 + 3, 3);
+    // Ladebalken: vertiefte Rinne, goldene Füllung wächst von links
+    const track = new Graphics();
+    drawMeter(track, -T.barW / 2, 0, T.barW, T.barH, 0, C.money);
+    drawMeterFill(this.fill, 0, 0, T.barW - 2 * METER.pad, T.barH - 2 * METER.pad, C.money);
+    this.fill.position.set(-T.barW / 2 + METER.pad, METER.pad);
     this.bar.addChild(track, this.fill);
     this.bar.position.set(VIEW_W / 2, T.cardY + CARD_H / 2 + T.barGap);
     this.hold.position.set(VIEW_W / 2, T.cardY);

@@ -41,7 +41,7 @@ export function switchToggle(on: boolean, onChange: (on: boolean) => void): Cont
   let state = on;
   const draw = () => {
     track.clear();
-    drawInset(track, 0, 0, w, h, state ? C.green : OFF_COLOR, { radius: KNOB.trackRadius });
+    drawInset(track, 0, 0, w, h, state ? KNOB.onColor : OFF_COLOR, { radius: KNOB.trackRadius });
     text.text = state ? t('An') : t('Aus');
     text.position.set(state ? (w - knobW - pad) / 2 : (w + knobW + pad) / 2, h / 2 - 1);
   };

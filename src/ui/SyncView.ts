@@ -4,11 +4,12 @@ import { t } from '../i18n';
 import { formatCode, isValidCode, normalizeCode } from '../syncCrypto';
 import type { RunSummary } from '../syncCloud';
 import { syncManager } from './syncManager';
+import { drawInset } from './depth';
 import { C } from './theme';
 import { Button, label, wrapText } from './widgets';
 
 export const SYNC_W = 800;
-export const SYNC_H = 790;
+export const SYNC_H = 830;
 
 type Screen = 'main' | 'enter' | 'show' | 'conflict';
 
@@ -121,7 +122,7 @@ export function buildSync(box: Container, onBack: () => void) {
       dyn.addChild(hint);
       // Immer alle Gruppen zeigen (leere Stellen als Punkte), sonst springt das Feld beim Tippen.
       // formatCode würde die Platzhalter verwerfen, darum wird von Hand in Gruppen geteilt.
-      const g = new Graphics().roundRect(40, 160, W - 80, 80, 12).fill(0x141d29).stroke({ width: 3, color: C.panelLine });
+      const g = drawInset(new Graphics(), 40, 160, W - 80, 80, 0x24344a, { radius: 12 });
       dyn.addChild(g);
       const nGroups = Math.ceil(SYNC.codeLength / SYNC.codeGroup);
       for (let i = 0; i < nGroups; i++) {
@@ -131,6 +132,8 @@ export function buildSync(box: Container, onBack: () => void) {
         tx.position.set(W / 2 + (i - (nGroups - 1) / 2) * 140, 200);
         dyn.addChild(tx);
       }
+      // Tastenfeld liegt in einer vertieften Schale
+      dyn.addChild(drawInset(new Graphics(), 64, 296, W - 128, 346, 0x1e2d42, { radius: 14 }));
       const KEY = 66;
       const KEY_STEP = 80;
       const KEY_COLS = 8;
@@ -140,7 +143,7 @@ export function buildSync(box: Container, onBack: () => void) {
         b.enabled = entry.length < SYNC.codeLength && !busy;
         dyn.addChild(b);
       });
-      const ACT_Y = 665;
+      const ACT_Y = 696;
       const del = new Button(t('Löschen'), 180, 56, C.mult, () => { entry = entry.slice(0, -1); render(); }, 24);
       del.position.set(W / 2 - 200, ACT_Y);
       del.enabled = entry.length > 0;
@@ -171,7 +174,7 @@ export function buildSync(box: Container, onBack: () => void) {
       ok.position.set(W / 2 + 200, ACT_Y);
       ok.enabled = isValidCode(entry) && !busy;
       const back = new Button(t('Abbrechen'), 260, 50, 0x3b5068, () => { screen = 'main'; entry = ''; render(); }, 22);
-      back.position.set(W / 2, 735);
+      back.position.set(W / 2, 770);
       // Meldung zwischen Codefeld und Tasten, auf eine Zeile begrenzt (längere Texte schrumpfen)
       const msg = label(notice || ' ', 20, noticeColor);
       msg.position.set(W / 2, 268);
@@ -185,7 +188,7 @@ export function buildSync(box: Container, onBack: () => void) {
       const tx = wrapText(t('Dein Kopplungscode. Gib ihn auf dem anderen Gerät unter "Geräte koppeln" und "Code eingeben" ein. Schreib ihn Dir auf, ohne ihn gibt es keinen Zugriff auf den Cloud Stand.'), W - 100, 22, C.text, 'center');
       tx.position.set(W / 2, 130);
       dyn.addChild(tx);
-      const g = new Graphics().roundRect(40, 290, W - 80, 110, 12).fill(0x141d29).stroke({ width: 3, color: C.accent });
+      const g = drawInset(new Graphics(), 40, 290, W - 80, 110, 0x24344a, { radius: 12, line: C.accent });
       dyn.addChild(g);
       codeRow(code, 345, 40);
       const copy = new Button(t('Kopieren'), 260, 62, C.chips, async () => {
@@ -246,7 +249,7 @@ export function buildSync(box: Container, onBack: () => void) {
     sub.position.set(W / 2, 180);
     dyn.addChild(status, sub);
     const code = syncManager.code() ?? '';
-    const g = new Graphics().roundRect(40, 250, W - 80, 100, 12).fill(0x141d29).stroke({ width: 3, color: C.panelLine });
+    const g = drawInset(new Graphics(), 40, 250, W - 80, 100, 0x24344a, { radius: 12 });
     dyn.addChild(g);
     if (reveal) codeRow(code, 300, 34);
     else {

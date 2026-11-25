@@ -4,8 +4,7 @@ import { Container, Graphics } from 'pixi.js';
 import { COLLECTION_TABS, collectionEntries, collectionHint, collectionProgress, loadDiscovered, markAllSeen, unseenKeys, type CollectionEntry, type CollectionTab } from '../collection';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS, fmt, fmtMult, shade } from './theme';
 import { Button, label, tabBar } from './widgets';
-import { drawInset, drawPlate, vGradient } from './depth';
-import { lighten } from './depthMath';
+import { drawInset, drawPlate } from './depth';
 import { tabTrough } from './tileDepth';
 import { ConsumableView } from './ConsumableView';
 import { JokerView } from './JokerView';
@@ -100,7 +99,7 @@ export function buildCollection(box: Container, close: () => void) {
       const color = entryColor(e);
       // Vitrine: vertieftes Fach, bei entdeckten Einträgen mit Rand und Lichtband in der Farbe des Eintrags
       dyn.addChild(drawInset(new Graphics(), x, y, CELL_W, CELL_H, known ? C.panel : 0x141d29, { radius: 14, outline: 3, line: known ? shade(color, 0.8) : C.panelLine }));
-      if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(vGradient(lighten(color, 0.3), shade(color, 0.8))));
+      if (known) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 8, 4).fill(color));
       const tile = known ? tileFor(e) : null;
       // Textbereich: mit Kachel rechts von ihr, sonst über die ganze Zelle
       const tx = tile ? x + COLLECTION_TILE.pad * 2 + tile.w : x;

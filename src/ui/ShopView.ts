@@ -20,7 +20,7 @@ import { PackView, packPixelSize } from './PackView';
 import { attachPop } from './artFx';
 import { VOUCHER_H, VOUCHER_W, VoucherView } from './VoucherView';
 import { JokerView } from './JokerView';
-import { drawInset, drawPlate, dropShadow, radialGradient, raised, sunken, vGradient } from './depth';
+import { drawInset, drawPlate, dropShadow, raised, sunken } from './depth';
 import { lighten } from './depthMath';
 import { bottomRounded, drawPill, liftTo } from './tileDepth';
 import { C, CONSUMABLE_COLORS, RARITY_COLORS, RARITY_NAMES, shade } from './theme';
@@ -70,7 +70,6 @@ const L = {
 };
 
 const SHOP_FRAME = SHOP_DEPTH.frame;
-const WHITE = (a: number) => `rgba(255,255,255,${a})`;
 const BLACK = (a: number) => `rgba(0,0,0,${a})`;
 
 /** Preis Plakette: erhabene dunkle Platte mit Verlauf, Kante und Goldrand, sitzt mit der Unterkante auf dem Artikel. */
@@ -100,10 +99,10 @@ function shelf(x: number, y: number, w: number, h: number, floorH: number): Cont
   c.addChild(drawInset(new Graphics(), 0, 0, w, h, D.shelf, { radius: D.radius, line: D.shelfLine }));
   const g = new Graphics();
   const fy = h - 3 - floorH;
-  bottomRounded(g, 3, fy, w - 6, floorH, D.radius - 3, D.floorTop, D.floorBottom);
+  bottomRounded(g, 3, fy, w - 6, floorH, D.radius - 3, D.floorTop);
   // Vorderkante: dunkle Fuge zur Wand, helle Lippe
   g.rect(3, fy, w - 6, 2).fill(BLACK(0.45));
-  g.rect(3, fy + 2, w - 6, D.floorLipH).fill(vGradient(D.floorLip, D.floorTop));
+  g.rect(3, fy + 2, w - 6, D.floorLipH).fill(D.floorLip);
   c.addChild(g);
   c.position.set(x, y);
   c.boundsArea = new Rectangle(0, 0, w, h);
@@ -128,13 +127,11 @@ export function buildShopSign(): Container {
   const { w, h } = SIGN;
   const edge = BEVEL.panelEdge;
   const sign = new Container();
-  // weicher Schatten, erhabener roter Rahmen, vertieftes dunkles Feld, Halo hinter dem Titel und Glasglanz oben
+  // scharfer Schatten, erhabener roter Rahmen mit hartem Unterrand, vertieftes dunkles Feld
   sign.addChild(dropShadow(w, h + edge, SHADOW.panel, { radius: 12 }));
   const body = new Graphics();
   drawPlate(body, 0, 0, w, h, SIGN.frameColor, { radius: 12, edge, sheen: 0.3 });
   drawInset(body, 15, 15, w - 30, h - 30, SIGN.displayColor, { radius: 8 });
-  body.ellipse(w / 2, 72, 140, 46).fill(radialGradient(`rgba(255,200,90,${SIGN.titleGlowAlpha})`, 'rgba(255,200,90,0)'));
-  body.roundRect(19, 19, w - 38, (h - 38) * 0.36, 6).fill(vGradient(WHITE(0.09), WHITE(0)));
   sign.addChild(body);
   sign.boundsArea = new Rectangle(0, 0, w, h + edge);
   // Glühbirnen entlang des Rahmens, gerade und ungerade im Wechsel
@@ -149,8 +146,9 @@ export function buildShopSign(): Container {
       const on = i % 2 === f;
       const look = on ? SIGN.on : SIGN.off;
       // leuchtende Birnen haben einen Halo, jede Birne eine kleine Kugel aus Mitte und Rand
-      if (on) g.circle(x, y, SIGN.haloR).fill(radialGradient(`rgba(255,211,107,${SIGN.haloAlpha})`, 'rgba(255,211,107,0)', 0.25));
-      g.circle(x, y, SIGN.bulbR).fill(radialGradient(look.core, look.edge, 0)).stroke({ width: 1.5, color: look.line });
+      if (on) g.circle(x, y, SIGN.haloR).fill({ color: 0xffd36b, alpha: SIGN.haloAlpha });
+      g.circle(x, y, SIGN.bulbR).fill(look.edge).stroke({ width: 1.5, color: look.line });
+      g.circle(x - 1, y - 1.2, SIGN.bulbR * 0.45).fill(look.core);
     });
   });
   frames[1].visible = false;

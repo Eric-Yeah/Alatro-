@@ -1,7 +1,7 @@
 import { Container, Graphics, GraphicsContext, NineSliceSprite, Rectangle, Sprite, type Texture } from 'pixi.js';
-import { SHADOW } from '../data/depth';
+import { BEVEL, SHADOW } from '../data/depth';
 import { ROW_DEPTH, TILE_DEPTH, type GlowSpec } from '../data/tileDepth';
-import { dropShadow, setShadowLift, sunken, vGradient, vGradient3 } from './depth';
+import { dropShadow, setShadowLift, sunken } from './depth';
 import { lighten } from './depthMath';
 import { C, shade } from './theme';
 import { tween } from './tween';
@@ -65,21 +65,19 @@ export function tileBody(tex: Texture, scale: number): Sprite {
   return s;
 }
 
-/** Glanz für Kacheln mit gerundetem Rahmen: Lichtkante oben, Schattenkante unten, schwaches Lichtband. Mitte im Ursprung. */
-export function tileGloss(w: number, h: number, radius: number, strength = 1, inset = 2): Graphics {
+/** Glanz für Kacheln im Comic Stil: nur ein kleiner heller Lichtstreifen oben links, keine Verläufe. Mitte im Ursprung. */
+export function tileGloss(w: number, h: number, radius: number, strength = 1, inset = 3): Graphics {
   const k = strength;
   return shared(`g:${w}:${h}:${radius}:${k}:${inset}`, (c) => {
-    c.roundRect(-w / 2 + inset, -h / 2 + inset, w - 2 * inset, h - 2 * inset, Math.max(1, radius - inset))
-      .stroke({ width: 2, fill: vGradient3(WHITE(TILE_DEPTH.glossRim * k), WHITE(0), BLACK(0.3 * k), 0.5) });
-    c.roundRect(-w / 2 + inset + 2, -h / 2 + inset + 2, w - 2 * (inset + 2), h * TILE_DEPTH.glossBandH, Math.max(2, radius - 4))
-      .fill(vGradient(WHITE(TILE_DEPTH.glossBand * k), WHITE(0)));
+    c.roundRect(-w / 2 + radius, -h / 2 + inset, Math.max(8, (w - 2 * radius) * 0.5), TILE_DEPTH.glossH, TILE_DEPTH.glossH / 2)
+      .fill({ color: 0xffffff, alpha: Math.min(1, TILE_DEPTH.glossAlpha * k) });
   });
 }
 
-/** Nur das Lichtband (Packs und Vouchers, deren Rand gezackt oder gekerbt ist): Fläche (x, y, w, h) mit Mitte des Ursprungs als Bezug */
-export function tileSheen(x: number, y: number, w: number, h: number, radius: number, strength = 1): Graphics {
-  return shared(`s:${x}:${y}:${w}:${h}:${radius}:${strength}`, (c) => {
-    c.roundRect(x, y, w, h, radius).fill(vGradient(WHITE(TILE_DEPTH.glossBand * 1.4 * strength), WHITE(0)));
+/** Nur der Lichtstreifen (Packs und Vouchers): Fläche (x, y, w), Höhe aus den Zahlen */
+export function tileSheen(x: number, y: number, w: number, _h: number, _radius: number, strength = 1): Graphics {
+  return shared(`s:${x}:${y}:${w}:${strength}`, (c) => {
+    c.roundRect(x, y, w, TILE_DEPTH.glossH, TILE_DEPTH.glossH / 2).fill({ color: 0xffffff, alpha: Math.min(1, TILE_DEPTH.glossAlpha * strength) });
   });
 }
 
@@ -101,16 +99,15 @@ export function tileBounds(w: number, h: number, extraBottom = 0): Rectangle {
 
 // ───────────────────────────────────────────────────────────── Listen und Reiter
 
-/** Vertiefte Listenzeile: dunkler Verlauf, schmaler Innenschatten oben, helle Lippe unten (kleiner als `drawInset`) */
+/** Vertiefte Listenzeile im Comic Stil: flache dunkle Fläche, harter Schattenstreifen oben, helle Lippe unten */
 export function drawRow(g: Graphics, x: number, y: number, w: number, h: number, color: number, o: { radius?: number; alpha?: number; line?: number; outline?: number } = {}): Graphics {
   const r = o.radius ?? 8;
   const ol = o.outline ?? 2;
   const line = o.line ?? C.panelLine;
   g.roundRect(x - ol, y - ol + 1, w + 2 * ol, h + 2 * ol, r + ol).fill(WHITE(ROW_DEPTH.lipAlpha));
   g.roundRect(x - ol, y - ol, w + 2 * ol, h + 2 * ol, r + ol).fill(line);
-  g.roundRect(x, y, w, h, r).fill({ fill: vGradient(shade(color, 0.62), shade(color, 0.82)), alpha: o.alpha ?? 1 });
-  const sh = Math.min(h, ROW_DEPTH.shadowH + r);
-  g.roundRect(x, y, w, sh, r).fill(vGradient(BLACK(ROW_DEPTH.shadowAlpha), BLACK(0)));
+  g.roundRect(x, y, w, h, r).fill({ color: shade(color, 0.7), alpha: o.alpha ?? 1 });
+  g.roundRect(x, y, w, Math.min(h, ROW_DEPTH.shadowH), r).fill(BLACK(ROW_DEPTH.shadowAlpha));
   return g;
 }
 
@@ -122,8 +119,8 @@ export function tabTrough(width: number, h = 46): Container {
   return c;
 }
 
-/** Fläche mit Rundung nur unten (Regalboden im Fach): Rechteck (x, y, w, h), unten Radius r, Verlauf von top nach bottom */
-export function bottomRounded(g: Graphics, x: number, y: number, w: number, h: number, r: number, top: number, bottom: number): Graphics {
+/** Fläche mit Rundung nur unten (Regalboden im Fach): Rechteck (x, y, w, h), unten Radius r, flach in `color` */
+export function bottomRounded(g: Graphics, x: number, y: number, w: number, h: number, r: number, color: number): Graphics {
   g.moveTo(x, y)
     .lineTo(x + w, y)
     .lineTo(x + w, y + h - r)
@@ -131,13 +128,15 @@ export function bottomRounded(g: Graphics, x: number, y: number, w: number, h: n
     .lineTo(x + r, y + h)
     .arc(x + r, y + h - r, r, Math.PI / 2, Math.PI)
     .closePath()
-    .fill(vGradient(top, bottom));
+    .fill(color);
   return g;
 }
 
-/** Erhabene kleine Marke (Pille) mit Verlauf und Lichtkante, Fläche (x, y, w, h). `light` hellt oben auf, `sheen` ist das Lichtband. */
+/** Erhabene kleine Marke (Pille) im Comic Stil: flache Farbe, harter dunkler Unterrand, kleiner Lichtstreifen. Fläche (x, y, w, h). */
 export function drawPill(g: Graphics, x: number, y: number, w: number, h: number, color: number, radius = 4, o: { light?: number; sheen?: number } = {}): Graphics {
-  g.roundRect(x, y, w, h, radius).fill(vGradient(lighten(color, o.light ?? 0.22), shade(color, 0.78)));
-  g.roundRect(x + 1, y + 1, w - 2, Math.max(1, h * 0.4), Math.max(1, radius - 1)).fill(vGradient(WHITE(o.sheen ?? 0.26), WHITE(0)));
+  const edge = Math.max(1, Math.min(3, h * 0.14));
+  g.roundRect(x, y, w, h, radius).fill(shade(color, BEVEL.edgeShade));
+  g.roundRect(x, y, w, h - edge, radius).fill(o.light ? lighten(color, o.light) : color);
+  if (w > 10 && h > 8) g.roundRect(x + Math.min(4, radius), y + 1.5, Math.max(4, w * 0.4), 1.5, 0.75).fill(WHITE(o.sheen ?? 0.35));
   return g;
 }

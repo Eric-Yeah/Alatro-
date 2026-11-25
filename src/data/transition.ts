@@ -33,9 +33,9 @@ export const TRANSITION = {
   sway: 0.045,
   cardY: 470,
   /** Ladebalken unter der Karte */
-  barW: 240,
-  barH: 12,
-  barGap: 46,
+  barW: 260,
+  barH: 18,
+  barGap: 50,
   /** Kartenvorderseite: Buchstabe und Suit */
   faceChar: 'A',
   faceSuit: 'H' as const,

@@ -1,7 +1,8 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { PATCH_NOTES } from '../data/patchnotes';
 import { TUTORIAL } from '../data/tutorial';
 import { t } from '../i18n';
+import { drawInset } from './depth';
 import { C } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
@@ -38,6 +39,8 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
   const head = label(t('Anleitung'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
+  // Textfeld: vertieftes dunkles Feld hinter Titel und Text, damit die Schrift gut lesbar bleibt
+  box.addChild(drawInset(new Graphics(), 40, 132, W - 80, TUTORIAL_H - 132 - 92, 0x24344a, { radius: 12 }));
   const dyn = new Container();
   box.addChild(dyn);
 
@@ -74,6 +77,7 @@ export function buildPatchNotes(box: Container, close: () => void) {
   const head = label(t('Patch Notes'), 38);
   head.position.set(W / 2, 40);
   box.addChild(head);
+  box.addChild(drawInset(new Graphics(), 40, 84, W - 80, PATCH_H - 84 - 92, 0x24344a, { radius: 12 }));
   const dyn = new Container();
   box.addChild(dyn);
 

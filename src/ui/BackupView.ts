@@ -1,13 +1,14 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { SYNC } from '../data/sync';
 import { decodeBundle, describeRun, encodeBundle, type SyncBundle } from '../syncBundle';
 import { applyBundle, currentBundle, previewRun } from '../syncStorage';
 import { t } from '../i18n';
+import { drawInset } from './depth';
 import { C } from './theme';
 import { Button, label, wrapText } from './widgets';
 
 export const BACKUP_W = 760;
-export const BACKUP_H = 640;
+export const BACKUP_H = 720;
 
 /** Datei zum Speichern anbieten (auf dem iPad öffnet sich das Teilen Menü bzw. der Download) */
 function downloadText(name: string, text: string) {
@@ -100,18 +101,20 @@ export function buildBackup(box: Container, onBack: () => void) {
       W - 100, 22, C.textDim, 'left',
     );
     intro.position.set(50, 110);
-    const section = (y: number, text: string) => {
+    // Zwei Gruppen (Sichern, Laden) als vertiefte Felder mit Überschrift und zwei Knöpfen
+    const group = (y: number, text: string) => {
+      dyn.addChild(drawInset(new Graphics(), 40, y, W - 80, 150, 0x24344a, { radius: 14 }));
       const l = label(text, 28, C.text);
       l.anchor.set(0, 0.5);
-      l.position.set(50, y);
+      l.position.set(66, y + 32);
       dyn.addChild(l);
     };
-    section(250, t('Sichern'));
+    group(222, t('Sichern'));
     const file = new Button(t('Als Datei'), 300, 64, C.chips, () => {
       downloadText(SYNC.exportFileName, JSON.stringify(currentBundle()));
       say(t('Datei erzeugt. Auf dem iPad im Teilen Menü sichern.'), C.green);
     }, 24);
-    file.position.set(W / 2 - 170, 310);
+    file.position.set(W / 2 - 170, 222 + 96);
     const copy = new Button(t('Text kopieren'), 300, 64, C.chips, async () => {
       try {
         await navigator.clipboard.writeText(encodeBundle(currentBundle()));
@@ -120,10 +123,10 @@ export function buildBackup(box: Container, onBack: () => void) {
         say(t('Kopieren nicht erlaubt. Nutze die Datei.'), C.mult);
       }
     }, 24);
-    copy.position.set(W / 2 + 170, 310);
-    section(390, t('Laden'));
+    copy.position.set(W / 2 + 170, 222 + 96);
+    group(398, t('Laden'));
     const open = new Button(t('Aus Datei'), 300, 64, C.money, async () => importText(await pickTextFile()), 24);
-    open.position.set(W / 2 - 170, 450);
+    open.position.set(W / 2 - 170, 398 + 96);
     const paste = new Button(t('Text einfügen'), 300, 64, C.money, async () => {
       try {
         importText(await navigator.clipboard.readText());
@@ -131,11 +134,11 @@ export function buildBackup(box: Container, onBack: () => void) {
         say(t('Einfügen nicht erlaubt. Nutze die Datei.'), C.mult);
       }
     }, 24);
-    paste.position.set(W / 2 + 170, 450);
+    paste.position.set(W / 2 + 170, 398 + 96);
     const msg = wrapText(status || ' ', W - 100, 22, statusColor, 'center');
-    msg.position.set(W / 2, 505);
+    msg.position.set(W / 2, 590);
     const back = new Button(t('Zurück'), 300, 62, 0x3b5068, onBack, 26);
-    back.position.set(W / 2, 580);
+    back.position.set(W / 2, 650);
     dyn.addChild(intro, file, copy, open, paste, msg, back);
   };
   render();

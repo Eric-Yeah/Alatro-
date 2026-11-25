@@ -1,10 +1,12 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Rectangle } from 'pixi.js';
 import { condProgress, earnedStars, rankOf, unlockedCount } from '../achievements';
 import { collectionProgress } from '../collection';
 import { ACHIEVEMENTS, CATEGORY_NAMES, CATEGORY_ORDER, TOTAL_STARS, type AchievementCategory, type AchievementDef } from '../data/achievements';
 import { DECKS } from '../data/decks';
 import { getProfile } from '../profile';
 import { t } from '../i18n';
+import { SHADOW } from '../data/depth';
+import { drawInset, drawMeter, drawPlate, dropShadow, gloss } from './depth';
 import { C, fmt, numLocale } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
@@ -15,10 +17,10 @@ const COLS = 2;
 const ROWS = 4;
 const PER_PAGE = COLS * ROWS;
 const CELL_W = 596;
-const CELL_H = 128;
+const CELL_H = 124;
 const GAP_X = 16;
-const GAP_Y = 12;
-const GRID_Y = 214;
+const GAP_Y = 10;
+const GRID_Y = 224;
 
 type Tab = AchievementCategory | 'statistik';
 
@@ -27,10 +29,9 @@ function starShape(x: number, y: number, r: number, on: boolean): Graphics {
   return new Graphics().star(x, y, 5, r, r * 0.45).fill(on ? C.money : 0x2a3548).stroke({ width: 1.5, color: on ? 0x8a5a00 : 0x151c28 });
 }
 
+/** Fortschrittsbalken: vertiefte Rinne mit gefüllter Farbe */
 function bar(x: number, y: number, w: number, frac: number, color: number): Graphics {
-  const g = new Graphics().roundRect(x, y, w, 14, 7).fill(0x0f1622).stroke({ width: 2, color: C.panelLine });
-  if (frac > 0) g.roundRect(x + 2, y + 2, Math.max(10, (w - 4) * Math.min(1, frac)), 10, 5).fill(color);
-  return g;
+  return drawMeter(new Graphics(), x, y, w, 16, frac, color);
 }
 
 /** Achievements Ansicht: Rang, Erfolge nach Kategorien, Statistik. */
@@ -48,32 +49,42 @@ export function buildAchievements(box: Container, close: () => void) {
   box.addChild(dyn);
 
   const renderRank = () => {
+    dyn.addChild(drawInset(new Graphics(), 40, 78, W - 80, 74, 0x24344a, { radius: 12 }));
     const rank = rankOf(p);
     const stars = earnedStars(p);
     const name = label(rank.name, 30, rank.color);
     name.anchor.set(0, 0.5);
-    name.position.set(48, 108);
+    name.position.set(60, 104);
     const sub = label(t('{a} von {b} Erfolgen · {c} von {d} Sternen', { a: unlockedCount(p), b: ACHIEVEMENTS.length, c: stars, d: TOTAL_STARS }), 18, C.textDim);
     sub.anchor.set(0, 0.5);
-    sub.position.set(48, 142);
+    sub.position.set(60, 134);
     dyn.addChild(name, sub);
     const next = rank.next
       ? t('Noch {n} Stern bis {rank}|Noch {n} Sterne bis {rank}', { n: rank.starsToNext ?? 0, rank: rank.next })
       : t('Höchster Rang erreicht');
     const nl = label(next, 18, C.textDim);
     nl.anchor.set(1, 0.5);
-    nl.position.set(W - 48, 108);
-    dyn.addChild(nl, bar(W - 48 - 420, 128, 420, stars / TOTAL_STARS, rank.color));
+    nl.position.set(W - 56, 104);
+    dyn.addChild(nl, bar(W - 56 - 420, 124, 420, stars / TOTAL_STARS, rank.color));
   };
 
   const cell = (a: AchievementDef, x: number, y: number) => {
     const got = p.unlocked[a.id] !== undefined;
     const hidden = a.secret && !got;
-    const g = new Graphics()
-      .roundRect(x, y + 4, CELL_W, CELL_H, 14).fill({ color: 0, alpha: 0.35 })
-      .roundRect(x, y, CELL_W, CELL_H, 14).fill(got ? C.panel : 0x141d29).stroke({ width: 3, color: got ? C.money : C.panelLine });
-    dyn.addChild(g);
-    if (got) dyn.addChild(new Graphics().roundRect(x + 10, y + 10, CELL_W - 20, 6, 3).fill(C.money));
+    // freigeschaltet: erhabene Platte mit goldener Kontur und Glanz, gesperrt: vertieftes dunkles Feld
+    const card = new Container();
+    card.position.set(x, y);
+    if (got) {
+      card.addChild(dropShadow(CELL_W, CELL_H + 4, SHADOW.panel, { radius: 12 }));
+      card.addChild(drawPlate(new Graphics(), 0, 0, CELL_W, CELL_H, 0x3a5070, { radius: 12, edge: 4, line: 0x6b4a08, sheen: 0 }));
+      card.addChild(new Graphics().roundRect(12, 10, CELL_W - 24, 6, 3).fill(C.money));
+      const gl = gloss(CELL_W, CELL_H, 12, 1);
+      card.addChild(gl);
+    } else {
+      card.addChild(drawInset(new Graphics(), 0, 0, CELL_W, CELL_H, 0x1b2636, { radius: 12 }));
+    }
+    card.boundsArea = new Rectangle(0, 0, CELL_W, CELL_H + 4);
+    dyn.addChild(card);
     const name = label(hidden ? t('Geheimer Erfolg') : a.name, 24, got ? C.text : C.textDim);
     name.anchor.set(0, 0.5);
     name.position.set(x + 20, y + 38);
@@ -131,7 +142,7 @@ export function buildAchievements(box: Container, close: () => void) {
       const row = Math.floor(i / 2);
       const x = 48 + col * (CELL_W + GAP_X);
       const y = GRID_Y + 6 + row * 50;
-      dyn.addChild(new Graphics().roundRect(x, y, CELL_W, 42, 10).fill(row % 2 === 0 ? 0x1b2636 : 0x172130));
+      dyn.addChild(drawInset(new Graphics(), x, y, CELL_W, 42, row % 2 === 0 ? 0x2a3b52 : 0x243449, { radius: 10, outline: 2 }));
       const kl = label(k, 20, C.textDim);
       kl.anchor.set(0, 0.5);
       kl.position.set(x + 16, y + 21);

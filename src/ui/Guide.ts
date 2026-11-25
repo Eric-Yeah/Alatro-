@@ -4,9 +4,8 @@ import type { GuideStep } from '../data/guide';
 import { GUIDE_LOOK, WINDOW } from '../data/tableSurface';
 import { t } from '../i18n';
 import { CARD_H, CARD_W, CardView } from './CardView';
-import { drawInset, raised, vGradient } from './depth';
-import { lighten } from './depthMath';
-import { C, VIEW_H, shade } from './theme';
+import { drawInset, raised } from './depth';
+import { C, VIEW_H } from './theme';
 import { easeOutBack, tween } from './tween';
 import { Button, label, wrapText } from './widgets';
 
@@ -117,12 +116,12 @@ export class Guide {
     const rowH = 58;
     const h = pad + headH + 10 + body.height + 18 + rowH + 16;
     const box = new Container();
-    box.addChild(raised(w, h, C.panelDark, { radius: 18, line: C.money, alpha: WINDOW.alpha, holo: true, shadow: SHADOW.plate, sheen: Math.min(0.3, WINDOW.sheenMax / h) }));
+    box.addChild(raised(w, h, C.panelDark, { radius: 18, alpha: WINDOW.alpha, rim: true, shadow: SHADOW.plate }));
     // Abzeichen: goldener Kreis mit Stern in einer Fassung, wie ein Stern am Observatorium
     const badge = new Graphics()
       .circle(0, 2, GUIDE.badge + 2).fill({ color: 0xffffff, alpha: 0.14 })
       .circle(0, 0, GUIDE.badge + 2).fill(C.panelLine)
-      .circle(0, 0, GUIDE.badge).fill(vGradient(lighten(0x2a1f4a, 0.25), shade(0x2a1f4a, 0.7))).stroke({ width: 4, color: C.money })
+      .circle(0, 0, GUIDE.badge).fill(0x33275a).stroke({ width: 4, color: C.money })
       .star(0, 0, 5, GUIDE.badge * 0.62, GUIDE.badge * 0.28).fill(C.money);
     badge.position.set(pad + GUIDE.badge, pad + GUIDE.badge);
     const name = label('Astra', 16, C.textDim);

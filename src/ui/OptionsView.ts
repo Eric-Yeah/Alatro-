@@ -7,7 +7,7 @@ import { LANGS, LANG_NAMES, getLang, t } from '../i18n';
 import { clampVolume, getSettings, updateSettings } from '../settings';
 import { BEVEL, SHADOW } from '../data/depth';
 import { sfx } from './audio';
-import { drawPlate, dropShadow, radialGradient, raised, sunken } from './depth';
+import { drawPlate, dropShadow, raised, sunken } from './depth';
 import { lighten } from './depthMath';
 import { haptics } from './haptics';
 import { languageRowTexts, switchLanguage } from './langSwitch';
@@ -62,11 +62,11 @@ function buildAstrolabe(): Container {
   const wr = r + A.wellPad;
   well.circle(0, 2, wr + 3).fill({ color: 0xffffff, alpha: 0.14 });
   well.circle(0, 0, wr + 3).fill(C.panelLine);
-  well.circle(0, 0, wr).fill(radialGradient(A.wellInner, A.wellOuter));
+  well.circle(0, 0, wr).fill(A.wellColor);
   well.arc(0, 0, wr - 2, Math.PI * 1.08, Math.PI * 1.92).stroke({ width: 5, color: 0x000000, alpha: 0.38 });
   // Schein hinter dem Kern
   const core = new Graphics();
-  core.circle(0, 0, A.glowR).fill(radialGradient(`rgba(245,179,43,${A.glowAlpha})`, 'rgba(245,179,43,0)'));
+  core.circle(0, 0, A.glowR).fill({ color: C.money, alpha: A.glowAlpha });
   core.poly([0, -12, 4, 0, 0, 12, -4, 0]).fill({ color: C.money, alpha: 0.95 })
     .poly([-12, 0, 0, -4, 12, 0, 0, 4]).fill({ color: C.money, alpha: 0.95 })
     .poly([0, -12, 4, 0, 0, 0, -4, 0]).fill({ color: 0xffe9a6, alpha: 0.7 });
@@ -110,7 +110,7 @@ export function buildOptions(deps: OptionsDeps): Container {
   // Seitenleiste
   const side = new Container();
   side.position.set(L.side.x, L.side.y);
-  const sidePanel = raised(L.side.w, L.side.h, C.panelDark, { radius: 16, alpha: 0.94, holo: true, shadow: SHADOW.plate });
+  const sidePanel = raised(L.side.w, L.side.h, C.panelDark, { radius: 16, alpha: 1, rim: true, shadow: SHADOW.plate });
   side.addChild(sidePanel);
   const astro = buildAstrolabe();
   astro.position.set(L.astrolabe.cx - L.side.x, L.astrolabe.cy - L.side.y);
@@ -127,7 +127,7 @@ export function buildOptions(deps: OptionsDeps): Container {
   // Inhaltsfläche
   const main = new Container();
   main.position.set(L.main.x, L.main.y);
-  const mainPanel = raised(L.main.w, L.main.h, C.panelDark, { radius: 16, alpha: 0.9, holo: true, shadow: SHADOW.plate });
+  const mainPanel = raised(L.main.w, L.main.h, C.panelDark, { radius: 16, alpha: 1, rim: true, shadow: SHADOW.plate });
   main.addChild(mainPanel);
   const content = new Container();
   main.addChild(content);

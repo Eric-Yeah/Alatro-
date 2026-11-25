@@ -14,7 +14,7 @@ export const OPTIONS_LAYOUT = {
     color: 0x2d405a,
     sheen: 0.22,
     edge: 4,
-    shadow: { blur: 9, dy: 5, dx: 0, alpha: 0.45 },
+    shadow: { blur: 3, dy: 6, dx: 0, alpha: 0.5 },
     markX: 12,
     grooveH: 5,
     grooveY: 158,
@@ -25,12 +25,14 @@ export const OPTIONS_LAYOUT = {
   knob: {
     edge: 3,
     radius: 6,
-    shadowBlur: 6,
+    shadowBlur: 3,
     shadowDy: 4,
     shadowAlpha: 0.6,
     switchPad: 6,
     switchKnobW: 54,
     knobColor: 0xdfe8f2,
+    /** Farbwert für die Schiene im An Zustand (die vertiefte Fläche dunkelt ihn ab, daher heller gewählt) */
+    onColor: 0x55f090,
     trackRadius: 10,
     railH: 18,
     tickY: 18,
@@ -43,10 +45,9 @@ export const OPTIONS_LAYOUT = {
     cx: 220, cy: 722, r: 62, spinMs: 120000,
     /** Schale um die Ringe: Abstand, Farben von Mitte zu Rand; Schein des Kerns */
     wellPad: 9,
-    wellInner: 0x1c2c42,
-    wellOuter: 0x0a111b,
-    glowR: 34,
-    glowAlpha: 0.45,
+    wellColor: 0x121c2a,
+    glowR: 30,
+    glowAlpha: 0.18,
     /** Rille unter Überschriften: Füllfarbe und Konturfarbe (heller als die Plattenkontur, damit sie nicht schwarz wirkt) */
     grooveColor: 0x34506f,
     grooveLine: 0x111a26,

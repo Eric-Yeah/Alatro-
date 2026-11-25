@@ -2,13 +2,10 @@ import { Container, Graphics } from 'pixi.js';
 import { CARD_BODY } from '../data/depth';
 import { CONTROL_BAND, DECK_STACK, FELT, PLAY_ZONE, SLOT } from '../data/tableSurface';
 import { CARD_H, CARD_W, cardBack } from './CardView';
-import { dropShadow, vGradient, vGradient3, vignette } from './depth';
+import { dropShadow } from './depth';
 
-// Tischfläche und Bausteine des Spieltisches: Filz mit Vignette, Kartenplätze, Rinne für die Knöpfe, Kartenstapel.
-// Alles ist statisch gezeichnet (Graphics mit zwischengespeicherten Verläufen), keine Filter, nichts pro Bild.
-
-const WHITE = (a: number) => `rgba(255,255,255,${a})`;
-const BLACK = (a: number) => `rgba(0,0,0,${a})`;
+// Tischfläche und Bausteine des Spieltisches (Comic Stil, flache Flächen): Filz, Kartenplätze, Rinne für die Knöpfe, Kartenstapel.
+// Alles ist statisch gezeichnet (Graphics), keine Filter, nichts pro Bild.
 
 /** Lage der Dinge auf dem Tisch (die Zahlen gehören zu `Game.ts`) */
 export interface SurfaceLayout {
@@ -57,24 +54,17 @@ export function buildTableSurface(L: SurfaceLayout): Container {
   root.eventMode = 'none';
   const { x, y, w, h, radius: r } = FELT;
 
-  // Randabfall: weicher Abfall nur außen. Ein Schatten unter der durchscheinenden Fläche würde sie abdunkeln,
-  // darum Ringe außen mit Ausrichtung nach außen.
+  // Harter Rand außen: kräftige dunkle Kontur und ein schmaler Schattenstreifen (Ausrichtung nach außen, damit nichts durch die
+  // durchscheinende Fläche schimmert)
   const fall = new Graphics();
-  for (const f of FELT.falloff) {
-    fall.roundRect(x, y, w, h, r).stroke({ width: f.w, color: FELT.line, alpha: f.alpha, alignment: 0 });
-  }
+  fall.roundRect(x, y, w, h, r).stroke({ width: FELT.shadowWidth, color: FELT.line, alpha: FELT.shadowAlpha, alignment: 0 });
+  fall.roundRect(x, y, w, h, r).stroke({ width: FELT.lineWidth, color: FELT.line, alpha: FELT.lineAlpha, alignment: 0 });
   root.addChild(fall);
 
-  // Fläche: tiefes Nachtblau mit leichtem Verlauf, durchscheinend
+  // Fläche: flaches tiefes Nachtblau, durchscheinend (der Sternhimmel bleibt sichtbar)
   const felt = new Graphics();
-  felt.roundRect(x, y, w, h, r).fill(vGradient3(FELT.top, FELT.mid, FELT.bottom, FELT.midAt));
+  felt.roundRect(x, y, w, h, r).fill(FELT.color);
   root.addChild(felt);
-
-  // Vignette: dunkle Ränder wie ein Raumlicht, an die runden Ecken gebunden über eine Maske aus Verlauf (Rechteck reicht,
-  // weil die Ecken außen ohnehin dunkel sind und der Randabfall sie überdeckt)
-  const vg = vignette(w - 2, h - 2, FELT.vignetteAlpha, FELT.vignetteInner);
-  vg.position.set(x + 1, y + 1);
-  root.addChild(vg);
 
   // Rinne unten hinter den Spielknöpfen: bis zum Rand des Filzes, mit den unteren Ecken des Filzes
   const band = new Graphics();
@@ -82,16 +72,15 @@ export function buildTableSurface(L: SurfaceLayout): Container {
   const bottom = y + h;
   band.moveTo(x + 1, by).lineTo(x + w - 1, by).lineTo(x + w - 1, bottom - r).arcTo(x + w - 1, bottom - 1, x + w - r, bottom - 1, r - 1)
     .lineTo(x + r, bottom - 1).arcTo(x + 1, bottom - 1, x + 1, bottom - r, r - 1).closePath()
-    .fill(vGradient(CONTROL_BAND.fillTop, CONTROL_BAND.fillBottom));
-  // Kante oben: dunkle Linie, darunter helle Lippe (die Rinne liegt tiefer)
+    .fill(CONTROL_BAND.fill);
+  // Kante oben: harte dunkle Linie, darunter helle Lippe (die Rinne liegt tiefer)
   band.moveTo(x + 8, by).lineTo(x + w - 8, by).stroke({ width: 2, color: 0x000000, alpha: CONTROL_BAND.darkAlpha });
   band.moveTo(x + 8, by + 2).lineTo(x + w - 8, by + 2).stroke({ width: 1.5, color: 0xffffff, alpha: CONTROL_BAND.lightAlpha });
   root.addChild(band);
 
-  // Kante: Kontur, Lichtkante oben und Schattenkante unten innen, feine Linie als Sternbild Rahmen
+  // Innenkante: kleiner Lichtstreifen oben, feine Linie als Sternbild Rahmen
   const edge = new Graphics();
-  edge.roundRect(x, y, w, h, r).stroke({ width: 2.5, color: FELT.line, alpha: FELT.lineAlpha });
-  edge.roundRect(x + 2, y + 2, w - 4, h - 4, r - 2).stroke({ width: 2, fill: vGradient3(WHITE(FELT.lightAlpha), WHITE(0), BLACK(FELT.darkAlpha), 0.5) });
+  edge.roundRect(x + FELT.lightInset, y + 3, w - 2 * FELT.lightInset, 3, 1.5).fill({ color: 0xffffff, alpha: FELT.lightAlpha });
   const g = FELT.inlineGap;
   edge.roundRect(x + g, y + g, w - 2 * g, h - 2 * g, r - g / 2).stroke({ width: 1, color: FELT.inlineColor, alpha: FELT.inlineAlpha });
   root.addChild(edge);

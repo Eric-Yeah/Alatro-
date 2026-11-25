@@ -9,7 +9,7 @@ import { blindRows, deckStats, handRows } from '../core/runInfo';
 import { FINAL_ANTE } from '../data/blinds';
 import { RANKS, SUITS } from '../data/cards';
 import { SHADOW } from '../data/depth';
-import { drawInset, drawPlate, raised, vGradient } from './depth';
+import { drawInset, drawPlate, raised } from './depth';
 import { lighten } from './depthMath';
 import { drawRow, tabTrough } from './tileDepth';
 import { C, SUIT_COLORS, fmt, fmtMult, shade } from './theme';
@@ -217,8 +217,10 @@ function deck(c: Container, run: RunState, openDeck?: () => void) {
     drawInset(bar, x - 3, 60 - 4, 62, barH + 10, 0x1d2a3a, { radius: 8, outline: 2 });
     if (h > 0) {
       const bh = Math.max(8, h);
-      bar.roundRect(x, 60 + barH - bh, 56, bh, 6).fill(vGradient(lighten(C.chips, 0.3), shade(C.chips, 0.75)));
-      bar.roundRect(x + 3, 60 + barH - bh + 2, 14, Math.max(2, bh - 4), 4).fill({ color: 0xffffff, alpha: 0.16 });
+      // flache Farbe, harter dunkler Unterrand, kleiner Lichtstreifen oben
+      bar.roundRect(x, 60 + barH - bh, 56, bh, 6).fill(shade(C.chips, 0.6));
+      bar.roundRect(x, 60 + barH - bh, 56, Math.max(4, bh - 4), 6).fill(C.chips);
+      if (bh > 12) bar.roundRect(x + 6, 60 + barH - bh + 3, 18, 3, 1.5).fill({ color: 0xffffff, alpha: 0.35 });
     }
     c.addChild(bar);
     const cnt = label(String(n), 20, C.text);

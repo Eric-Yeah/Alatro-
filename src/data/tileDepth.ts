@@ -3,7 +3,7 @@
 import type { Rarity } from '../core/jokers';
 import type { PackSize } from './packs';
 
-/** Weiche Leuchtkante hinter einer Kachel (Seltenheit): Farbe, Unschärfe, Deckkraft, wie weit sie über die Kachel hinausragt */
+/** Weiche Scharfe farbige Randlinie hinter einer Kachel (Seltenheit): Farbe, Unschärfe, Deckkraft, wie weit sie über die Kachel hinausragt */
 export interface GlowSpec {
   color: number;
   blur: number;
@@ -13,27 +13,26 @@ export interface GlowSpec {
 
 export const TILE_DEPTH = {
   /** Körper: Kopie der Kachel, dunkel getönt, um dy nach unten versetzt (zeigt die Dicke, folgt der Form der Pixel Art) */
-  bodyDy: 4,
+  bodyDy: 5,
   /** Abtönung des Körpers: Faktor auf die Farben der Kachel (je dunkler, desto tiefer wirkt der Unterrand) */
   bodyTint: 0x4a4a5c,
-  /** Glanz: Stärke der Kante (Rim) und des Bands oben, Höhe des Bands als Anteil der Kachel */
-  glossRim: 0.55,
-  glossBand: 0.16,
-  glossBandH: 0.2,
+  /** Glanz (Comic): kleiner Lichtstreifen oben links, Höhe und Deckkraft */
+  glossH: 4,
+  glossAlpha: 0.4,
   /** Hover: so weit hebt sich eine Kachel im Fach (Schatten wächst, 0 bis 1) und Dauer in ms */
   hoverLift: 0.55,
   liftMs: 130,
   dropMs: 240,
   /** Schlanker Schatten für Raster mit vielen Kacheln (Deck, Atlas) */
-  gridShadow: { blur: 7, dy: 5, dx: 1, alpha: 0.5 },
+  gridShadow: { blur: 3, dy: 4, dx: 1, alpha: 0.5 },
 };
 
 /** Leuchtkante je Seltenheit: Common ohne, Uncommon ganz leise, Rare und Legendary deutlich */
 export const RARITY_GLOW: Record<Rarity, GlowSpec | null> = {
   common: null,
-  uncommon: { color: 0x3fbf7f, blur: 10, alpha: 0.28, grow: 1 },
-  rare: { color: 0xff5a70, blur: 14, alpha: 0.6, grow: 3 },
-  legendary: { color: 0xc58cff, blur: 22, alpha: 0.9, grow: 5 },
+  uncommon: { color: 0x3fbf7f, blur: 3, alpha: 0.45, grow: 2 },
+  rare: { color: 0xff5a70, blur: 3, alpha: 0.95, grow: 3 },
+  legendary: { color: 0xd9a8ff, blur: 4, alpha: 1, grow: 5 },
 };
 
 /** Zusätzlicher Glanz bei Legendary (Faktor auf die Stärke des Glanzes) */
@@ -42,13 +41,13 @@ export const RARITY_GLOSS: Record<Rarity, number> = { common: 1, uncommon: 1, ra
 /** Leuchtkante der Packs je Größe (Farbe kommt aus der Palette des Packs): Normal ohne */
 export const PACK_GLOW: Record<PackSize, Omit<GlowSpec, 'color'> | null> = {
   normal: null,
-  jumbo: { blur: 12, alpha: 0.35, grow: 2 },
-  mega: { blur: 18, alpha: 0.7, grow: 4 },
+  jumbo: { blur: 3, alpha: 0.6, grow: 2 },
+  mega: { blur: 4, alpha: 0.95, grow: 4 },
 };
 
 /** Leuchtkante der seltenen Consumables (Farbe aus dem Rahmen der Art) und des Vouchers */
-export const CONSUMABLE_GLOW = { blur: 14, alpha: 0.5, grow: 3 };
-export const VOUCHER_GLOW: GlowSpec = { color: 0xf2b92c, blur: 14, alpha: 0.42, grow: 3 };
+export const CONSUMABLE_GLOW = { blur: 3, alpha: 0.9, grow: 3 };
+export const VOUCHER_GLOW: GlowSpec = { color: 0xf2b92c, blur: 3, alpha: 0.85, grow: 3 };
 
 /** Schatten der Kacheln: Pack und Voucher haben gezackte oder gekerbte Ränder, der Schatten schrumpft darum etwas (Einheiten je Seite) */
 export const SHADOW_INSET = { joker: 0, consumable: 0, voucher: 1, pack: 6 };
@@ -75,7 +74,7 @@ export const SHOP_DEPTH = {
   tagLineOff: 0x3b5068,
   tagTextOff: 0x8a7f99,
   /** weicher Schatten unter der Plakette */
-  tagShadow: { blur: 6, dy: 4, dx: 0, alpha: 0.55 },
+  tagShadow: { blur: 3, dy: 4, dx: 0, alpha: 0.55 },
   /** Boden des unteren Fachs (Voucher und Packs) ist höher, die Beschriftung "Booster Packs" liegt darauf */
   floorHLow: 75,
   /** Detail Karte: Plattenfarbe (warmes Pergament), Kontrast der Fläche, Radius */
@@ -98,16 +97,14 @@ export const SIGN_DEPTH = {
   bulbR: 5,
   on: { core: 0xfffbe8, edge: 0xffc85a, line: 0xd9902a },
   off: { core: 0x8a3a35, edge: 0x5a1a18, line: 0x3a0e0c },
-  haloR: 10,
-  haloAlpha: 0.5,
-  /** Halo hinter dem Titel */
-  titleGlowAlpha: 0.2,
+  haloR: 8,
+  haloAlpha: 0.25,
 };
 
 /** Listenzeilen (Run Info, Atlas): Innenschatten oben und Lippe, kleiner als bei großen Feldern */
 export const ROW_DEPTH = {
-  shadowH: 6,
-  shadowAlpha: 0.42,
+  shadowH: 4,
+  shadowAlpha: 0.38,
   lipAlpha: 0.1,
   /** Reiter Rinne hinter den Reitern: Rand rundum */
   troughPad: 6,

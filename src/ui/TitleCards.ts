@@ -5,25 +5,15 @@ import { CARD_BODY, SHADOW } from '../data/depth';
 import { HOME_TITLE as T } from '../data/homeTitle';
 import { sfx } from './audio';
 import { CARD_H, CARD_W } from './CardView';
-import { dropShadow, gloss, radialGradient, vGradient } from './depth';
-import { lighten } from './depthMath';
-import { C, FONT_BODY, FONT_TITLE, SUIT_COLORS, shade } from './theme';
+import { dropShadow, gloss } from './depth';
+import { C, FONT_BODY, FONT_TITLE, SUIT_COLORS } from './theme';
 import { easeInOutCubic, easeOutBack, easeOutCubic, loop, tween, wait } from './tween';
 import { label } from './widgets';
 
-/** Weicher Lichtfleck (Ellipse, Mitte als Ursprung): hebt Karten vom dunklen Grund ab, damit ihre Schatten sichtbar werden */
-export function lightPool(w: number, h: number, color: number, alpha: number): Graphics {
-  const g = new Graphics();
-  const rgb = `${(color >> 16) & 255},${(color >> 8) & 255},${color & 255}`;
-  g.ellipse(0, 0, w / 2, h / 2).fill(radialGradient(`rgba(${rgb},${alpha})`, `rgba(${rgb},0)`));
-  g.eventMode = 'none';
-  return g;
-}
-
-/** Weicher Schatten und Kartendicke (Streifen darunter), Mitte als Ursprung, wie bei CardView */
+/** Scharfer Schatten und Kartendicke (Streifen darunter), Mitte als Ursprung, wie bei CardView */
 function cardBody(w: number, h: number): Container {
   const c = new Container();
-  const shadow = dropShadow(w, h, SHADOW.card, { radius: T.radius, alpha: T.shadowAlpha, blur: T.shadowBlur, dy: T.shadowDy });
+  const shadow = dropShadow(w, h, SHADOW.card, { radius: T.radius });
   shadow.x -= w / 2;
   shadow.y -= h / 2;
   c.addChild(shadow, new Graphics().roundRect(-w / 2, -h / 2 + CARD_BODY.dy, w, h, T.radius).fill(CARD_BODY.color));
@@ -37,7 +27,7 @@ export function cardFront(ch: string, suit: Suit): Container {
   const c = new Container();
   c.addChild(cardBody(w, h));
   c.addChild(new Graphics()
-    .roundRect(-w / 2, -h / 2, w, h, T.radius).fill(vGradient(lighten(C.cardFace, T.faceLight), shade(C.cardFace, T.faceDark))).stroke({ width: 3, color: C.cardEdge })
+    .roundRect(-w / 2, -h / 2, w, h, T.radius).fill(C.cardFace).stroke({ width: 3, color: C.cardEdge })
     .roundRect(-w / 2 + 6, -h / 2 + 6, w - 12, h - 12, 6).stroke({ width: 1.5, color, alpha: 0.35 }));
   const sheen = gloss(w, h, T.radius, T.glossStrength);
   sheen.position.set(-w / 2, -h / 2);
@@ -67,7 +57,7 @@ function cardBackStar(): Container {
   }
   c.addChild(cardBody(w, h));
   c.addChild(new Graphics()
-    .roundRect(-w / 2, -h / 2, w, h, T.radius).fill(vGradient(lighten(C.cardBack, T.faceLight * 0.6), shade(C.cardBack, T.faceDark))).stroke({ width: 3, color: C.cardEdge })
+    .roundRect(-w / 2, -h / 2, w, h, T.radius).fill(C.cardBack).stroke({ width: 3, color: C.cardEdge })
     .roundRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20, 6).stroke({ width: 2, color: 0xffffff, alpha: 0.6 })
     .poly(star).fill(C.money).stroke({ width: 2, color: C.cardEdge }));
   const sheen = gloss(w, h, T.radius, T.glossStrength);
@@ -91,10 +81,9 @@ export function buildTitleCards(): Container {
   const n = T.letters.length;
   const cards: TitleCard[] = [];
 
-  // Bodenschatten: weicher dunkler Fleck unter der Kartenreihe, blendet ein, wenn die Karten gelandet sind
-  root.addChild(lightPool(T.poolW, T.poolH, T.poolColor, T.poolAlpha));
+  // Bodenschatten: flacher dunkler Fleck unter der Kartenreihe, blendet ein, wenn die Karten gelandet sind
   const floor = new Graphics();
-  floor.ellipse(0, 0, T.floorW / 2, T.floorH / 2).fill(radialGradient(`rgba(2,5,11,${T.floorAlpha})`, 'rgba(2,5,11,0)'));
+  floor.ellipse(0, 0, T.floorW / 2, T.floorH / 2).fill({ color: SHADOW.color, alpha: T.floorAlpha });
   floor.position.set(0, CARD_H / 2 + T.floorDy);
   floor.eventMode = 'none';
   floor.alpha = 0;
