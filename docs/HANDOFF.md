@@ -1,6 +1,13 @@
-# Übergabe: Stand nach der Grafikstufe Supernova und den neuen Optionen (Version 0.12.1)
+# Übergabe: Stand nach dem Tiefen Look (Version 0.13.0)
 
-Stand: 24.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+Stand: 25.11.2026. Arbeitsbranch `claude/affectionate-brown-zwzu9c` (zuvor `claude/clever-franklin-nytl3y`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.13.0: Tiefen Look im Comic Stil
+
+* Das ganze Spiel hat Tiefe, aber nicht realistisch: kräftige flache Farben, dunkle Kontur, harter Unterrand, scharfe Schatten, kleiner Lichtstreifen oben, Fenster mit heller Randlinie. Plan `docs/tiefe-plan.md`, Einzelheiten und offene Punkte `AUDIT.md` O119 bis O125. **Das ersetzt den Abschnitt "Klarer Grafikstil" weiter unten** (harte Schatten, keine Verläufe gilt nicht mehr).
+* **Wo:** Werkzeug `src/ui/depth.ts` (`dropShadow`, `drawPlate`, `drawInset`, `raised`, `sunken`, `gloss`, `drawMeter`, `vignette`, `setShadowLift`), Zahlen `src/data/depth.ts` (`SHADOW`, `BEVEL`, `CARD_BODY`, `METER`), Rechnung `depthMath.ts` (getestet), Kacheln und Raster `tileDepth.ts`, Tischfläche `tableSurface.ts`. `panel()`, `Button` und `popup` in `widgets.ts` bauen darauf auf.
+* **Neue Platten und Knöpfe:** immer über diese Bausteine, Stil zentral in `data/depth.ts` ändern. Container mit Schatten setzen `boundsArea` (sonst stimmen `getBounds` und die Einführungszeiger nicht). Karten haben `CardView.lift`, Jokers, Consumables, Packs und Vouchers ebenfalls.
+* **Als Nächstes:** Auf dem iPad prüfen: Bildrate mit FPS Anzeige in allen drei Stufen, Lesbarkeit der Zahlen auf den flachen Farben, Tippgefühl des Eindrückens der Knöpfe, ob die Filzfläche auf dem Tisch zu schwach oder zu stark wirkt (`FELT.color`), Game Over und Run gewonnen (nur über den Code geprüft).
 
 ## Version 0.12.1: Supernova ruhiger, Menü Überarbeitung zusammengeführt
 
@@ -199,7 +206,7 @@ Offen und möglich: eigene Joker Grafiken (M5, bisher Farbkreis mit Initiale), S
 * **Patch Notes:** `src/data/patchnotes.ts`. Bei jedem Release oben einen Eintrag ergänzen und `version` in `package.json` und `package-lock.json` anpassen, der Test in `src/patchnotes.test.ts` prüft das. Die Notes erscheinen beim Start einmal pro Version, danach über Neuigkeiten.
 * **Anleitung:** `src/data/tutorial.ts`, Ansicht in `src/ui/InfoViews.ts` (zusammen mit den Patch Notes). Bei Regeländerungen die Texte mitpflegen.
 
-## Klarer Grafikstil
+## Klarer Grafikstil (überholt durch Version 0.13.0, Tiefen Look)
 
 Die UI wurde auf einen flachen, scharfen Stil umgestellt (Einzelheiten in `AUDIT.md`, Abschnitt "Klarer Grafikstil"). Neue Panels und Knöpfe immer über `panel()` und `Button` bauen, Farben und Konturen aus `C` und `STYLE` in `ui/theme.ts`, keine halbtransparenten Weichzeichner Flächen. Der Look ist eine Mischung aus flach und scharf, weichem Leuchten im Hintergrund und dezentem Hologramm (CRT Shader ohne Wölbung, `data/juice.ts` `CRT`). Beschreibungstexte mit Wortumbruch nutzen `FONT_BODY`. Die Schrift ist eine eigene Pixel Schrift (`tools/pixelfont.py` erzeugt `src/assets/alatro-pixel.ttf`, geladen in `main.ts` vor dem ersten Text, `FONT` in `ui/theme.ts`). Neue Sonderzeichen in der UI zuerst in `tools/pixelfont.py` als Glyphe zeichnen (`pip install fonttools shapely`, `python3 tools/pixelfont.py`). Die Raster werden beim Erzeugen weich gezeichnet (siehe AUDIT.md, Weiche Schrift). **Als Nächstes:** Shop, Packs und Boss Stimmungen auf dem iPad ansehen und Feinschliff nachziehen. **Neuer Shop (0.3.2):** `ShopView.ts` mit Fächern, Preisfahnen, Detail Karte beim Antippen und Leuchtschild `buildShopSign` (Einzelheiten in `AUDIT.md`).
 

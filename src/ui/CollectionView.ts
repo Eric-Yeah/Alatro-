@@ -87,7 +87,7 @@ export function buildCollection(box: Container, close: () => void) {
     const seen = entries.filter((e) => found.has(e.key)).length;
     const newHere = entries.filter((e) => fresh.has(e.key)).length;
     const count = label(t('{seen} von {total} entdeckt', { seen, total: entries.length }) + (newHere ? t(', {n} neu', { n: newHere }) : ''), 20, newHere ? C.money : C.textDim);
-    count.position.set(W / 2, 156);
+    count.position.set(W / 2, 162);
     dyn.addChild(count);
 
     const pages = Math.max(1, Math.ceil(entries.length / PER_PAGE));

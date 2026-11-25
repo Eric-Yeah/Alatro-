@@ -11,7 +11,7 @@ const EN: Record<string, { title: string; items: Item[] }> = {
   '0.13.0': {
     title: 'Depth Look',
     items: [
-      'New: The whole game feels more three dimensional. Panels, fields, buttons, cards, Jokers, packs and the shop have soft shadows, gradients, light edges and a body instead of flat surfaces. The light comes from above, the shadows fall downward.',
+      'New: The whole game feels more three dimensional, in a cartoon style. Panels, fields, buttons, cards, Jokers, packs and the shop have bold flat colors, dark outlines, a hard bottom edge, crisp shadows and a small highlight stripe on top.',
       'New: Buttons have a thick bottom edge and press in when you tap them. Value displays are sunken, buttons and panels are raised, so you can see at a glance what you can tap.',
       'New: A selected card rises, its shadow stays on the table and gets softer. Cards have a visible thickness.',
       'New: The table has a subtle felt surface with card spots, the trays for Jokers and Consumables are sunken, the deck pile has thickness.',

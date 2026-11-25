@@ -1,7 +1,7 @@
 import { Container, Graphics, GraphicsContext, NineSliceSprite, Rectangle, Sprite, type Texture } from 'pixi.js';
 import { BEVEL, SHADOW } from '../data/depth';
 import { ROW_DEPTH, TILE_DEPTH, type GlowSpec } from '../data/tileDepth';
-import { dropShadow, setShadowLift, sunken } from './depth';
+import { dropShadow, sunken } from './depth';
 import { lighten } from './depthMath';
 import { C, shade } from './theme';
 import { tween } from './tween';
@@ -85,11 +85,6 @@ export function tileSheen(x: number, y: number, w: number, _h: number, _radius: 
 export function liftTo(view: { lift: number; destroyed: boolean }, v: number, ms = v > 0 ? TILE_DEPTH.liftMs : TILE_DEPTH.dropMs) {
   if (view.destroyed) return;
   void tween(view, { lift: v }, ms);
-}
-
-/** Setzt `lift` einer Kachel (nur der Schatten wächst, die Kachel selbst bewegt der Aufrufer) */
-export function applyLift(shadow: NineSliceSprite, v: number) {
-  setShadowLift(shadow, v);
 }
 
 /** Tippfläche und Grenzen einer Kachel ohne Schatten und Leuchtkante (für getBounds und Hit Tests) */

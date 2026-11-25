@@ -12,7 +12,7 @@ export const PATCH_NOTES: readonly PatchNote[] = [
     date: '25.11.2026',
     title: 'Tiefen Look',
     items: [
-      'Neu: Das ganze Spiel wirkt räumlicher. Platten, Felder, Knöpfe, Karten, Jokers, Packs und der Shop haben weiche Schatten, Verläufe, Lichtkanten und einen Körper statt flacher Flächen. Das Licht kommt von oben, die Schatten fallen nach unten.',
+      'Neu: Das ganze Spiel wirkt räumlicher, im Stil eines Comics. Platten, Felder, Knöpfe, Karten, Jokers, Packs und der Shop haben kräftige flache Farben, dunkle Konturen, einen harten Unterrand, scharfe Schatten und einen kleinen Lichtstreifen oben.',
       'Neu: Knöpfe haben einen dicken Unterrand und drücken sich beim Antippen ein. Anzeigen für Werte sind vertieft, Knöpfe und Platten erhaben, so sieht man auf einen Blick, was man antippen kann.',
       'Neu: Eine gewählte Karte steigt, ihr Schatten bleibt auf dem Tisch und wird weicher. Karten haben eine sichtbare Dicke.',
       'Neu: Der Spieltisch hat eine dezente Filzfläche mit Kartenplätzen, die Fächer für Jokers und Consumables sind vertieft, der Stapel hat Dicke.',
