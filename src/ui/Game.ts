@@ -1865,9 +1865,9 @@ export class Game {
     td.position.set(W / 2, 530);
     this.well(box, 90, 474, W - 180, 530 + td.height + 6 - 474);
     const seed = label(`Seed ${d.seed}`, 18, C.textDim, { fontWeight: '600' });
-    seed.position.set(W / 2, 598);
+    seed.position.set(W / 2, 592);
     const best = label(entry ? t('Bisher heute: Ante {n}', { n: entry.ante }) + (entry.won ? t(', gewonnen') : '') : t('Heute noch nicht gespielt'), 20, entry?.won ? C.green : C.textDim);
-    best.position.set(W / 2, 640);
+    best.position.set(W / 2, 632);
     const go = new Button(entry ? t('Nochmal spielen') : t('Starten'), 360, 72, C.chips, () => {
       this.beginNewRun(d.deckId, { level: d.level, seed: d.seed, daily: { date: d.date, twistId: d.twistId } });
     }, 30);
