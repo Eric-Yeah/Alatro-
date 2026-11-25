@@ -6,7 +6,7 @@ import { DECKS } from '../data/decks';
 import { getProfile } from '../profile';
 import { t } from '../i18n';
 import { SHADOW } from '../data/depth';
-import { drawInset, drawMeter, drawPlate, dropShadow, gloss } from './depth';
+import { drawInset, drawMeter, drawPlate, dropShadow } from './depth';
 import { C, fmt, numLocale } from './theme';
 import { Button, label, tabBar, wrapText } from './widgets';
 
@@ -78,8 +78,6 @@ export function buildAchievements(box: Container, close: () => void) {
       card.addChild(dropShadow(CELL_W, CELL_H + 4, SHADOW.panel, { radius: 12 }));
       card.addChild(drawPlate(new Graphics(), 0, 0, CELL_W, CELL_H, 0x3a5070, { radius: 12, edge: 4, line: 0x6b4a08, sheen: 0 }));
       card.addChild(new Graphics().roundRect(12, 10, CELL_W - 24, 6, 3).fill(C.money));
-      const gl = gloss(CELL_W, CELL_H, 12, 1);
-      card.addChild(gl);
     } else {
       card.addChild(drawInset(new Graphics(), 0, 0, CELL_W, CELL_H, 0x1b2636, { radius: 12 }));
     }

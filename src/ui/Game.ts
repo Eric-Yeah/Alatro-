@@ -481,23 +481,23 @@ export class Game {
     np.visible = false;
     // vertieftes Feld für Ziel und Belohnung
     const well = new Graphics();
-    drawInset(well, 12, 88, 306, 76, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
+    drawInset(well, 12, 84, 306, 70, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
     const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);
     const blind = label('', 28);
     blind.position.set(165, 66);
     const target = label('', 36, C.mult);
-    target.position.set(165, 118);
+    target.position.set(165, 110);
     const reward = label('', 19, C.money);
-    reward.position.set(165, 150);
+    reward.position.set(165, 140);
     // eingravierte Linie zwischen den Abschnitten
-    const line = new Graphics().rect(24, 172, 282, 2).fill({ color: 0x000000, alpha: 0.4 }).rect(24, 174, 282, 1).fill({ color: 0xffffff, alpha: 0.12 });
+    const line = new Graphics().rect(24, 164, 282, 2).fill({ color: 0x000000, alpha: 0.4 }).rect(24, 166, 282, 1).fill({ color: 0xffffff, alpha: 0.12 });
     const bossHead = label(t('Boss dieser Ante'), 18, C.textDim);
-    bossHead.position.set(165, 190);
+    bossHead.position.set(165, 180);
     const bossName = label('', 22, C.accent);
-    bossName.position.set(165, 214);
+    bossName.position.set(165, 203);
     const bossDesc = wrapText('', 296, 15, C.text);
-    bossDesc.position.set(165, 230);
+    bossDesc.position.set(165, 220);
     np.addChild(well, head, blind, target, reward, line, bossHead, bossName, bossDesc);
     this.nextPanel = np;
     this.nextTexts = { blind, target, reward, bossName, bossDesc, line, bossHead };
@@ -524,7 +524,7 @@ export class Game {
     n.line.visible = n.bossHead.visible = n.bossName.visible = !nextIsBoss;
     n.bossName.text = boss && !nextIsBoss ? boss.name : '';
     n.bossDesc.text = boss ? boss.description : '';
-    n.bossDesc.y = nextIsBoss ? 184 : 230;
+    n.bossDesc.y = nextIsBoss ? 172 : 222;
   }
 
   /** Hinweis für neue Spieler: sichtbar in der ersten Runde, solange noch keine Karte gewählt ist */

@@ -40,7 +40,7 @@ export function buildTutorial(box: Container, close: () => void, startId?: strin
   head.position.set(W / 2, 40);
   box.addChild(head);
   // Textfeld: vertieftes dunkles Feld hinter Titel und Text, damit die Schrift gut lesbar bleibt
-  box.addChild(drawInset(new Graphics(), 40, 132, W - 80, TUTORIAL_H - 132 - 92, 0x24344a, { radius: 12 }));
+  box.addChild(drawInset(new Graphics(), 40, 144, W - 80, TUTORIAL_H - 144 - 92, 0x24344a, { radius: 12 }));
   const dyn = new Container();
   box.addChild(dyn);
 

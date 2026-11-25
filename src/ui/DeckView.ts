@@ -261,7 +261,7 @@ export function buildDeckView(box: Container, run: RunState, close: () => void) 
     for (const c of [...header.children]) c.destroy({ children: true });
     const lbl = label(t('Sortieren'), 18, C.textDim);
     lbl.anchor.set(0, 0.5);
-    lbl.position.set(DECK_VIEW.gridX, DECK_VIEW.toggleY - 40);
+    lbl.position.set(DECK_VIEW.gridX, DECK_VIEW.toggleY - 45);
     header.addChild(lbl);
     header.addChild(segmented<DeckSort>(
       [{ id: 'rank', text: t('Rang'), w: DECK_VIEW.toggleW }, { id: 'suit', text: t('Farbe'), w: DECK_VIEW.toggleW }],
