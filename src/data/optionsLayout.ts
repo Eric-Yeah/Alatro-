@@ -2,17 +2,52 @@
 
 export const OPTIONS_LAYOUT = {
   /** Seitenleiste links: Titel, Bereiche, Zurück */
-  side: { x: 40, y: 40, w: 360, h: 920 },
+  side: { x: 40, y: 40, w: 360, h: 920, groovePad: 40, grooveH: 6, grooveY: 154 },
   /** Inhaltsfläche rechts */
   main: { x: 430, y: 40, w: 970, h: 920 },
   /** Bereichsknöpfe in der Seitenleiste */
-  tab: { y0: 230, w: 320, h: 92, gap: 14 },
+  tab: { y0: 230, w: 320, h: 92, gap: 14, color: 0x2b3d55, activeColor: 0x3a6190 },
   /** Zeilen der Inhaltsfläche: Abstand zum Rand, Startlinie, Höhen und Abstand */
-  row: { pad: 40, y0: 215, h: 112, hWide: 178, gap: 16, inner: 26 },
+  row: {
+    pad: 40, y0: 215, h: 112, hWide: 178, gap: 16, inner: 26,
+    /** Zeilenkarte: Farbe, Glanz, Unterrand, Schatten (enger als bei großen Platten), Rille unter der Überschrift */
+    color: 0x2d405a,
+    sheen: 0.22,
+    edge: 4,
+    shadow: { blur: 9, dy: 5, dx: 0, alpha: 0.45 },
+    markX: 12,
+    grooveH: 6,
+    grooveY: 158,
+  },
   /** Bedienelemente */
-  control: { h: 56, switchW: 128, sliderW: 330, sliderValueW: 76, knob: 40, segGap: 6 },
+  control: { h: 56, switchW: 128, sliderW: 330, sliderValueW: 76, knob: 40, segGap: 4, segPad: 5 },
+  /** Griffe und Schienen (Schalter, Schieberegler, Auswahlleiste): Unterrand, Eckenradius, Schatten, Maße */
+  knob: {
+    edge: 3,
+    radius: 6,
+    shadowBlur: 6,
+    shadowDy: 4,
+    shadowAlpha: 0.6,
+    switchPad: 6,
+    switchKnobW: 54,
+    knobColor: 0xdfe8f2,
+    trackRadius: 10,
+    railH: 18,
+    tickY: 18,
+    valueH: 44,
+    valuePadL: 0,
+    valuePadR: 12,
+  },
   /** Sternwarten Zierde unten in der Seitenleiste (Astrolabium) */
-  astrolabe: { cx: 220, cy: 738, r: 62, spinMs: 120000 },
+  astrolabe: {
+    cx: 220, cy: 738, r: 62, spinMs: 120000,
+    /** Schale um die Ringe: Abstand, Farben von Mitte zu Rand; Schein des Kerns */
+    wellPad: 14,
+    wellInner: 0x1c2c42,
+    wellOuter: 0x0a111b,
+    glowR: 34,
+    glowAlpha: 0.45,
+  },
 } as const;
 
 export type OptionsTab = 'anzeige' | 'ton' | 'spiel' | 'daten';

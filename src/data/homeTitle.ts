@@ -39,6 +39,25 @@ export const HOME_TITLE = {
   swayAngle: 0.025,
   swayMs: 2400,
   swayStaggerMs: 320,
+  /** Tiefe der Karten: Eckenradius, Verlauf der Fläche (Aufhellen oben, Abdunkeln unten), Stärke des Glanzes */
+  radius: 10,
+  faceLight: 0.5,
+  faceDark: 0.88,
+  glossStrength: 0.55,
+  /** Bodenschatten unter der Kartenreihe: Breite, Höhe, Abstand zur Unterkante, Deckkraft, Einblenden (ms) */
+  shadowAlpha: 0.8,
+  shadowBlur: 20,
+  shadowDy: 16,
+  /** Lichtfleck hinter dem Titel (Breite, Höhe, Farbe, Deckkraft), macht die Schatten sichtbar */
+  poolW: 1200,
+  poolH: 420,
+  poolColor: 0x8a7cff,
+  poolAlpha: 0.4,
+  floorW: 960,
+  floorH: 78,
+  floorDy: 34,
+  floorAlpha: 0.8,
+  floorFadeMs: 500,
   /** Größe des Sterns auf dem Kartenrücken */
   backStarOuter: 34,
   backStarInner: 11,

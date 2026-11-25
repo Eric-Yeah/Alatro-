@@ -1,44 +1,55 @@
-import { Container, Graphics, type FederatedPointerEvent } from 'pixi.js';
+import { Container, Graphics, Rectangle, type FederatedPointerEvent } from 'pixi.js';
 import { OPTIONS_LAYOUT } from '../data/optionsLayout';
 import { t } from '../i18n';
 import { sfx } from './audio';
+import { drawInset, drawMeter, drawPlate, dropShadow } from './depth';
 import { haptics } from './haptics';
-import { C, STYLE, shade } from './theme';
+import { C, STYLE } from './theme';
 import { easeOutCubic, tween } from './tween';
-import { Button, label } from './widgets';
+import { label } from './widgets';
 
 const CTRL = OPTIONS_LAYOUT.control;
+const KNOB = OPTIONS_LAYOUT.knob;
 const OFF_COLOR = 0x3b5068;
 
-/** Schalter An/Aus mit gleitendem Griff. Zeichnet sich selbst neu, die Zeile muss nicht neu gebaut werden. */
+/** Weicher Schatten für Griffe und aktive Segmente (kleine Erhebung auf einer vertieften Schiene) */
+function gripShadow(w: number, h: number) {
+  return dropShadow(w, h + KNOB.edge, { blur: KNOB.shadowBlur, dy: KNOB.shadowDy, dx: 0, alpha: KNOB.shadowAlpha }, { radius: KNOB.radius });
+}
+
+/** Erhabener Griff (Schalter, Segment): Schatten plus Platte mit Glanz. Ursprung links oben, bounds gleich Plattengröße. */
+function gripPlate(w: number, h: number, color: number): Container {
+  const c = new Container();
+  c.addChild(gripShadow(w, h));
+  c.addChild(drawPlate(new Graphics(), 0, 0, w, h, color, { edge: KNOB.edge, outline: 1, radius: KNOB.radius, sheen: 0.5, line: C.panelLine }));
+  c.boundsArea = new Rectangle(0, 0, w, h + KNOB.edge);
+  return c;
+}
+
+/** Schalter An/Aus: vertiefte Schiene mit erhabenem, gleitendem Griff. Zeichnet sich selbst neu, die Zeile muss nicht neu gebaut werden. */
 export function switchToggle(on: boolean, onChange: (on: boolean) => void): Container {
   const w = CTRL.switchW;
   const h = CTRL.h;
   const c = new Container();
   const track = new Graphics();
-  const knob = new Graphics();
   const text = label('', 22, C.text);
-  const pad = 6;
-  const knobW = 50;
+  const pad = KNOB.switchPad;
+  const knobW = KNOB.switchKnobW;
+  const knobH = h - pad * 2 - KNOB.edge;
+  const knob = gripPlate(knobW, knobH, KNOB.knobColor);
   const knobX = (v: boolean) => (v ? w - pad - knobW : pad);
   let state = on;
   const draw = () => {
-    const o = STYLE.outline;
-    track.clear()
-      .roundRect(-o, -o, w + o * 2, h + o * 2 + 4, STYLE.radius + o).fill(C.panelLine)
-      .roundRect(0, 0, w, h + 4, STYLE.radius).fill(shade(state ? C.green : OFF_COLOR, 0.55))
-      .roundRect(0, 0, w, h, STYLE.radius).fill(state ? C.green : OFF_COLOR);
-    knob.clear()
-      .roundRect(0, 0, knobW, h - pad * 2, 5).fill(C.panelLine)
-      .roundRect(2, 2, knobW - 4, h - pad * 2 - 4, 4).fill(0xf2f6fb)
-      .roundRect(6, 5, knobW - 12, 4, 2).fill({ color: 0xffffff, alpha: 0.7 });
+    track.clear();
+    drawInset(track, 0, 0, w, h, state ? C.green : OFF_COLOR, { radius: KNOB.trackRadius });
     text.text = state ? t('An') : t('Aus');
-    text.position.set(state ? (w - knobW - pad) / 2 : (w + knobW + pad) / 2, h / 2);
+    text.position.set(state ? (w - knobW - pad) / 2 : (w + knobW + pad) / 2, h / 2 - 1);
   };
   knob.y = pad;
   knob.x = knobX(state);
   draw();
   c.addChild(track, text, knob);
+  c.boundsArea = new Rectangle(-STYLE.outline, -STYLE.outline, w + 2 * STYLE.outline, h + 2 * STYLE.outline + 2);
   c.eventMode = 'static';
   c.cursor = 'pointer';
   c.hitArea = { contains: (x: number, y: number) => x >= -8 && x <= w + 8 && y >= -8 && y <= h + 12 } as never;
@@ -55,32 +66,38 @@ export function switchToggle(on: boolean, onChange: (on: boolean) => void): Cont
 
 /** Schieberegler 0 bis 1 in festen Stufen mit Wertanzeige. Ziehen oder Tippen auf die Leiste. */
 export function slider(value: number, step: number, onChange: (v: number) => void, onRelease: () => void): Container {
-  const trackW = OPTIONS_LAYOUT.control.sliderW;
+  const trackW = CTRL.sliderW;
   const knobS = CTRL.knob;
   const steps = Math.round(1 / step);
   const c = new Container();
   const track = new Graphics();
-  const fill = new Graphics();
-  const knob = new Graphics();
+  const ticks = new Graphics();
+  const knob = new Container();
   const valueText = label('', 26, C.text);
   valueText.anchor.set(1, 0.5);
-  valueText.position.set(trackW + 30 + CTRL.sliderValueW, 0);
+  const vx = trackW + 30 + CTRL.sliderValueW;
+  valueText.position.set(vx, 0);
+  const valueBox = new Graphics();
+  drawInset(valueBox, vx - CTRL.sliderValueW - KNOB.valuePadL, -KNOB.valueH / 2, CTRL.sliderValueW + KNOB.valuePadL + KNOB.valuePadR, KNOB.valueH, 0x1b2a3f, { radius: STYLE.radius });
+  // Griff: Schatten, Platte in Akzentfarbe, drei Rillen zum Greifen
+  const ks = gripShadow(knobS, knobS);
+  ks.position.set(ks.x - knobS / 2, ks.y - knobS / 2);
+  knob.addChild(ks);
+  const kg = drawPlate(new Graphics(), -knobS / 2, -knobS / 2, knobS, knobS, C.accent, { edge: KNOB.edge, outline: 1, radius: KNOB.radius + 1, sheen: 0.5, line: C.panelLine });
+  for (const dx of [-5, 0, 5]) kg.rect(dx - 1, -knobS / 2 + 10, 2, knobS - 20).fill({ color: 0x000000, alpha: 0.22 });
+  knob.addChild(kg);
+  for (let i = 0; i <= steps; i++) ticks.rect(i * (trackW / steps) - 1, KNOB.tickY, 2, i % 5 === 0 ? 10 : 6).fill({ color: C.textDim, alpha: 0.5 });
   let v = value;
   const draw = () => {
-    const x = v * trackW;
-    track.clear().roundRect(-4, -11, trackW + 8, 22, 8).fill(C.panelLine).roundRect(0, -7, trackW, 14, 5).fill(0x141d29);
-    for (let i = 0; i <= steps; i++) track.rect(i * (trackW / steps) - 1, 12, 2, i % 5 === 0 ? 10 : 6).fill({ color: C.textDim, alpha: 0.5 });
-    fill.clear();
-    if (x > 0) fill.roundRect(0, -7, x, 14, 5).fill(C.chips).roundRect(0, -7, x, 4, 2).fill({ color: 0xffffff, alpha: 0.3 });
-    knob.clear()
-      .roundRect(-knobS / 2 - 3, -knobS / 2 - 3, knobS + 6, knobS + 6, 8).fill(C.panelLine)
-      .roundRect(-knobS / 2, -knobS / 2, knobS, knobS, 6).fill(C.accent)
-      .roundRect(-knobS / 2 + 4, -knobS / 2 + 4, knobS - 8, 5, 2).fill({ color: 0xffffff, alpha: 0.4 });
-    knob.x = x;
+    track.clear();
+    // Rinne mit gefülltem Verlauf; die Füllung endet unter der Mitte des Griffs
+    drawMeter(track, 0, -KNOB.railH / 2, trackW, KNOB.railH, v, C.chips, { minFill: 0 });
+    knob.x = v * trackW;
     valueText.text = `${Math.round(v * 100)} %`;
   };
   draw();
-  c.addChild(track, fill, knob, valueText);
+  c.addChild(valueBox, track, ticks, knob, valueText);
+  c.boundsArea = new Rectangle(-30, -34, trackW + 60 + CTRL.sliderValueW + 40, 68);
   c.eventMode = 'static';
   c.cursor = 'pointer';
   c.hitArea = { contains: (x: number, y: number) => x >= -30 && x <= trackW + 30 && y >= -34 && y <= 34 } as never;
@@ -110,15 +127,50 @@ export interface SegmentItem {
   name: string;
 }
 
-/** Auswahlleiste: gleich breite Knöpfe nebeneinander, der gewählte ist orange. */
+/**
+ * Auswahlleiste: eine zusammenhängende vertiefte Leiste. Das gewählte Segment ist erhaben und orange,
+ * die anderen liegen vertieft in der Leiste (nur Schrift).
+ */
 export function segmented(items: readonly SegmentItem[], current: string, totalW: number, onSelect: (id: string) => void, size = 22): Container {
   const c = new Container();
+  const h = CTRL.h;
+  const pad = CTRL.segPad;
   const gap = CTRL.segGap;
-  const w = (totalW - gap * (items.length - 1)) / items.length;
+  const sw = (totalW - pad * 2 - gap * (items.length - 1)) / items.length;
+  const sh = h - pad * 2 - KNOB.edge;
+  c.addChild(drawInset(new Graphics(), 0, 0, totalW, h, OFF_COLOR, { radius: KNOB.trackRadius }));
   items.forEach((it, i) => {
-    const b = new Button(it.name, w, CTRL.h, it.id === current ? C.accent : OFF_COLOR, () => { if (it.id !== current) onSelect(it.id); }, size);
-    b.position.set(w / 2 + i * (w + gap), CTRL.h / 2);
-    c.addChild(b);
+    const active = it.id === current;
+    const seg = new Container();
+    seg.position.set(pad + i * (sw + gap), pad);
+    const txt = label(it.name, size, active ? C.text : C.textDim, { align: 'center' });
+    txt.position.set(sw / 2, sh / 2);
+    const maxW = sw - 14;
+    if (txt.width > maxW) txt.scale.set(Math.max(0.5, maxW / txt.width));
+    if (active) {
+      seg.addChild(gripPlate(sw, sh, C.accent), txt);
+    } else {
+      // vertieftes Segment: nur ein heller Hauch beim Berühren, damit es antippbar wirkt
+      const hover = new Graphics().roundRect(0, 0, sw, sh + KNOB.edge, KNOB.radius).fill({ color: 0xffffff, alpha: 0.1 });
+      hover.visible = false;
+      seg.addChild(hover, txt);
+      seg.on('pointerover', () => { hover.visible = true; });
+      seg.on('pointerout', () => { hover.visible = false; txt.y = sh / 2; });
+      seg.on('pointerdown', () => { txt.y = sh / 2 + 2; });
+      seg.on('pointerup', () => { txt.y = sh / 2; });
+      seg.on('pointerupoutside', () => { txt.y = sh / 2; });
+    }
+    seg.hitArea = new Rectangle(-gap / 2, -pad, sw + gap, h);
+    seg.eventMode = 'static';
+    seg.cursor = active ? 'default' : 'pointer';
+    seg.on('pointertap', () => {
+      if (active) return;
+      sfx.click();
+      haptics.tap();
+      onSelect(it.id);
+    });
+    c.addChild(seg);
   });
+  c.boundsArea = new Rectangle(0, 0, totalW, h);
   return c;
 }

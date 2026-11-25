@@ -1,9 +1,14 @@
 import { Container, Graphics } from 'pixi.js';
+import { SHADOW } from '../data/depth';
 import type { GuideStep } from '../data/guide';
+import { GUIDE_LOOK, WINDOW } from '../data/tableSurface';
 import { t } from '../i18n';
-import { C, VIEW_H } from './theme';
+import { CARD_H, CARD_W, CardView } from './CardView';
+import { drawInset, raised, vGradient } from './depth';
+import { lighten } from './depthMath';
+import { C, VIEW_H, shade } from './theme';
 import { easeOutBack, tween } from './tween';
-import { Button, label, panel, wrapText } from './widgets';
+import { Button, label, wrapText } from './widgets';
 
 /** Maße und Lage des Hinweisfelds der Einführung */
 const GUIDE = {
@@ -58,7 +63,9 @@ export class Guide {
     }
     for (const r of rects) {
       const p = GUIDE.ringPad;
+      // weicher Schein außen, dunkle Kante, leuchtender goldener Rahmen
       this.ring
+        .roundRect(r.x - p, r.y - p, r.w + p * 2, r.h + p * 2, 14).stroke({ width: GUIDE_LOOK.glowWidth, color: C.money, alpha: GUIDE_LOOK.glowAlpha * a })
         .roundRect(r.x - p, r.y - p, r.w + p * 2, r.h + p * 2, 12).stroke({ width: GUIDE.ringWidth + 3, color: 0x070b11, alpha: 0.8 * a })
         .roundRect(r.x - p, r.y - p, r.w + p * 2, r.h + p * 2, 12).stroke({ width: GUIDE.ringWidth, color: C.money, alpha: a });
     }
@@ -66,6 +73,14 @@ export class Guide {
 
   /** Rechteck eines Objekts in den Koordinaten dieses Containers (auch bei gedrehtem Spielfeld) */
   private rectOf(t: Container): Rect | null {
+    // Karten tragen einen weichen Schatten, der die Grenzen aufbläht: der Zeiger soll die Karte selbst umrahmen
+    if (t instanceof CardView) {
+      const pts = [[-CARD_W / 2, -CARD_H / 2], [CARD_W / 2, -CARD_H / 2], [CARD_W / 2, CARD_H / 2], [-CARD_W / 2, CARD_H / 2]]
+        .map(([x, y]) => this.root.toLocal(t.toGlobal({ x, y })));
+      const xs = pts.map((q) => q.x);
+      const ys = pts.map((q) => q.y);
+      return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    }
     const b = t.getBounds();
     if (!Number.isFinite(b.x) || b.width === 0) return null;
     const a = this.root.toLocal({ x: b.x, y: b.y });
@@ -102,10 +117,12 @@ export class Guide {
     const rowH = 58;
     const h = pad + headH + 10 + body.height + 18 + rowH + 16;
     const box = new Container();
-    box.addChild(panel(w, h, C.panelDark, 18, C.money));
-    // Abzeichen: goldener Kreis mit Stern, wie ein Stern am Observatorium
+    box.addChild(raised(w, h, C.panelDark, { radius: 18, line: C.money, alpha: WINDOW.alpha, holo: true, shadow: SHADOW.plate, sheen: Math.min(0.3, WINDOW.sheenMax / h) }));
+    // Abzeichen: goldener Kreis mit Stern in einer Fassung, wie ein Stern am Observatorium
     const badge = new Graphics()
-      .circle(0, 0, GUIDE.badge).fill(0x2a1f4a).stroke({ width: 4, color: C.money })
+      .circle(0, 2, GUIDE.badge + 2).fill({ color: 0xffffff, alpha: 0.14 })
+      .circle(0, 0, GUIDE.badge + 2).fill(C.panelLine)
+      .circle(0, 0, GUIDE.badge).fill(vGradient(lighten(0x2a1f4a, 0.25), shade(0x2a1f4a, 0.7))).stroke({ width: 4, color: C.money })
       .star(0, 0, 5, GUIDE.badge * 0.62, GUIDE.badge * 0.28).fill(C.money);
     badge.position.set(pad + GUIDE.badge, pad + GUIDE.badge);
     const name = label('Astra', 16, C.textDim);
@@ -114,8 +131,14 @@ export class Guide {
     body.position.set(left, pad + headH + 10);
     const prog = label(opts.progress, 15, C.textDim, { fontWeight: '600' });
     prog.anchor.set(1, 0.5);
-    prog.position.set(w - pad, pad + headH / 2);
-    box.addChild(badge, name, title, prog, body);
+    prog.position.set(w - pad - 14, pad + headH / 2);
+    // Fortschritt in einer kleinen vertieften Plakette
+    const pillW = prog.width + 28;
+    // lange Titel (englisch) schrumpfen, statt unter die Plakette zu laufen
+    const titleMax = w - left - pad - pillW - 12;
+    if (title.width > titleMax) title.scale.set(titleMax / title.width);
+    const pill = drawInset(new Graphics(), w - pad - pillW, pad + headH / 2 - 15, pillW, 30, 0x1b2a3f, { radius: 15, outline: 2 });
+    box.addChild(badge, name, title, pill, prog, body);
     if (opts.onNext) {
       const next = new Button(t('Weiter'), 220, rowH, C.chips, opts.onNext, 28);
       next.position.set(w - pad - 110, h - 16 - rowH / 2);

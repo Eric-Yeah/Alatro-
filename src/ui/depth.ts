@@ -1,5 +1,5 @@
 import { BufferImageSource, Container, FillGradient, Graphics, NineSliceSprite, Rectangle, Texture } from 'pixi.js';
-import { BEVEL, SHADOW } from '../data/depth';
+import { BEVEL, METER, SHADOW } from '../data/depth';
 import { lighten, pickRadius, shadowAlphaGrid } from './depthMath';
 import { C, STYLE, shade } from './theme';
 
@@ -240,5 +240,29 @@ export function vignette(w: number, h: number, alpha = 0.45, innerAt = 0.55): Gr
   const g = new Graphics();
   g.rect(0, 0, w, h).fill(radialGradient(BLACK(0), BLACK(alpha), innerAt));
   g.eventMode = 'none';
+  return g;
+}
+
+/** Gefüllter Verlauf einer Messleiste (Rinne ist schon gezeichnet): Fläche (x, y, w, h) mit rundem Ende und Glanzband oben */
+export function drawMeterFill(g: Graphics, x: number, y: number, w: number, h: number, color: number): Graphics {
+  if (w <= 0 || h <= 0) return g;
+  const r = h / 2;
+  g.roundRect(x, y, w, h, r).fill(vGradient(lighten(color, METER.fillTop), shade(color, METER.fillBottom)));
+  if (h >= 6 && w >= 8) g.roundRect(x + 2, y + 1, w - 4, Math.max(2, h * 0.42), Math.max(1, r - 1)).fill(vGradient(WHITE(METER.sheenAlpha), WHITE(0.03)));
+  return g;
+}
+
+/**
+ * Messleiste: vertiefte Rinne (Fläche (x, y, w, h)) mit gefülltem Verlauf bis `frac` (0 bis 1).
+ * `minFill` ist die kleinste sichtbare Füllbreite bei frac > 0 (Standard: Höhe der Füllung, damit das runde Ende bleibt).
+ */
+export function drawMeter(g: Graphics, x: number, y: number, w: number, h: number, frac: number, color: number, o: { minFill?: number; line?: number } = {}): Graphics {
+  drawInset(g, x, y, w, h, 0x1b2a3f, { radius: h / 2, outline: 2, line: o.line });
+  const pad = METER.pad;
+  const fh = h - 2 * pad;
+  if (frac > 0) {
+    const fw = Math.max(o.minFill ?? fh, (w - 2 * pad) * Math.min(1, frac));
+    drawMeterFill(g, x + pad, y + pad, Math.min(fw, w - 2 * pad), fh, color);
+  }
   return g;
 }

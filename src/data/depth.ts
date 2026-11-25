@@ -58,3 +58,13 @@ export const CARD_BODY = {
   color: 0xb4ab94,
   dy: 3,
 };
+
+/** Messleiste (Fortschritt, Ladebalken, Schieberegler): vertiefte Rinne mit gefülltem Verlauf */
+export const METER = {
+  /** Abstand der Füllung zum Rinnenrand */
+  pad: 2,
+  /** Füllung: Aufhellung oben, Abdunklung unten, Deckkraft des Glanzbands oben */
+  fillTop: 0.32,
+  fillBottom: 0.8,
+  sheenAlpha: 0.42,
+};

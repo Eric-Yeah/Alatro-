@@ -44,7 +44,7 @@ import { Guide } from './Guide';
 import { sfx } from './audio';
 import { haptics } from './haptics';
 import { CARD_H, CARD_W, CardView, cardBack } from './CardView';
-import { ConsumableView, CONSUMABLE_H } from './ConsumableView';
+import { ConsumableView, CONSUMABLE_H, CONSUMABLE_W } from './ConsumableView';
 import { playPackOpen, type FanTarget } from './packFx';
 import { trayLayout } from './consumableTray';
 import { OPEN_FX } from '../data/artFx';
@@ -56,20 +56,25 @@ import { buildPatchNotes, buildTutorial, PATCH_H, PATCH_W, TUTORIAL_H, TUTORIAL_
 import { buildHome } from './HomeView';
 import { buildOptions } from './OptionsView';
 import { ScreenTransition } from './ScreenTransition';
-import { JokerView } from './JokerView';
+import { JokerView, JOKER_H, JOKER_W } from './JokerView';
 import { buildRunInfo, RUN_INFO_H, RUN_INFO_W, type RunInfoTab } from './RunInfoView';
 import { buildDeckView, deckButton, deckCaption, DECK_VIEW_H, DECK_VIEW_W } from './DeckView';
 import { levelUpBlock } from './levelUpView';
 import { LEVEL_UP_VIEW } from '../data/deckView';
 import { consumableDescription, levelUpPreview } from '../core/runInfo';
 import { buildShop, buildShopSign } from './ShopView';
-import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, STYLE, VIEW_BLEED, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
+import { C, CONSUMABLE_COLORS, FONT_BODY, RARITY_COLORS, RARITY_NAMES, VIEW_BLEED, VIEW_H, VIEW_W, fmt, fmtMult, numLocale, shade } from './theme';
 import { scoreTier, xMultShake } from './juiceMath';
 import { spektakel } from './spektakel';
 import { collectCards, dealCards, DeckFx } from './dealAnim';
 import { StageFx } from './stageFx';
 import { easeInOutCubic, easeOutBack, juice, tween, wait } from './tween';
 import { Button, label, overlay, panel, popup, wrapText } from './widgets';
+import { BEVEL, SHADOW } from '../data/depth';
+import { BLIND_PLATE, BLIND_TILE, CARD_LIFT, CONTROL_BAND, FIELD, HAND_TILE, PAYOUT, SIDEBAR, SLOT, TIP, TRAY, WINDOW } from '../data/tableSurface';
+import { drawInset, drawPlate, dropShadow, raised, sunken, vGradient } from './depth';
+import { lighten } from './depthMath';
+import { buildDeckStack, buildTableSurface, slotOutline, type DeckStack } from './tableSurface';
 
 /** Seitenleiste links: obere Kante der Felder, gleicher Abstand von 20 Punkten dazwischen. `buttons` ist die Mitte von Menü und Run Info. */
 const SIDE = { score: 200, hand: 296, counters: 486, money: 590, info: 694, buttons: 850 };
@@ -88,6 +93,7 @@ const CONS_TRAY_X = 1160;
 const CONS_TRAY_W = 260;
 /** größte Breite des Round Score Werts im Seitenfeld (daneben steht die Beschriftung) */
 const SCORE_MAX_W = 185;
+
 
 const BLIND_COLORS: Record<BlindKind, number> = { small: 0x1f8fc4, big: 0xe08a1e, boss: 0xd23a4a };
 
@@ -181,6 +187,13 @@ export class Game {
   private seedText!: Text;
   private jokerCount!: Text;
   private deckCount!: Text;
+  /** Kartenstapel mit mehreren Rückseiten, sein Füllstand folgt dem Zähler */
+  private deckStack!: DeckStack;
+  /** Platzumrisse in Joker und Consumable Fach */
+  private traySlots = new Graphics();
+  private traySlotsKey = '';
+  /** Farbe, mit der die Blind Platte zuletzt gezeichnet wurde (gleiche Farbe, kein Neuzeichnen) */
+  private blindBgColor = -1;
   private totalText!: Text;
   /** Einführungshinweis in der Tischmitte, nur bis zur ersten gespielten Hand */
   private hintText!: Text;
@@ -254,15 +267,26 @@ export class Game {
     catcher.on('pointertap', () => this.closeTooltip());
     tb.addChild(catcher);
 
-    // Sidebar background
-    const side = new Graphics().roundRect(10, 10, 350, VIEW_H - 20, 12).fill({ color: 0x24354a, alpha: 0.9 }).stroke({ width: 3, color: C.panelLine })
-      .roundRect(15, 15, 340, VIEW_H - 30, 9).stroke({ width: 1.5, color: C.holo, alpha: 0.3 });
-    tb.addChild(side);
+    // Tischfläche (Filz) unter Seitenleiste und Karten, über den Hintergrund Partikeln
+    tb.addChild(buildTableSurface({ mx: MX, playY: PLAY_Y, deckX: DECK_X, deckY: DECK_Y }));
 
-    // Blind panel
+    // Seitenleiste: große erhabene Platte, darauf vertiefte Felder
+    const side = raised(SIDEBAR.w, SIDEBAR.h, SIDEBAR.color, { radius: SIDEBAR.radius, shadow: SHADOW.plate, alpha: SIDEBAR.alpha, holo: true, sheen: SIDEBAR.sheen });
+    side.position.set(SIDEBAR.x, SIDEBAR.y);
+    tb.addChild(side);
+    /** Vertieftes Feld der Seitenleiste, `bounds` gleich Feldgröße (Ziel der Einführung) */
+    const field = (w: number, h: number, x: number, y: number) => {
+      const f = sunken(w, h, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
+      f.position.set(x, y);
+      return f;
+    };
+
+    // Blind panel: erhabene Platte in der Blindfarbe, darin ein vertieftes Zielfeld
     const bp = this.blindPanel;
     bp.position.set(20, 20);
     this.blindBg = new Graphics();
+    const bpShadow = dropShadow(BLIND_PLATE.w, BLIND_PLATE.h + BLIND_PLATE.edge, SHADOW.panel, { radius: BLIND_PLATE.radius });
+    bp.boundsArea = new Rectangle(0, 0, BLIND_PLATE.w, BLIND_PLATE.h + BLIND_PLATE.edge);
     this.blindName = label('', 28);
     this.blindName.position.set(165, 30);
     const zielLbl = label(t('Ziel'), 18, C.textDim);
@@ -275,7 +299,7 @@ export class Game {
     this.bossDesc = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 300, align: 'center' } });
     this.bossDesc.anchor.set(0.5, 0);
     this.bossDesc.position.set(165, 110);
-    bp.addChild(this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
+    bp.addChild(bpShadow, this.blindBg, this.blindName, zielLbl, this.targetText, this.rewardText, this.bossDesc);
     tb.addChild(bp);
     // Im Shop ersetzt ein Leuchtschild die Blind Anzeige
     this.shopSign = buildShopSign();
@@ -284,8 +308,7 @@ export class Game {
     tb.addChild(this.shopSign);
 
     // Round score
-    const sp = panel(330, 76, C.panelDark);
-    sp.position.set(20, SIDE.score);
+    const sp = field(330, 76, 20, SIDE.score);
     const sLbl = label('Round Score', 20, C.textDim);
     sLbl.anchor.set(0, 0.5);
     sLbl.position.set(20, 38);
@@ -296,16 +319,20 @@ export class Game {
     this.scorePanel = sp;
     tb.addChild(sp);
 
-    // Hand panel: name, level, chips × mult
-    const hp = panel(330, 170, C.panelDark);
-    hp.position.set(20, SIDE.hand);
+    // Hand panel: name, level, chips × mult als erhabene Kacheln im vertieften Feld
+    const hp = field(330, 170, 20, SIDE.hand);
     this.handName = label('', 28);
     this.handName.position.set(165, 34);
     this.handLevel = label('', 18, C.textDim);
     this.handLevel.position.set(165, 66);
     const box = (c: Container, color: number, x: number) => {
-      c.addChild(new Graphics().roundRect(-66, -36, 132, 72, 8).fill(color).stroke({ width: 3, color: C.panelLine }));
-      c.position.set(x, 122);
+      const T = HAND_TILE;
+      const sh = dropShadow(T.w, T.h + T.edge, SHADOW.button, { radius: T.radius, ...T.shadow });
+      sh.x -= T.w / 2;
+      sh.y -= T.h / 2;
+      const g = drawPlate(new Graphics(), -T.w / 2, -T.h / 2, T.w, T.h, color, { radius: T.radius, edge: T.edge, outline: T.outline, sheen: T.sheen });
+      c.addChild(sh, g);
+      c.position.set(x, 122 - T.edge / 2);
       const tx = label('0', 38, C.text);
       c.addChild(tx);
       return tx;
@@ -321,8 +348,7 @@ export class Game {
 
     // Hands / discards
     const counter = (title: string, color: number, px: number) => {
-      const p = panel(160, 84, C.panelDark);
-      p.position.set(px, SIDE.counters);
+      const p = field(160, 84, px, SIDE.counters);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('0', 38, color);
@@ -335,8 +361,7 @@ export class Game {
     this.discardsText = counter('Discards', C.mult, 190);
 
     // Money
-    const mp = panel(330, 84, C.panelDark);
-    mp.position.set(20, SIDE.money);
+    const mp = field(330, 84, 20, SIDE.money);
     this.moneyText = label('$0', 48, C.money);
     this.moneyText.position.set(165, 42);
     mp.addChild(this.moneyText);
@@ -344,8 +369,7 @@ export class Game {
 
     // Ante / round
     const info = (title: string, px: number) => {
-      const p = panel(160, 84, C.panelDark);
-      p.position.set(px, SIDE.info);
+      const p = field(160, 84, px, SIDE.info);
       const l = label(title, 18, C.textDim);
       l.position.set(80, 22);
       const v = label('', 32, C.money);
@@ -357,43 +381,47 @@ export class Game {
     this.anteText = info('Ante', 20);
     this.roundText = info('Round', 190);
 
-    const menuBtn = new Button(t('Menü'), 156, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
-    menuBtn.position.set(98, SIDE.buttons);
-    const infoBtn = new Button('Run Info', 156, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
-    infoBtn.position.set(272, SIDE.buttons);
+    // Menü und Run Info liegen in einer Rinne
+    tb.addChild(field(330, FIELD.menuStrip.h, 20, FIELD.menuStrip.y));
+    const menuBtn = new Button(t('Menü'), FIELD.menuStrip.buttonW, 60, 0x3b5068, () => { if (this.guardGuide()) return; if (!this.busy) this.showMainMenu(); }, 24);
+    menuBtn.position.set(20 + 5 + FIELD.menuStrip.buttonW / 2, FIELD.menuStrip.buttonY);
+    const infoBtn = new Button('Run Info', FIELD.menuStrip.buttonW, 60, 0xf2711c, () => { if (this.guardGuide()) return; if (!this.busy && this.run) this.showRunInfo(); }, 24);
+    infoBtn.position.set(350 - 5 - FIELD.menuStrip.buttonW / 2, FIELD.menuStrip.buttonY);
     tb.addChild(menuBtn, infoBtn);
 
+    // Seed in einer kleinen vertieften Plakette
+    tb.addChild(field(330, FIELD.seed.h, 20, FIELD.seed.y));
     this.seedText = label('', 18, C.textDim, { fontWeight: '600' });
-    this.seedText.position.set(185, 960);
+    this.seedText.position.set(185, FIELD.seed.y + FIELD.seed.h / 2);
     this.tagsText = new Text({ text: '', style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.accent, wordWrap: true, wordWrapWidth: 320, align: 'center' } });
     this.tagsText.anchor.set(0.5, 1);
-    this.tagsText.position.set(185, 935);
+    this.tagsText.position.set(185, FIELD.seed.y - 8);
     tb.addChild(this.seedText, this.tagsText);
 
-    // Joker tray + consumable tray
-    const jt = panel(JOKER_TRAY_W, 180, C.panelDark);
-    jt.alpha = 0.85;
-    jt.position.set(JOKER_TRAY_X, 24);
+    // Joker Fach und Consumable Fach: vertiefte Fächer mit feinen Platzumrissen
+    const tray = (x: number, w: number) => {
+      const f = sunken(w, TRAY.h, TRAY.color, { radius: TRAY.radius, outline: FIELD.outline });
+      f.position.set(x, TRAY.y);
+      return f;
+    };
+    const jt = tray(JOKER_TRAY_X, JOKER_TRAY_W);
+    const ct = tray(CONS_TRAY_X, CONS_TRAY_W);
     this.jokerCount = label('', 18, C.textDim);
     this.jokerCount.anchor.set(0, 0.5);
-    this.jokerCount.position.set(JOKER_TRAY_X + 12, 220);
-    const ct = panel(CONS_TRAY_W, 180, C.panelDark);
-    ct.alpha = 0.85;
-    ct.position.set(CONS_TRAY_X, 24);
+    this.jokerCount.position.set(JOKER_TRAY_X + 12, 222);
     this.consLabel = label('Consumables 0/2', 18, C.textDim);
     this.consLabel.anchor.set(1, 0.5);
-    this.consLabel.position.set(1408, 220);
+    this.consLabel.position.set(1408, 222);
     this.jokerTray = jt;
-    tb.addChild(jt, ct, this.jokerCount, this.consLabel);
+    this.traySlots.eventMode = 'none';
+    tb.addChild(jt, ct, this.traySlots, this.jokerCount, this.consLabel);
 
-    // Deck pile
-    const deck = cardBack();
-    deck.position.set(DECK_X, DECK_Y);
-    const deck2 = cardBack();
-    deck2.position.set(DECK_X - 4, DECK_Y - 4);
+    // Deck pile: Stapel mit Dicke und weichem Schatten
+    this.deckStack = buildDeckStack();
+    this.deckStack.root.position.set(DECK_X, DECK_Y);
     this.deckCount = label('', 20, C.text);
-    this.deckCount.position.set(DECK_X, DECK_Y + CARD_H / 2 + 22);
-    this.deckPile.addChild(deck, deck2, this.deckCount, deckCaption(DECK_X, DECK_Y + CARD_H / 2 + 44));
+    this.deckCount.position.set(DECK_X, DECK_Y + CARD_H / 2 + 24);
+    this.deckPile.addChild(this.deckStack.root, this.deckCount, deckCaption(DECK_X, DECK_Y + CARD_H / 2 + 46));
     // Antippen des Stapels öffnet die Deck Ansicht
     this.deckPile.hitArea = new Rectangle(DECK_X - CARD_W / 2 - 10, DECK_Y - CARD_H / 2 - 10, CARD_W + 20, CARD_H + 70);
     this.deckPile.eventMode = 'static';
@@ -411,7 +439,7 @@ export class Game {
     this.sortBtn = new Button(SORT_LABEL[this.sortMode], 170, 56, 0xf2711c, () => this.cycleSort(), 24);
     this.sortBtn.position.set(MX, 935);
     const sortLbl = label(t('Sortieren'), 18, C.textDim);
-    sortLbl.position.set(MX, 892);
+    sortLbl.position.set(MX, CONTROL_BAND.y + 14);
     this.handControls.addChild(this.playBtn, this.discardBtn, this.sortBtn, sortLbl);
     tb.addChild(this.handControls);
 
@@ -421,33 +449,55 @@ export class Game {
     this.fxLayer.addChild(this.totalText);
 
     this.hintText = wrapText(t('Tippe bis zu 5 Karten an, um sie auszuwählen.\nDer Kasten links zeigt die Pokerhand dazu. Dann Play Hand.'), 800, 24, C.textDim);
-    this.hintText.position.set(MX, 380);
+    this.hintText.position.set(MX, 318);
     this.hintText.eventMode = 'none';
     this.hintText.visible = false;
     this.table.addChild(this.hintText);
   }
 
+  /** Platzumrisse in Joker und Consumable Fach, passend zur Zahl der Plätze (wird nur bei Änderung neu gezeichnet) */
+  private drawTraySlots(jokerCap: number, consCap: number) {
+    const key = `${jokerCap}|${consCap}`;
+    if (key === this.traySlotsKey) return;
+    this.traySlotsKey = key;
+    const g = this.traySlots.clear();
+    const pad = SLOT.pad;
+    for (let i = 0; i < jokerCap; i++) {
+      const x = this.jokerX(i, jokerCap);
+      slotOutline(g, x - JOKER_W / 2 - pad, JOKER_Y - JOKER_H / 2 - pad, JOKER_W + 2 * pad, JOKER_H + 2 * pad);
+    }
+    for (const s of this.consumableSlots(consCap)) {
+      const w = CONSUMABLE_W * s.scale;
+      const h = CONSUMABLE_H * s.scale;
+      slotOutline(g, s.x - w / 2 - pad, s.y - h / 2 - pad, w + 2 * pad, h + 2 * pad);
+    }
+  }
+
   /** Vorschau im Shop: nächster Blind und Boss der Ante, damit sich Käufe darauf abstimmen lassen */
   private buildNextPanel() {
-    const np = panel(330, 262, C.panelDark);
+    const np = panel(330, 262, FIELD.color);
     np.position.set(20, SIDE.score);
     np.visible = false;
+    // vertieftes Feld für Ziel und Belohnung
+    const well = new Graphics();
+    drawInset(well, 12, 88, 306, 76, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
     const head = label(t('Als Nächstes'), 20, C.textDim);
     head.position.set(165, 28);
     const blind = label('', 28);
     blind.position.set(165, 66);
     const target = label('', 36, C.mult);
-    target.position.set(165, 110);
+    target.position.set(165, 118);
     const reward = label('', 19, C.money);
-    reward.position.set(165, 148);
-    const line = new Graphics().rect(24, 168, 282, 2).fill({ color: C.holo, alpha: 0.3 });
+    reward.position.set(165, 150);
+    // eingravierte Linie zwischen den Abschnitten
+    const line = new Graphics().rect(24, 172, 282, 2).fill({ color: 0x000000, alpha: 0.4 }).rect(24, 174, 282, 1).fill({ color: 0xffffff, alpha: 0.12 });
     const bossHead = label(t('Boss dieser Ante'), 18, C.textDim);
-    bossHead.position.set(165, 186);
+    bossHead.position.set(165, 190);
     const bossName = label('', 22, C.accent);
-    bossName.position.set(165, 211);
+    bossName.position.set(165, 214);
     const bossDesc = wrapText('', 296, 15, C.text);
-    bossDesc.position.set(165, 228);
-    np.addChild(head, blind, target, reward, line, bossHead, bossName, bossDesc);
+    bossDesc.position.set(165, 230);
+    np.addChild(well, head, blind, target, reward, line, bossHead, bossName, bossDesc);
     this.nextPanel = np;
     this.nextTexts = { blind, target, reward, bossName, bossDesc, line, bossHead };
     this.table.addChild(np);
@@ -473,7 +523,7 @@ export class Game {
     n.line.visible = n.bossHead.visible = n.bossName.visible = !nextIsBoss;
     n.bossName.text = boss && !nextIsBoss ? boss.name : '';
     n.bossDesc.text = boss ? boss.description : '';
-    n.bossDesc.y = nextIsBoss ? 182 : 228;
+    n.bossDesc.y = nextIsBoss ? 184 : 230;
   }
 
   /** Hinweis für neue Spieler: sichtbar in der ersten Runde, solange noch keine Karte gewählt ist */
@@ -490,10 +540,7 @@ export class Game {
     const blind = BLIND_KINDS[Math.min(run.blindIndex, 2)];
     const r = run.round;
     const boss = blind === 'boss' ? (r ? activeBoss(run) : run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined) : undefined;
-    this.blindBg.clear()
-      .roundRect(0, 4, 330, 160, 8).fill(STYLE.shadowColor)
-      .roundRect(0, 0, 330, 160, 8).fill(boss ? boss.color : BLIND_COLORS[blind]).stroke({ width: 3, color: C.panelLine })
-      .roundRect(10, 56, 310, 96, 6).fill(shade(boss ? boss.color : BLIND_COLORS[blind], 0.4));
+    this.drawBlindPlate(boss ? boss.color : BLIND_COLORS[blind]);
     this.blindName.text = boss ? boss.name : BLIND_NAMES[blind];
     this.blindName.scale.set(1);
     if (this.blindName.width > 310) this.blindName.scale.set(310 / this.blindName.width);
@@ -516,7 +563,8 @@ export class Game {
     this.jokerCount.text = `Joker ${run.jokers.length}/${jokerCapacity(run)}`;
     this.consLabel.text = `Consumables ${run.consumables.length}/${consumableCapacity(run)}`;
     this.tagsText.text = run.pendingTags.length ? 'Tags: ' + run.pendingTags.map((id) => TAG_BY_ID[id]?.name ?? id).join(', ') : '';
-    this.deckCount.text = r ? `${r.drawPile.length}/${run.deck.length}` : `${run.deck.length}/${run.deck.length}`;
+    this.setPile(r ? r.drawPile.length : run.deck.length, run.deck.length);
+    this.drawTraySlots(jokerCapacity(run), consumableCapacity(run));
     const inShop = run.phase === 'shop' || run.phase === 'pack';
     this.blindPanel.visible = !inShop;
     this.shopSign.visible = inShop;
@@ -529,6 +577,16 @@ export class Game {
     this.updateHint();
     this.updateMood(blind, boss?.color);
     this.updateGuide();
+  }
+
+  /** Blind Platte: Verlauf, Kante und Glanz in der Blindfarbe, darin ein vertieftes Zielfeld. Nur bei neuer Farbe neu gezeichnet. */
+  private drawBlindPlate(color: number) {
+    if (color === this.blindBgColor) return;
+    this.blindBgColor = color;
+    const P = BLIND_PLATE;
+    const g = this.blindBg.clear();
+    drawPlate(g, 0, 0, P.w, P.h, color, { radius: P.radius, edge: P.edge, outline: P.outline, sheen: P.sheen });
+    drawInset(g, P.well.x, P.well.y, P.well.w, P.well.h, shade(color, P.well.shade), { radius: P.well.radius, outline: P.well.outline });
   }
 
   /** Farbstimmung: Small ruhig, Big kräftig, Boss dramatisch, Shop und Packs gedämpft. */
@@ -656,6 +714,12 @@ export class Game {
   }
 
   /** Animiert Karten, die die Engine bereits gezogen hat, vom Stapel in die Hand (Flug, Umdrehen, gestaffelt). */
+  /** Zähler und Höhe des Stapels setzen */
+  private setPile(n: number, total: number) {
+    this.deckCount.text = `${n}/${total}`;
+    this.deckStack.setFill(total > 0 ? n / total : 0);
+  }
+
   private async drawCards(drawn: Card[]) {
     this.applySort();
     const views = drawn.map((c) => this.makeCardView(c.id));
@@ -666,7 +730,7 @@ export class Game {
     const pile = run.round?.drawPile.length ?? 0;
     await dealCards(this.deckFx, views, { x: DECK_X, y: DECK_Y }, {
       countFrom: pile + views.length,
-      setCount: (n) => { this.deckCount.text = `${n}/${run.deck.length}`; },
+      setCount: (n) => this.setPile(n, run.deck.length),
     });
     this.refreshInfo();
   }
@@ -679,7 +743,7 @@ export class Game {
   /** Zieht Karten zum Stapel zurück (gespielt, verworfen, Rundenende). count: Zähler am Stapel zählt dabei hoch. */
   private async flyAway(views: CardView[], count?: { from: number; to: number }) {
     const run = this.run;
-    const set = (n: number) => { this.deckCount.text = `${n}/${run?.deck.length ?? 0}`; };
+    const set = (n: number) => this.setPile(n, run?.deck.length ?? 0);
     if (count && views.length) set(count.from);
     await collectCards(this.deckFx, views, { x: DECK_X, y: DECK_Y }, {
       done: (v) => {
@@ -781,6 +845,15 @@ export class Game {
     this.tooltip = null;
   }
 
+  /** Helle Tooltip Karte als erhabene Platte (Ursprung oben Mitte), fängt Taps ab, damit der Tisch dahinter sie nicht schließt */
+  private tipPlate(w: number, h: number): Container {
+    const c = raised(w, h, C.text, { radius: TIP.radius, line: C.cardEdge, shadow: SHADOW.plate, edge: TIP.edge, contrast: TIP.contrast, sheen: TIP.sheen });
+    c.position.set(-w / 2, 0);
+    c.eventMode = 'static';
+    c.hitArea = new Rectangle(0, 0, w, h + TIP.edge);
+    return c;
+  }
+
   private showJokerTooltip(v: JokerView) {
     const wasSame = this.tooltip && (this.tooltip as any).jokerUid === v.joker.uid;
     this.closeTooltip();
@@ -798,22 +871,19 @@ export class Game {
     const rowW = tagW.reduce((x, y) => x + y, 0) + (tags.length - 1) * 6;
     let tx = -rowW / 2;
     tags.forEach((tg, i) => {
-      const pill = new Graphics().roundRect(tx, 0, tagW[i], 24, 12).fill(tg.color).stroke({ width: 2, color: C.cardEdge });
+      const pill = drawPlate(new Graphics(), tx, 0, tagW[i], 24, tg.color, { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
       const pt = label(tg.name, 13, 0xffffff);
       pt.position.set(tx + tagW[i] / 2, 12);
       tagRow.addChild(pill, pt);
       tx += tagW[i] + 6;
     });
     const h = 114 + trig.height + 10 + desc.height + 82;
-    const bg = new Graphics()
-      .roundRect(-w / 2, 4, w, h, 14).fill({ color: 0, alpha: 0.4 })
-      .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge })
-      // farbiger Kopf in der Seltenheitsfarbe
-      .roundRect(-w / 2 + 3, 3, w - 6, 72, 11).fill({ color: RARITY_COLORS[def.rarity], alpha: 0.28 });
-    bg.eventMode = 'static';
+    const bg = this.tipPlate(w, h);
+    // farbiger Kopf in der Seltenheitsfarbe
+    const headBand = new Graphics().roundRect(-w / 2 + 3, 3, w - 6, 72, 11).fill({ color: RARITY_COLORS[def.rarity], alpha: 0.28 });
     const name = label(def.name, 24, C.cardEdge);
     name.position.set(0, 24);
-    const rar = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(RARITY_COLORS[def.rarity]).stroke({ width: 2, color: C.cardEdge });
+    const rar = drawPlate(new Graphics(), -60, 44, 120, 24, RARITY_COLORS[def.rarity], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
     const rarT = label(RARITY_NAMES[def.rarity], 14, 0xffffff);
     rarT.position.set(0, 56);
     tagRow.position.set(0, 82);
@@ -821,7 +891,7 @@ export class Game {
     desc.position.set(0, 114 + trig.height + 10);
     const sell = new Button(t('Verkaufen {price}', { price: '$' + jokerSellValue(v.joker) }), 220, 56, C.green, () => this.sellJoker(v.joker.uid), 20);
     sell.position.set(0, h - 42);
-    tip.addChild(bg, name, rar, rarT, tagRow, trig, desc, sell);
+    tip.addChild(bg, headBand, name, rar, rarT, tagRow, trig, desc, sell);
     tip.position.set(Math.max(JOKER_TRAY_X + w / 2, Math.min(VIEW_W - w / 2 - 10, v.x)), JOKER_Y + 82);
     tip.scale.set(0.8);
     tween(tip, { 'scale.x': 1, 'scale.y': 1 }, 160, easeOutBack);
@@ -907,13 +977,10 @@ export class Game {
     if (lvlBlock) lvlBlock.position.set(0, 84 + desc.height + LEVEL_UP_VIEW.gap);
     if (hintText) hintText.position.set(0, below + 8);
     const h = below + (hintText ? hintText.height + 16 : 8) + 144;
-    const bg = new Graphics()
-      .roundRect(-w / 2, 4, w, h, 14).fill({ color: 0, alpha: 0.4 })
-      .roundRect(-w / 2, 0, w, h, 14).fill(C.text).stroke({ width: 3, color: C.cardEdge });
-    bg.eventMode = 'static';
+    const bg = this.tipPlate(w, h);
     const name = label(def.name, 24, C.cardEdge);
     name.position.set(0, 24);
-    const badge = new Graphics().roundRect(-60, 44, 120, 24, 12).fill(CONSUMABLE_COLORS[def.type]);
+    const badge = drawPlate(new Graphics(), -60, 44, 120, 24, CONSUMABLE_COLORS[def.type], { radius: 12, edge: 2, outline: 1.5, line: C.cardEdge, sheen: 0.45 });
     const badgeT = label(CONSUMABLE_TYPE_NAMES[def.type], 14, 0xffffff);
     badgeT.position.set(0, 56);
     const use = new Button(t('Benutzen'), 230, 56, C.chips, () => this.useConsumableUI(uid), 20);
@@ -1025,13 +1092,22 @@ export class Game {
       v.selected = false;
       this.playLayer.addChild(v);
       const x = MX + (i - (sel.length - 1) / 2) * 130;
-      wait(i * 50).then(() => tween(v, { x, y: PLAY_Y, rotation: 0 }, 300, easeInOutCubic));
+      wait(i * 50).then(() => {
+        if (v.destroyed) return;
+        tween(v, { x, y: PLAY_Y, rotation: 0 }, 300, easeInOutCubic);
+        // gespielte Karten liegen auf dem Tisch: Schatten wieder flach
+        tween(v, { lift: CARD_LIFT.played }, 300);
+      });
     });
     this.layoutHand();
     await wait(380 + sel.length * 50);
 
     const scoringIds = new Set(result.scoring.map((c) => c.id));
-    for (const v of sel) if (scoringIds.has(v.card.id)) tween(v, { y: PLAY_Y - 30 }, 160, easeOutBack);
+    for (const v of sel) {
+      if (!scoringIds.has(v.card.id)) continue;
+      tween(v, { y: PLAY_Y - 30 }, 160, easeOutBack);
+      tween(v, { lift: 1 }, 160);
+    }
     sfx.select(true);
     const base = result.events[0];
     this.setHandDisplay(handDisplayName(result.handType, result.scoring), run.handLevels[result.handType], base.chipsTotal, base.multTotal);
@@ -1261,7 +1337,7 @@ export class Game {
     this.closeTooltip();
     const o = overlay(VIEW_W, VIEW_H);
     const box = new Container();
-    box.addChild(panel(w, h, color, 20));
+    box.addChild(raised(w, h, color, { radius: WINDOW.radius, alpha: WINDOW.alpha, holo: true, shadow: SHADOW.plate, sheen: Math.min(BEVEL.sheenH, WINDOW.sheenMax / h) }));
     box.pivot.set(w / 2, h / 2);
     box.position.set(VIEW_W / 2, VIEW_H / 2);
     // Hohe Fenster (lange Rückschau) werden so verkleinert, dass sie auf den Bildschirm passen
@@ -1275,6 +1351,14 @@ export class Game {
 
   private toast(text: string, color = C.accent) {
     popup(this.fxLayer, VIEW_W / 2, 330, text, color, 30);
+  }
+
+  /** Vertiefte Mulde hinter einem Textblock (Rückschau, Beschreibungen), wird unter den Text gelegt */
+  private well(box: Container, x: number, y: number, w: number, h: number): Graphics {
+    const g = new Graphics();
+    drawInset(g, x, y, w, h, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
+    box.addChild(g);
+    return g;
   }
 
   /** Zeigt den Bildschirm, der zur Phase des Runs passt. */
@@ -1562,6 +1646,7 @@ export class Game {
     head.position.set(360, 70);
     const text = wrapText(t('Alatro ist ein Roguelike mit Pokerhänden. Spiel Karten aus, sammle Punkte, kaufe Jokers und besiege Blinds.\n\nIn einer kurzen geführten Runde zeigt dir Astra alles Wichtige, Schritt für Schritt. Du spielst dabei echte Hände. Das dauert nur ein paar Minuten.'), 600, 22, C.text);
     text.position.set(360, 130);
+    this.well(box, 40, 118, 640, text.height + 24);
     const go = new Button(t('Einführung starten'), 400, 76, C.chips, () => this.startGuide(), 30);
     go.position.set(360, 370);
     const later = new Button(t('Später, ich kenne mich aus'), 400, 56, 0x3b5068, () => {
@@ -1586,6 +1671,7 @@ export class Game {
     head.position.set(350, 70);
     const text = wrapText(t('Du kennst jetzt die Grundlagen: Hände spielen, Discards, Jokers kaufen und Blinds. Der Rest ergibt sich beim Spielen.\n\nFür deinen ersten richtigen Run empfehle ich die Stufe {stake}. Sie ist etwas leichter als das Grundspiel. Unter Erfolge sammelst du ab jetzt Sterne.', { stake: STAKES.find((s) => s.id === BEGINNER_STAKE_ID)?.name ?? '' }), 600, 22, C.text);
     text.position.set(350, 130);
+    this.well(box, 30, 118, 640, text.height + 24);
     const go = new Button(t('Echten Run starten'), 400, 76, C.chips, () => this.exitGuide(true, 'setup'), 30);
     go.position.set(350, 400);
     const menu = new Button(t('Hauptmenü'), 260, 56, 0x3b5068, () => this.exitGuide(true), 24);
@@ -1631,6 +1717,8 @@ export class Game {
     const preview = (deckId: string, opts: { stakeId?: string; level?: number }, y: number) => {
       const pr = createRun({ seed: 'VORSCHAU', deckId, ...opts });
       const tgt = (ante: number) => fmt(blindTarget(ante, 'small', { scaling: pr.rules.scaling, deckFactor: pr.rules.blindTargetFactor }));
+      const wl = drawInset(new Graphics(), 70, y - 10, W - 140, 62, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
+      content.addChild(wl);
       body(t('Start: {hands} Hands, {discards} Discards, {size} Karten, ${money}\nSmall Blind Ziel: Ante 1 {t1}, Ante 4 {t4}, Ante 8 {t8}', { hands: pr.hands, discards: pr.discards, size: pr.handSize, money: pr.money, t1: tgt(1), t4: tgt(4), t8: tgt(8) }), y, 17, C.chips, 640);
     };
 
@@ -1692,9 +1780,11 @@ export class Game {
         for (let l = SCALE.min; l <= SCALE.max; l++) {
           const seg = new Container();
           const color = scaleBand(l).color;
-          const g = new Graphics()
-            .roundRect(0, 0, segW, 44, 6).fill(l <= level ? color : 0x1d2a3a)
-            .stroke({ width: l === level ? 4 : 2, color: l === level ? C.text : C.panelLine });
+          // gefüllte Stufen sind erhabene farbige Plättchen, die übrigen vertiefte Mulden
+          const g = new Graphics();
+          if (l <= level) drawPlate(g, 0, 0, segW, 44, color, { radius: 6, edge: 3, outline: 2, sheen: 0.4 });
+          else drawInset(g, 0, 0, segW, 44, 0x1d2a3a, { radius: 6, outline: 2 });
+          if (l === level) g.roundRect(-3, -3, segW + 6, 44 + 3 + 6, 8).stroke({ width: 3, color: C.text });
           seg.addChild(g);
           seg.position.set(x0 + (l - SCALE.min) * (segW + gap), 506);
           seg.eventMode = 'static';
@@ -1772,10 +1862,11 @@ export class Game {
     tw.position.set(W / 2, 500);
     const td = wrapText(twist.description, 560, 18, C.text);
     td.position.set(W / 2, 530);
+    this.well(box, 90, 474, W - 180, 530 + td.height + 6 - 474);
     const seed = label(`Seed ${d.seed}`, 18, C.textDim, { fontWeight: '600' });
-    seed.position.set(W / 2, 586);
+    seed.position.set(W / 2, 598);
     const best = label(entry ? t('Bisher heute: Ante {n}', { n: entry.ante }) + (entry.won ? t(', gewonnen') : '') : t('Heute noch nicht gespielt'), 20, entry?.won ? C.green : C.textDim);
-    best.position.set(W / 2, 630);
+    best.position.set(W / 2, 640);
     const go = new Button(entry ? t('Nochmal spielen') : t('Starten'), 360, 72, C.chips, () => {
       this.beginNewRun(d.deckId, { level: d.level, seed: d.seed, daily: { date: d.date, twistId: d.twistId } });
     }, 30);
@@ -1914,7 +2005,7 @@ export class Game {
       for (const c of [...dyn.children]) c.destroy({ children: true });
       for (let i = 0; i < SEED_LENGTH; i++) {
         const x = W / 2 + (i - (SEED_LENGTH - 1) / 2) * 76;
-        dyn.addChild(new Graphics().roundRect(x - 32, 130, 64, 76, 10).fill(0x141d29).stroke({ width: 3, color: i === seed.length ? C.accent : C.panelLine }));
+        dyn.addChild(drawInset(new Graphics(), x - 32, 130, 64, 76, 0x141d29, { radius: 10, outline: 3, line: i === seed.length ? C.accent : C.panelLine }));
         if (seed[i]) {
           const ch = label(seed[i], 40, C.text);
           ch.position.set(x, 168);
@@ -1954,55 +2045,70 @@ export class Game {
     box.addChild(head);
     if (!this.tut) {
       const deckBtn = deckButton(150, 52, 22, () => this.openDeck(() => this.showBlindSelect()));
-      deckBtn.position.set(110, 46);
+      deckBtn.position.set(110, 44);
       box.addChild(deckBtn);
     }
 
     BLIND_KINDS.forEach((kind, i) => {
       const col = new Container();
-      col.position.set(35 + i * 315, 90);
-      if (i === run.blindIndex) this.refs.blindColumn = col;
-      if (kind === 'boss') this.refs.blindBoss = col;
       const state = i < run.blindIndex ? 'done' : i === run.blindIndex ? 'current' : 'future';
+      const current = state === 'current';
+      const TW = 300;
+      const TH = 490;
+      // die aktive Kachel hebt sich ab: höher, mit größerem, weicherem Schatten
+      col.position.set(35 + i * 315, 90 - (current ? BLIND_TILE.lift : 0));
+      col.boundsArea = new Rectangle(0, 0, TW, TH + BEVEL.panelEdge);
+      if (current) this.refs.blindColumn = col;
+      if (kind === 'boss') this.refs.blindBoss = col;
       const boss = kind === 'boss' && run.anteBoss ? BOSS_BY_ID[run.anteBoss] : undefined;
       const color = boss ? boss.color : BLIND_COLORS[kind];
-      const g = new Graphics()
-        .roundRect(0, 6, 300, 490, 10).fill(STYLE.shadowColor)
-        .roundRect(0, 0, 300, 490, 10).fill(state === 'current' ? color : C.panel)
-        .stroke({ width: 4, color: C.panelLine });
-      col.addChild(g);
+      const base = current ? color : C.panel;
+      col.addChild(
+        dropShadow(TW, TH + BEVEL.panelEdge, current ? SHADOW.plate : SHADOW.panel, { radius: BLIND_TILE.radius }),
+        raised(TW, TH, base, { radius: BLIND_TILE.radius, shadow: false, sheen: BLIND_TILE.sheen }),
+      );
       const name = label(boss ? boss.name : BLIND_NAMES[kind], 26);
       name.position.set(150, 36);
       if (name.width > 280) name.scale.set(280 / name.width);
-      const chip = new Graphics().circle(150, 108, 40).fill(shade(color, 0.45)).stroke({ width: 4, color: C.panelLine });
+      // Marke in einer Fassung
+      const socket = new Graphics()
+        .circle(150, 110, 43).fill({ color: 0xffffff, alpha: 0.16 })
+        .circle(150, 108, 43).fill(C.panelLine)
+        .circle(150, 108, 39).fill(vGradient(shade(color, 0.3), shade(color, 0.6)))
+        .circle(150, 108, 39).stroke({ width: 1.5, color: lighten(color, 0.35), alpha: 0.5 });
       const chipT = label(kind === 'boss' ? '☠' : kind === 'big' ? '◆' : '●', 38, 0xffffff);
       chipT.position.set(150, 108);
-      col.addChild(name, chip, chipT);
+      col.addChild(name, socket, chipT);
       if (boss) {
         const d = new Text({ text: boss.description, style: { fontFamily: FONT_BODY, fontSize: 17, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 260, align: 'center' } });
         d.anchor.set(0.5, 0);
         d.position.set(150, 160);
         col.addChild(d);
       }
+      // Ziel und Belohnung in einem vertieften Feld
+      const well = new Graphics();
+      drawInset(well, 16, 226, 268, 100, shade(base, 0.8), { radius: 8, outline: 2 });
+      col.addChild(well);
       const zl = label(t('Mindestens'), 17, C.textDim);
-      zl.position.set(150, 228);
+      zl.position.set(150, 244);
       const target = label(fmt(currentTarget(run, kind)), 34, C.mult);
-      target.position.set(150, 262);
+      target.position.set(150, 276);
       const rw = blindReward(run.ante, kind, run.rules.smallBlindReward);
       const rew = label(rw > 0 ? t('Belohnung {money}', { money: '$'.repeat(rw) }) : t('Keine Belohnung'), 19, C.money);
-      rew.position.set(150, 298);
+      rew.position.set(150, 308);
       col.addChild(zl, target, rew);
       if (kind !== 'boss' && run.anteTags) {
         const tag = TAG_BY_ID[run.anteTags[kind]];
-        const tb = new Graphics().roundRect(16, 322, 268, 86, 6).fill(shade(state === 'current' ? color : C.panel, 0.45));
+        const tb = new Graphics();
+        drawInset(tb, 16, 334, 268, 80, shade(base, 0.8), { radius: 8, outline: 2 });
         const tn = label(t('Skip Tag: {name}', { name: tag.name }), 17, C.accent);
-        tn.position.set(150, 342);
+        tn.position.set(150, 350);
         const td = new Text({ text: tag.description, style: { fontFamily: FONT_BODY, fontSize: 15, fontWeight: '700', fill: C.text, wordWrap: true, wordWrapWidth: 250, align: 'center' } });
         td.anchor.set(0.5, 0);
-        td.position.set(150, 360);
+        td.position.set(150, 368);
         col.addChild(tb, tn, td);
       }
-      if (state === 'current') {
+      if (current) {
         const play = new Button(t('Spielen'), kind === 'boss' ? 220 : 140, 58, C.money, () => this.beginRound(), 24);
         play.position.set(kind === 'boss' ? 150 : 85, 448);
         col.addChild(play);
@@ -2093,7 +2199,8 @@ export class Game {
       ...(e.jokers ? [['Jokers', e.jokers] as [string, number]] : []),
     ];
     const overH = over ? 36 : 0;
-    const boxH = 288 + 58 * lines.length + overH;
+    const rowH = PAYOUT.rowH;
+    const boxH = 288 + rowH * lines.length + overH + PAYOUT.totalH + PAYOUT.totalGap;
     const { box } = this.modal(580, boxH, C.panelDark);
     const head = label(t('Blind geschafft!'), 44, C.money);
     head.position.set(290, 60);
@@ -2103,17 +2210,40 @@ export class Game {
       ol.position.set(290, 112);
       box.addChild(ol);
     }
+    // Zeilen in einer vertieften Leiste, feine Trennlinien
+    const rowsTop = 150 + overH - rowH / 2;
+    const bar = new Graphics();
+    drawInset(bar, 24, rowsTop, 532, rowH * lines.length, FIELD.color, { radius: FIELD.radius, outline: FIELD.outline });
+    for (let i = 1; i < lines.length; i++) {
+      bar.rect(40, rowsTop + i * rowH - 1, 500, 1).fill({ color: 0x000000, alpha: 0.35 }).rect(40, rowsTop + i * rowH, 500, 1).fill({ color: 0xffffff, alpha: 0.07 });
+    }
+    box.addChild(bar);
     lines.forEach(([txt, v], i) => {
       const l = label(txt, 22, C.text);
       l.anchor.set(0, 0.5);
-      l.position.set(40, 150 + overH + i * 58);
+      l.position.set(40, 150 + overH + i * rowH);
       const r = label('$' + v, 30, C.money);
       r.anchor.set(1, 0.5);
-      r.position.set(540, 150 + overH + i * 58);
+      r.position.set(540, 150 + overH + i * rowH);
       l.alpha = r.alpha = 0;
-      wait(200 + i * 220).then(() => { tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
+      wait(200 + i * 220).then(() => { if (l.destroyed) return; tween(l, { alpha: 1 }, 200); tween(r, { alpha: 1 }, 200); juice(r); });
       box.addChild(l, r);
     });
+    // Gesamtbetrag: dunkle Plakette mit Goldrand
+    const totalY = rowsTop + rowH * lines.length + PAYOUT.totalGap;
+    const total = new Container();
+    total.addChild(raised(532, PAYOUT.totalH, PAYOUT.color, { radius: FIELD.radius + 2, line: C.money, shadow: SHADOW.button, sheen: 0.4 }));
+    const tl = label('Total', 24, C.text);
+    tl.anchor.set(0, 0.5);
+    tl.position.set(16, PAYOUT.totalH / 2);
+    const tv = label('$' + e.total, 40, C.money);
+    tv.anchor.set(1, 0.5);
+    tv.position.set(516, PAYOUT.totalH / 2);
+    total.addChild(tl, tv);
+    total.position.set(24, totalY);
+    total.alpha = 0;
+    wait(200 + lines.length * 220).then(() => { if (total.destroyed) return; tween(total, { alpha: 1 }, 200); juice(tv, 0.8); });
+    box.addChild(total);
     const btn = new Button(t('Einkassieren {amount}', { amount: '$' + e.total }), 360, 76, C.money, async () => {
       btn.enabled = false;
       sfx.coins(e.total);
@@ -2243,6 +2373,8 @@ export class Game {
     const head = label(def.name, 40, typeColor);
     head.position.set(W / 2, 50);
     box.addChild(head);
+    // Ablage hinter den Angeboten: vertieft, darauf liegen Jokers, Karten und Wählen Knöpfe
+    this.well(box, 30, 112, W - 60, withHand ? 394 : 412);
     const dyn = new Container();
     box.addChild(dyn);
     /** gewählte Ziel Karten der Pack Hand (Reihenfolge der Wahl) */
@@ -2512,6 +2644,9 @@ export class Game {
     b.position.set(W / 2 - 170, H - 126);
     const m = new Button(t('Hauptmenü'), 220, 54, 0x3b5068, () => this.showMainMenu(), 22);
     m.position.set(W / 2, H - 52);
+    // Rückschau in einer Mulde (Rekorde und Zeilen)
+    const wellTop = (recs ?? info).y - 12;
+    this.well(box, 50, wellTop, W - 100, info.y + infoH + 12 - wellTop);
     box.addChild(head, l1, l1b, l2, info, tip, seed, b, again, m);
     if (quick) box.addChild(quick);
     if (nl) box.addChild(nl);
@@ -2540,6 +2675,8 @@ export class Game {
     sd.position.set(W / 2, 212);
     if (recs) recs.position.set(W / 2, 250);
     info.position.set(W / 2, 250 + recH);
+    const wellTop = 250 - 12;
+    this.well(box, 50, wellTop, W - 100, 250 + recH + info.height + 12 - wellTop);
     box.addChild(head, l, sd, info);
     if (recs) box.addChild(recs);
     let y = 250 + recH + info.height + 60;

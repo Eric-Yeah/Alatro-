@@ -1,11 +1,14 @@
-import { Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, type NineSliceSprite } from 'pixi.js';
 import { CONSUMABLE_BY_ID } from '../data/consumables';
-import { CBAND_H, CBAND_Y, CFOOT_H, CFOOT_Y, CONS_TRAY, CT_BAND_TEXT, CT_H, CT_SCALE, CT_W, RARE_CONSUMABLE_IDS, RARE_CONSUMABLE_TYPES, CONSUMABLE_FRAMES } from '../data/consumableArt';
+import { CBAND_H, CBAND_Y, CFOOT_H, CFOOT_Y, CONS_TRAY, CT_BAND_TEXT, CT_CORNER, CT_H, CT_SCALE, CT_W, RARE_CONSUMABLE_IDS, RARE_CONSUMABLE_TYPES, CONSUMABLE_FRAMES } from '../data/consumableArt';
+import { CONSUMABLE_GLOW, SHADOW_INSET, TILE_DEPTH } from '../data/tileDepth';
 import { IDLE_FX } from '../data/artFx';
 import { hashString } from '../core/rng';
 import { addShimmer, attachPop } from './artFx';
 import { attachFloat } from './cardMotion';
 import { consumableTexture } from './consumableArt';
+import { setShadowLift } from './depth';
+import { liftTo, tileBody, tileBounds, tileGlow, tileGloss, tileShadow } from './tileDepth';
 import { C, FONT_BODY, fmt, fmtMult } from './theme';
 import { COLORS } from './richText';
 import { levelUpGain } from '../core/runInfo';
@@ -14,6 +17,8 @@ import { tween, easeOutBack } from './tween';
 
 export const CONSUMABLE_W = CT_W * CT_SCALE;
 export const CONSUMABLE_H = CT_H * CT_SCALE;
+/** Eckenradius der Kachel in Spielfeld Einheiten */
+const CONSUMABLE_R = CT_CORNER * CT_SCALE;
 
 let nextSeed = 0;
 
@@ -32,6 +37,16 @@ export class ConsumableView extends Container {
   private restZ = 0;
   /** Zuwachs eines Sternbilds in der Fußleiste (Chips blau, Mult rot), nur bei ausreichendem Maßstab sichtbar */
   private foot: Container | null = null;
+  /** Weicher Schatten, liegt außerhalb der schwebenden Hülle und bleibt auf dem Tisch */
+  private readonly shadow: NineSliceSprite;
+  private _lift = 0;
+
+  /** Abhebung 0 bis 1: der Schatten wächst, wenn die Karte steigt (Maus darüber) */
+  get lift() { return this._lift; }
+  set lift(v: number) {
+    this._lift = v;
+    if (!this.destroyed) setShadowLift(this.shadow, v);
+  }
 
   /** float: leichtes Schweben, 'shop': etwas ruhiger (Shop und Pack Auswahl) */
   constructor(public readonly defId: string, float: boolean | 'shop' = true) {
@@ -39,13 +54,16 @@ export class ConsumableView extends Container {
     const def = CONSUMABLE_BY_ID[defId];
     const w = CONSUMABLE_W, h = CONSUMABLE_H;
     this.fullName = def.name;
-    // Schatten in der Form der Kachel
-    const shadow = new Sprite(consumableTexture(defId));
-    shadow.anchor.set(0.5);
-    shadow.scale.set(CT_SCALE);
-    shadow.tint = 0x000000;
-    shadow.alpha = 0.35;
-    shadow.position.set(3, 6);
+    const tex = consumableTexture(defId);
+    const rare = RARE_CONSUMABLE_TYPES.has(def.type) || RARE_CONSUMABLE_IDS.has(defId);
+    const frame = CONSUMABLE_FRAMES[def.type];
+    // Weicher Schatten (und bei seltenen Karten eine Leuchtkante in der Farbe der Art) unter der schwebenden Karte
+    this.shadow = tileShadow(w, h, { radius: CONSUMABLE_R, inset: SHADOW_INSET.consumable });
+    if (rare) this.addChild(tileGlow(w, h, { ...CONSUMABLE_GLOW, color: frame.light }, CONSUMABLE_R));
+    this.addChild(this.shadow);
+    // Körper: dunkler Streifen unter der Karte
+    const bodyStrip = tileBody(tex, CT_SCALE);
+    bodyStrip.tint = frame.dark;
     const tile = new Sprite(consumableTexture(defId));
     tile.anchor.set(0.5);
     tile.scale.set(CT_SCALE);
@@ -56,15 +74,16 @@ export class ConsumableView extends Container {
     this.nameText.anchor.set(0.5);
     this.nameText.y = -h / 2 + (CBAND_Y + CBAND_H / 2) * CT_SCALE;
     this.fitName();
-    this.body.addChild(shadow, tile, this.nameText);
+    this.body.addChild(bodyStrip, tile, tileGloss(w, h, CONSUMABLE_R, rare ? 1.2 : 1), this.nameText);
     this.foot = this.buildFoot(defId);
     if (this.foot) this.body.addChild(this.foot);
     // seltene Karten funkeln leicht und bekommen Glanzstreifen
-    if (RARE_CONSUMABLE_TYPES.has(def.type) || RARE_CONSUMABLE_IDS.has(defId)) {
+    if (rare) {
       addShimmer(this.body, w - 8, h - 8, IDLE_FX.sparksCard, hashString(defId), true, 0xffffff, 8);
     }
     this.floater.addChild(this.body);
     this.addChild(this.floater);
+    this.boundsArea = tileBounds(w, h, TILE_DEPTH.bodyDy);
     this.eventMode = 'static';
     this.cursor = 'pointer';
     // Phase aus der Vorlage plus laufender Nummer, damit zwei gleiche Consumables nicht im Gleichschritt schweben
@@ -73,6 +92,7 @@ export class ConsumableView extends Container {
       hoverScale: () => (this.compact < 1 ? CONS_TRAY.hoverScale / this.compact : undefined),
       always: () => this.compact < 1,
       onHover: (on) => {
+        liftTo(this, on ? 1 : 0);
         if (this.compact >= 1) return;
         this.hovering = on;
         this.showFoot();
