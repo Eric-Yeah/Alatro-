@@ -8,6 +8,17 @@ export interface PatchNote {
 
 export const PATCH_NOTES: readonly PatchNote[] = [
   {
+    version: '0.13.0',
+    date: '25.11.2026',
+    title: 'Pokalpfad und Wunderkammer',
+    items: [
+      'Neu: Jede gespielte Runde bringt Pokale, umso mehr, je höher die Ante. Zuschläge gibt es für übrige Hands, Überschuss, höhere Stakes, Tageslauf und Siegesserie.',
+      'Neu: Der Pokalpfad hat 8 Ligen mit 48 Meilensteinen, dazu je Deck einen Pfad mit 3 Stufen. Belohnungen holst du von Hand ab. Pokale sinken nie.',
+      'Neu: In der Wunderkammer rüstest du 69 Stücke aus: Kartenrücken, Kartenfarben, Himmel, Funken (Supernova) und Titel. Alles ist rein optisch.',
+      'Neu: Nach jeder gewonnenen Runde siehst du die Pokale, am Run Ende die Abrechnung mit Liga Aufstieg. Die Pokale werden zwischen Geräten abgeglichen.',
+    ],
+  },
+  {
     version: '0.12.1',
     date: '24.11.2026',
     title: 'Supernova ruhiger, neue Optionen',

@@ -8,6 +8,15 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.13.0': {
+    title: 'Trophy Road and Cabinet of Wonders',
+    items: [
+      'New: Every round you play earns trophies, more the higher the ante. There are bonuses for spare hands, overshoot, higher stakes, the daily run and a win streak.',
+      'New: The Trophy Road has 8 leagues with 48 milestones, plus a 3 stage path for each deck. You claim rewards by hand. Trophies never go down.',
+      'New: In the Cabinet of Wonders you equip 69 items: card backs, card colors, skies, sparks (Supernova) and titles. Everything is purely visual.',
+      'New: After every won round you see the trophies, at the end of a run the breakdown with league promotion. Trophies are synced between devices.',
+    ],
+  },
   '0.12.1': {
     title: 'Calmer Supernova, New Options',
     items: [

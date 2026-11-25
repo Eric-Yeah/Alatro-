@@ -36,7 +36,7 @@ Verbucht wird pro Run in `profile.trophies.run` (siehe `TrophyRunSync`): bezahlt
 
 * **8 Ligen** (Namen im Thema, Schwellen werden kalibriert): Funkenlehrling, Retortengehilfe, Kupferadept, Silbermagister, Mondastronom, Sternendeuter, Himmelsmeister, Weltenkartograf. Jede Liga hat eine Farbe und einen Satz Flair Text. Die erste beginnt bei 0.
 * **48 Meilensteine** (`RoadEntry`), 6 je Liga. Eintrag 1 jeder Liga gibt den Titel der Liga. Der letzte Eintrag jeder Liga ist ihr bestes Stück (Rarität steigt mit der Liga, Legendary ab Liga 6, der letzte Eintrag des ganzen Pfads ist die Krone).
-* **Dichte:** früh alle 40 bis 80 Pokale ein Eintrag, später weiter auseinander. Gesamtweg etwa 120 bis 160 durchschnittliche Runs, Endschwelle in der Größenordnung 9000 Pokale.
+* **Dichte:** früh alle 40 bis 80 Pokale ein Eintrag, später weiter auseinander. Gesamtweg etwa 120 bis 160 durchschnittliche Runs, Endschwelle 17100 Pokale (gemessen: 134 bis 149 Runs für den ganzen Pfad, die ursprünglich geschätzten 9000 hätten nur etwa 80 Runs ergeben).
 * **Abholen:** Ein erreichter Eintrag ist "bereit" und wird von Hand abgeholt (Zeremonie, nicht automatisch). "Alle abholen" gibt es auch. Abgeholt heißt besitzen (`owned`), ausrüsten ist ein eigener Schritt.
 * **Liga Aufstieg:** Fanfare und Banner, sobald die Gesamtpokale eine neue Liga erreichen (`leagueSeen` merkt, was gezeigt wurde).
 * **Deck Pfade** (`DeckStage`): je Deck 3 Stufen bei 60, 250 und 700 Pokalen mit diesem Deck. Stufe 1: Titel "Lehrling des X". Stufe 2: Kartenrücken mit dem Wappen des Decks (rare). Stufe 3: Titel "Meister des X" (epic). Pokale zählen immer für `total` und für das gespielte Deck.

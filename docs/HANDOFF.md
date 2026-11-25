@@ -1,6 +1,14 @@
-# Übergabe: Stand nach der Grafikstufe Supernova und den neuen Optionen (Version 0.12.1)
+# Übergabe: Stand nach dem Pokalsystem (Version 0.13.0)
 
-Stand: 24.11.2026. Arbeitsbranch `claude/clever-franklin-nytl3y` (zuvor `claude/wonderful-euler-rqq4w3`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+Stand: 25.11.2026. Arbeitsbranch `claude/cool-babbage-xjdpyw` (zuvor `claude/clever-franklin-nytl3y`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+
+## Version 0.13.0: Pokalpfad und Wunderkammer
+
+* **Was:** Pokale pro gespielter Runde (mehr bei höherer Ante), 8 Ligen mit 48 Meilensteinen, 7 Deck Pfade, 69 Kosmetik Stücke (Rücken, Kartenfarben, Himmel, Funken, Titel). Entwurf, Zahlen und Begründungen: `docs/pokale-plan.md`. Entscheidungen und offene Punkte: `AUDIT.md` O119 bis O130.
+* **Wo:** Zahlen `src/data/trophies.ts` (Verdienst), `src/data/trophyRoad.ts` (Ligen, Pfad, Deck Stufen, Titel), `src/data/cosmetics.ts` (Katalog mit Parametern), Layout `src/data/trophyLayout.ts` und `wardrobeLayout.ts`. Logik ohne DOM `src/trophies.ts` (`observeTrophies`, `claimEntry`, `equip`, `mergeTrophyState`), Zustand `src/trophyState.ts` (Feld `profile.trophies`, keine neue `SAVE_VERSION`). Darstellung `src/ui/cosmeticFx.ts` (Rücken, Himmel, Funken, Paletten), Rücken Muster `src/ui/cardArt/cardBackArt.ts`, Ansichten `src/ui/TrophyView.ts` und `WardrobeView.ts`, reine Teile `trophyViewMath.ts` und `wardrobeMath.ts`. Verdrahtung in `Game.ts` (Suche nach `trackTrophies`) und `HomeView.ts`.
+* **Neue Kosmetik anlegen:** Eintrag in `COSMETICS` (Id mit Präfix `back_`, `pal_`, `sky_`, `spark_` oder `title_`), Parameter je Kategorie, Platz am Pfad in `ROAD` oder `DECK_STAGES` (ein Test prüft, dass jedes Stück genau einmal belohnt wird), englischer Name und Beschreibung in `src/i18n/patch/cosmetics.ts`.
+* **Pokale anders einstellen:** nur in `src/data/trophies.ts` und den Schwellen in `trophyRoad.ts`. Die Simulation in `src/trophies.test.ts` zeigt Runs je Liga und fängt Abweichungen ab.
+* **Als Nächstes:** Auf dem iPad prüfen: Tempo des Pfads (O120), Wischen und Kachelgrößen (O130), Lesbarkeit der Himmel Farben und der Boss Stimmung (O127), Gefühl der Pokal Toasts und der Abrechnung in der Rückschau.
 
 ## Version 0.12.1: Supernova ruhiger, Menü Überarbeitung zusammengeführt
 
