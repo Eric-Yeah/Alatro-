@@ -454,22 +454,24 @@ export class Game {
     this.table.addChild(this.hintText);
   }
 
-  /** Platzumrisse in Joker und Consumable Fach, passend zur Zahl der Plätze (wird nur bei Änderung neu gezeichnet) */
+  /** Umriss der Ablagezone in Joker und Consumable Fach, passend zur Zahl der Plätze (wird nur bei Änderung neu gezeichnet).
+   * Eine Zone statt einzelner Plätze, weil die Karten mittig liegen und bei weniger Karten zwischen Plätzen stünden. */
   private drawTraySlots(jokerCap: number, consCap: number) {
     const key = `${jokerCap}|${consCap}`;
     if (key === this.traySlotsKey) return;
     this.traySlotsKey = key;
     const g = this.traySlots.clear();
-    const pad = SLOT.pad;
-    for (let i = 0; i < jokerCap; i++) {
-      const x = this.jokerX(i, jokerCap);
-      slotOutline(g, x - JOKER_W / 2 - pad, JOKER_Y - JOKER_H / 2 - pad, JOKER_W + 2 * pad, JOKER_H + 2 * pad);
-    }
-    for (const s of this.consumableSlots(consCap)) {
-      const w = CONSUMABLE_W * s.scale;
-      const h = CONSUMABLE_H * s.scale;
-      slotOutline(g, s.x - w / 2 - pad, s.y - h / 2 - pad, w + 2 * pad, h + 2 * pad);
-    }
+    const pad = SLOT.zonePad;
+    const zone = (rects: { x: number; y: number; w: number; h: number }[]) => {
+      if (!rects.length) return;
+      const x0 = Math.min(...rects.map((r) => r.x - r.w / 2)) - pad;
+      const x1 = Math.max(...rects.map((r) => r.x + r.w / 2)) + pad;
+      const y0 = Math.min(...rects.map((r) => r.y - r.h / 2)) - pad;
+      const y1 = Math.max(...rects.map((r) => r.y + r.h / 2)) + pad;
+      slotOutline(g, x0, y0, x1 - x0, y1 - y0, SLOT.zoneRadius);
+    };
+    zone(Array.from({ length: jokerCap }, (_, i) => ({ x: this.jokerX(i, jokerCap), y: JOKER_Y, w: JOKER_W, h: JOKER_H })));
+    zone(this.consumableSlots(consCap).map((s) => ({ x: s.x, y: s.y, w: CONSUMABLE_W * s.scale, h: CONSUMABLE_H * s.scale })));
   }
 
   /** Vorschau im Shop: nächster Blind und Boss der Ante, damit sich Käufe darauf abstimmen lassen */

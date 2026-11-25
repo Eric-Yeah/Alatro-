@@ -64,7 +64,10 @@ export const SLOT = {
   gap: 8,
   radius: 10,
   /** Platz im Fach: Kachel plus Rand */
-  pad: 4,
+  pad: 2,
+  /** Ablagezone im Fach: Abstand um die Karten und Eckenradius */
+  zonePad: 10,
+  zoneRadius: 14,
 };
 
 /** Filzfläche im Spielbereich rechts der Seitenleiste: nächtliches Observatorium, flach und durchscheinend, damit der Sternhimmel sichtbar bleibt */
@@ -74,7 +77,7 @@ export const FELT = {
   w: 1058,
   h: 980,
   radius: 26,
-  color: 'rgba(16,30,66,0.56)',
+  color: 'rgba(22,40,88,0.62)',
   /** harte Kontur außen und schmaler Schattenstreifen daneben */
   line: 0x070b11,
   lineWidth: 3,
@@ -94,8 +97,9 @@ export const FELT = {
 export const PLAY_ZONE = {
   slots: 5,
   spacing: 130,
-  /** Platz etwas größer als die Karte */
-  pad: 6,
+  /** Zone etwas größer als die Karten und Eckenradius */
+  pad: 12,
+  radius: 16,
 };
 
 /** Rinne am unteren Rand des Filzes hinter Play Hand, Sortieren und Discard */

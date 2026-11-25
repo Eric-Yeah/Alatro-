@@ -85,15 +85,13 @@ export function buildTableSurface(L: SurfaceLayout): Container {
   edge.roundRect(x + g, y + g, w - 2 * g, h - 2 * g, r - g / 2).stroke({ width: 1, color: FELT.inlineColor, alpha: FELT.inlineAlpha });
   root.addChild(edge);
 
-  // Kartenplätze der Spielzone, zurückhaltend
+  // Spielzone: eine breite Mulde mit feinem Umriss (gespielte Karten liegen mittig darin, auch bei weniger als fünf)
   const slots = new Graphics();
   const pad = PLAY_ZONE.pad;
-  for (let i = 0; i < PLAY_ZONE.slots; i++) {
-    const cx = L.mx + (i - (PLAY_ZONE.slots - 1) / 2) * PLAY_ZONE.spacing;
-    slotOutline(slots, cx - CARD_W / 2 - pad, L.playY - CARD_H / 2 - pad, CARD_W + 2 * pad, CARD_H + 2 * pad);
-  }
+  const zoneW = (PLAY_ZONE.slots - 1) * PLAY_ZONE.spacing + CARD_W + 2 * pad;
+  slotOutline(slots, L.mx - zoneW / 2, L.playY - CARD_H / 2 - pad, zoneW, CARD_H + 2 * pad, PLAY_ZONE.radius);
   // Platz des Stapels
-  slotOutline(slots, L.deckX - CARD_W / 2 - pad, L.deckY - CARD_H / 2 - pad, CARD_W + 2 * pad, CARD_H + 2 * pad);
+  slotOutline(slots, L.deckX - CARD_W / 2 - SLOT.pad, L.deckY - CARD_H / 2 - SLOT.pad, CARD_W + 2 * SLOT.pad, CARD_H + 2 * SLOT.pad);
   root.addChild(slots);
   return root;
 }
