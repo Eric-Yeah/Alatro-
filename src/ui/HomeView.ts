@@ -5,7 +5,7 @@ import { scaleName } from '../data/difficulty';
 import type { RunState } from '../core/run';
 import { cardBack } from './CardView';
 import { t } from '../i18n';
-import { C, VIEW_BLEED, VIEW_H, VIEW_W, fmt } from './theme';
+import { C, VIEW_BLEED, VIEW_H, VIEW_W, fmt, shade } from './theme';
 import { easeOutCubic, loop, tween } from './tween';
 import { buildTitleCards } from './TitleCards';
 import { Button, label } from './widgets';
@@ -17,21 +17,30 @@ const HOME = {
   taglineY: 335,
   buttonX: VIEW_W / 2,
   buttonW: 480,
-  buttonH: 84,
-  buttonGap: 104,
-  firstButtonY: 468,
+  buttonH: 80,
+  buttonGap: 94,
+  /** zusätzlicher Abstand, wenn unter einem Knopf eine Zeile steht */
+  sublineGap: 15,
+  firstButtonY: 466,
   halfW: 232,
   halfGap: 248,
   smallW: 180,
   smallH: 62,
   smallGap: 196,
-  rankY: 382,
+  rankY: 376,
+  titleLineY: 404,
   stars: 46,
   fanX: 190,
   fanY: 520,
   fanAngles: [-0.34, -0.12, 0.1],
   fanSpread: 78,
   deckColors: [0x5b3fa8, 0x2a5fa8, 0xa8324a],
+  /** Pokalpfad und Wunderkammer */
+  trophyShade: 0.55,
+  wardrobeColor: 0x7a4fa8,
+  badgeR: 18,
+  badgeSize: 20,
+  badgeColor: 0xffd45e,
 } as const;
 
 export interface HomeActions {
@@ -45,6 +54,10 @@ export interface HomeActions {
   guide: () => void;
   daily: () => void;
   achievements: () => void;
+  /** Pokalpfad (Pokale, Ligen, Belohnungen) */
+  trophies: () => void;
+  /** Wunderkammer (Kosmetik ausrüsten) */
+  wardrobe: () => void;
 }
 
 export interface HomeRank {
@@ -54,10 +67,23 @@ export interface HomeRank {
   total: number;
 }
 
+export interface HomeTrophies {
+  total: number;
+  leagueName: string;
+  leagueColor: number;
+  /** Anzahl abholbereiter Einträge (Marker mit Zahl, wenn größer als 0) */
+  claimable: number;
+}
+
 export interface HomeInput {
   /** Gespeicherter Run, der sich fortsetzen lässt, sonst null */
   saved: RunState | null;
   rank: HomeRank;
+  /** Ausgerüsteter Titel (steht unter dem Rang), sonst null */
+  title: string | null;
+  trophies: HomeTrophies;
+  /** Besessene und alle Kosmetik Stücke (Anzeige am Knopf der Wunderkammer) */
+  wardrobe: { owned: number; total: number };
   /** Tageslauf von heute schon gespielt? */
   dailyDone: boolean;
   /** Einführungsrunde noch nicht abgeschlossen (Knopf wird hervorgehoben) */
@@ -125,6 +151,11 @@ export function buildHome(input: HomeInput): Container {
   const rank = label(t('{name}  ·  {unlocked} von {total} Erfolgen', { name: input.rank.name, unlocked: input.rank.unlocked, total: input.rank.total }), 22, input.rank.color);
   rank.position.set(VIEW_W / 2, HOME.rankY);
   root.addChild(rank);
+  if (input.title) {
+    const ttl = label(input.title, 17, C.text, { fontWeight: '700' });
+    ttl.position.set(VIEW_W / 2, HOME.titleLineY);
+    root.addChild(ttl);
+  }
 
   // Hauptknöpfe: Fortsetzen (falls vorhanden), Neuer Run
   let y = HOME.firstButtonY;
@@ -137,7 +168,7 @@ export function buildHome(input: HomeInput): Container {
       s.position.set(HOME.buttonX, y + HOME.buttonH / 2 + 14);
       root.addChild(s);
     }
-    y += HOME.buttonGap + (subline ? 12 : 0);
+    y += HOME.buttonGap + (subline ? HOME.sublineGap : 0);
   };
   if (saved) {
     const deck = DECKS.find((d) => d.id === saved.deckId)?.name ?? '';
@@ -146,20 +177,39 @@ export function buildHome(input: HomeInput): Container {
   }
   main(t('Neuer Run'), C.mult, actions.newRun);
 
-  // Zwei Hälften: Tageslauf und Erfolge
-  const half = (text: string, i: number, color: number, fn: () => void, sub?: string) => {
+  // Zwei Hälften je Reihe: Tageslauf und Erfolge, Pokalpfad und Wunderkammer
+  const half = (text: string, i: number, color: number, fn: () => void, sub?: string, subColor: number = C.textDim): Button => {
     const b = new Button(text, HOME.halfW, HOME.buttonH, color, fn, 28);
     b.position.set(VIEW_W / 2 + (i - 0.5) * HOME.halfGap, y);
     root.addChild(b);
     if (sub) {
-      const s = label(sub, 16, C.textDim, { fontWeight: '700' });
+      const s = label(sub, 16, subColor, { fontWeight: '700' });
       s.position.set(b.x, y + HOME.buttonH / 2 + 14);
+      if (s.width > HOME.halfW + 20) s.scale.set((HOME.halfW + 20) / s.width);
       root.addChild(s);
     }
+    return b;
   };
   half(t('Tageslauf'), 0, 0x2f9f7a, actions.daily, input.dailyDone ? t('heute gespielt') : t('neu heute'));
   half(t('Erfolge'), 1, 0xc9962b, actions.achievements, t('{a} von {b}', { a: input.rank.unlocked, b: input.rank.total }));
-  y += HOME.buttonGap + 12;
+  y += HOME.buttonGap + HOME.sublineGap;
+
+  // Pokalpfad (Farbe der Liga, Marker mit Zahl bei abholbereiten Einträgen) und Wunderkammer
+  const tr = input.trophies;
+  const trophyBtn = half(t('Pokalpfad'), 0, shade(tr.leagueColor, HOME.trophyShade), actions.trophies, t('{liga}, {n} Pokale', { liga: tr.leagueName, n: fmt(tr.total) }), tr.leagueColor);
+  if (tr.claimable > 0) {
+    const badge = new Container();
+    badge.addChild(new Graphics().circle(0, 0, HOME.badgeR).fill(HOME.badgeColor).stroke({ width: 3, color: C.panelLine }));
+    const num = label(String(tr.claimable), HOME.badgeSize, C.panelLine);
+    num.style.dropShadow = false;
+    badge.addChild(num);
+    badge.position.set(trophyBtn.x + HOME.halfW / 2 - 8, y - HOME.buttonH / 2 + 4);
+    root.addChild(badge);
+    loop(badge, 'scale.x', 0.92, 1.12, 800);
+    loop(badge, 'scale.y', 0.92, 1.12, 800);
+  }
+  half(t('Wunderkammer'), 1, HOME.wardrobeColor, actions.wardrobe, t('{a} von {b} Stücken', { a: input.wardrobe.owned, b: input.wardrobe.total }));
+  y += HOME.buttonGap + HOME.sublineGap;
 
   // Nebenmenüs in einer Reihe
   const smalls: [string, () => void, number?][] = [
@@ -171,11 +221,11 @@ export function buildHome(input: HomeInput): Container {
   ];
   smalls.forEach(([text, fn, color], i) => {
     const b = new Button(text, HOME.smallW, HOME.smallH, color ?? 0x4a3f6b, fn, 22);
-    b.position.set(VIEW_W / 2 + (i - (smalls.length - 1) / 2) * HOME.smallGap, y + 10);
+    b.position.set(VIEW_W / 2 + (i - (smalls.length - 1) / 2) * HOME.smallGap, y);
     root.addChild(b);
     if (i === 0) {
       const s = label(t('{a} von {b}', { a: input.atlas.found, b: input.atlas.total }), 16, C.textDim, { fontWeight: '700' });
-      s.position.set(b.x, y + 10 + HOME.smallH / 2 + 14);
+      s.position.set(b.x, y + HOME.smallH / 2 + 14);
       root.addChild(s);
     }
   });
