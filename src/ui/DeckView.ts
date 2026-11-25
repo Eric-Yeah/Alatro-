@@ -8,8 +8,8 @@ import { CARD_PX_H, CARD_PX_W } from '../data/cardArt/cardGlyphs';
 import { DECK_VIEW } from '../data/deckView';
 import { SEALS } from '../data/modifiers';
 import { t } from '../i18n';
-import { getSettings } from '../settings';
 import { cardTexture } from './cardArt/cardTextures';
+import { effectiveCardPalette } from './cosmeticFx';
 import { richText } from './richText';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS, SUIT_COLORS } from './theme';
 import { Button, label, panel } from './widgets';
@@ -51,7 +51,7 @@ function cardTile(card: Card): Container {
   const c = new Container();
   const rankless = isRankless(card);
   const face = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] : undefined;
-  const art = new Sprite(cardTexture(card.suit, card.rank, getSettings().cardPalette, { face, rankless }));
+  const art = new Sprite(cardTexture(card.suit, card.rank, effectiveCardPalette(), { face, rankless }));
   art.anchor.set(0.5);
   art.scale.set(DECK_VIEW.pxScale);
   c.addChild(art);

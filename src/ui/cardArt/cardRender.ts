@@ -32,7 +32,7 @@ function cardDistance(x: number, y: number): number {
 }
 
 /** Karten Grundform mit weich gerundeten Ecken, dunkler Kontur und weißem Rand */
-function drawBase(buf: PixelBuffer, face: number) {
+export function drawBase(buf: PixelBuffer, face: number) {
   for (let y = 0; y < CARD_PX_H; y++) {
     for (let x = 0; x < CARD_PX_W; x++) {
       const d = cardDistance(x, y);

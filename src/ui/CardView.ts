@@ -2,8 +2,9 @@ import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { isRankless, type Card } from '../core/cards';
 import { CARD_PX_H, CARD_PX_SCALE, CARD_PX_W } from '../data/cardArt/cardGlyphs';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
-import { getSettings, onSettings } from '../settings';
-import { cardBackTexture, cardTexture } from './cardArt/cardTextures';
+import { onSettings } from '../settings';
+import { cardBackTexture, cardTexture, cosmeticBackTexture } from './cardArt/cardTextures';
+import { activeBack, effectiveCardPalette } from './cosmeticFx';
 import { attachFloat } from './cardMotion';
 import { editionOverlay } from './editionFx';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS } from './theme';
@@ -35,7 +36,7 @@ export class CardView extends Container {
 
   private currentTexture() {
     const card = this.card;
-    return cardTexture(card.suit, card.rank, getSettings().cardPalette, { face: this.faceColor, rankless: isRankless(card) });
+    return cardTexture(card.suit, card.rank, effectiveCardPalette(), { face: this.faceColor, rankless: isRankless(card) });
   }
 
   /** Textur neu setzen (nach Wechsel der Kartenpalette) */
@@ -142,11 +143,20 @@ export class CardView extends Container {
   }
 }
 
-export function cardBack(color: number = C.cardBack): Container {
+export interface CardBackOpts {
+  /** true: den ausgerüsteten Kartenrücken (Kosmetik) übergehen und die Deckfarbe zeigen (zum Beispiel im Run Setup) */
+  ignoreEquipped?: boolean;
+  /** Rücken einer bestimmten Kosmetik Id zeigen (Vorschau der Wunderkammer), hat Vorrang vor dem ausgerüsteten */
+  backId?: string;
+}
+
+/** Kartenrücken: der ausgerüstete aus der Wunderkammer, sonst in der Deckfarbe `color` */
+export function cardBack(color: number = C.cardBack, opts: CardBackOpts = {}): Container {
   const c = new Container();
   const w = CARD_W, h = CARD_H;
   const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.35 });
-  const art = new Sprite(cardBackTexture(color));
+  const id = opts.backId ?? (opts.ignoreEquipped ? '' : activeBack()?.id ?? '');
+  const art = new Sprite((id && cosmeticBackTexture(id)) || cardBackTexture(color));
   art.anchor.set(0.5);
   art.scale.set(CARD_PX_SCALE);
   c.addChild(shadow, art);

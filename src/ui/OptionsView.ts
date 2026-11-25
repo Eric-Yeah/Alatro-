@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import { CARD_PALETTES } from '../data/cardArt/cardPalettes';
+import { effectiveCardPalette, ownedPalettes } from './cosmeticFx';
 import { QUALITY_IDS, QUALITY_NAMES, SPEED_STEPS, VOLUME_STEP } from '../data/juice';
 import { MUSIC_MIX, MUSIC_MIX_INFO, MUSIC_MIX_NAME, MUSIC_OFF, TRACK_IDS, getTrack } from '../data/music';
 import { OPTIONS_LAYOUT, OPTIONS_TABS, type OptionsTab } from '../data/optionsLayout';
@@ -249,11 +250,19 @@ export function buildOptions(deps: OptionsDeps): Container {
         QUALITY_IDS.map((id) => ({ id, name: QUALITY_NAMES[id] })), st.quality, 470,
         (id) => { const q = QUALITY_IDS.find((x) => x === id); if (q) set({ quality: q }); renderTab(); },
       );
-      choiceRow(
-        t('Kartenfarben'), CARD_PALETTES[st.cardPalette].description,
-        Object.values(CARD_PALETTES).map((p) => ({ id: p.id, name: p.name })), st.cardPalette, 380,
-        (id) => { const p = CARD_PALETTES[id as keyof typeof CARD_PALETTES]; if (p) set({ cardPalette: p.id }); renderTab(); },
-      );
+      {
+        // Standard und Hoher Kontrast immer, weitere Paletten nur, wenn sie als Kosmetik besessen werden
+        const pals = ownedPalettes().map((id) => ({ id: id as string, name: CARD_PALETTES[id].name }));
+        const cur = effectiveCardPalette();
+        const pick = (id: string) => { const p = ownedPalettes().find((x) => x === id); if (p) set({ cardPalette: p }); renderTab(); };
+        if (pals.length <= 2) choiceRow(t('Kartenfarben'), CARD_PALETTES[cur].description, pals, cur, 380, pick);
+        else {
+          const { card, h } = row(t('Kartenfarben'), CARD_PALETTES[cur].description, true);
+          const seg = segmented(pals, cur, rowW - L.row.inner * 2, pick);
+          seg.position.set(L.row.inner, h - L.control.h - 22);
+          card.addChild(seg);
+        }
+      }
       toggleRow(t('FPS Anzeige'), t('Bildrate oben rechts, zum Prüfen der Leistung'), st.fps, (v) => set({ fps: v }));
     } else if (lastTab === 'ton') {
       sliderRow(t('Lautstärke'), t('Karten, Chips, Münzen und alle Effekte'), st.volume, (v) => set({ volume: clampVolume(v) }));

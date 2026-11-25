@@ -7,6 +7,7 @@ import { getSettings, onSettings, speedFactor } from '../settings';
 import { t } from '../i18n';
 import type { Background } from './Background';
 import type { CrtFilter } from './crt';
+import { sparkColors } from './cosmeticFx';
 import { Motes, Orbs, Particles, glowTexture } from './particles';
 import { PointerFx, pointer, setPointerSpace } from './pointerFx';
 import { addHeat, calloutFor, coolHeat, heatBoost, nextDensity, orbCount, totalFx } from './spektakelMath';
@@ -281,13 +282,14 @@ class Spektakel {
   /** Konfetti aus einem Punkt nach oben, fällt zurück */
   confetti(at: P, n: number) {
     const count = this.fx.count(n);
+    const palette = sparkColors(FX_COLORS.confetti);
     for (let i = 0; i < count; i++) {
       const a = -Math.PI / 2 + rand(-0.9, 0.9);
       const v = rand(260, 760);
       this.fx.spawn('dot', {
         x: at.x, y: at.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 620, drag: 1.4,
         life: rand(1100, 1900), rot: Math.random() * 6.28, vr: rand(-10, 10), fadeIn: 0,
-      }, FX_COLORS.confetti[i % FX_COLORS.confetti.length], { from: rand(5, 9), to: rand(4, 7), flutter: true, normal: true });
+      }, palette[i % palette.length], { from: rand(5, 9), to: rand(4, 7), flutter: true, normal: true });
     }
   }
 
@@ -315,11 +317,12 @@ class Spektakel {
   /** Regen läuft in der obersten Ebene, damit er auch über dem Fenster der gewonnenen Runde fällt */
   private rain(n: number) {
     const count = this.top.count(n);
+    const palette = sparkColors(FX_COLORS.confetti);
     for (let i = 0; i < count; i++) {
       this.top.spawn('dot', {
         x: rand(-40, VIEW_W + 40), y: rand(-60, -10), vx: rand(-RAIN.sway, RAIN.sway), vy: rand(RAIN.fall[0], RAIN.fall[1]),
         drag: 0.2, life: rand(RAIN.life[0], RAIN.life[1]), rot: Math.random() * 6.28, vr: rand(-7, 7), fadeIn: 0,
-      }, FX_COLORS.confetti[i % FX_COLORS.confetti.length], { from: rand(6, 11), to: rand(5, 9), flutter: true, normal: true });
+      }, palette[i % palette.length], { from: rand(6, 11), to: rand(5, 9), flutter: true, normal: true });
     }
   }
 
