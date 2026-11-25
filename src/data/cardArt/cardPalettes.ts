@@ -1,9 +1,14 @@
 import type { Suit } from '../../core/types';
 
 // Farbpaletten der Spielkarten (Pixel Art). Alle Farben als 0xRRGGBB.
-// Zwei Varianten: "Standard" (gedämpfte, dunkle Töne) und "Hoher Kontrast" (kräftige Farben).
+// Zwei Varianten gehören immer dazu: "Standard" (gedämpfte, dunkle Töne) und "Hoher Kontrast" (kräftige Farben).
+// Vier weitere Farbwelten sind Kosmetik des Pokalpfads (Bernstein, Tintenmeer, Mondsilber, Glutkern) und werden
+// über die Wunderkammer freigeschaltet. In ihnen sind Herz und Karo immer klar rot, Pik und Kreuz klar dunkel.
 
-export type CardPaletteId = 'standard' | 'kontrast';
+export type CardPaletteId = 'standard' | 'kontrast' | 'bernstein' | 'tintenmeer' | 'mondsilber' | 'glutkern';
+
+/** Paletten, die immer zur Verfügung stehen (alle anderen müssen als Kosmetik besessen werden) */
+export const FREE_CARD_PALETTES: readonly CardPaletteId[] = ['standard', 'kontrast'];
 
 export interface SuitColors {
   /** Pips, Rang und Hauptton der Kleidung */
@@ -60,6 +65,28 @@ export const CARD_BASE = {
   rankless: 0x6a5a9a,
 };
 
+// ───────────────────────────────────────────── Ableitung der Kosmetik Paletten
+
+const mix = (a: number, b: number, t: number): number => {
+  const ch = (s: number) => Math.round(((a >> s) & 255) * (1 - t) + ((b >> s) & 255) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+};
+
+/** Anteile der Ableitung: wie stark Hauptfarbe und Besatz aufgehellt oder abgedunkelt werden */
+const DERIVE = { dark: 0.42, light: 0.38, tint: 0.88, trimLight: 0.55, trimDark: 0.4, hairDark: 0.42, secLight: 0.38, secDark: 0.42 };
+
+/** Hauptfarbe, Besatz (Metall), Edelstein, Haar und zweite Stofffarbe genügen, der Rest wird abgeleitet */
+interface SuitSeed { main: number; trim: number; gem: number; hair: number; sec: number }
+
+function suitFrom(s: SuitSeed): SuitColors {
+  return {
+    main: s.main, dark: mix(s.main, 0x000000, DERIVE.dark), light: mix(s.main, 0xffffff, DERIVE.light), tint: mix(s.main, 0xffffff, DERIVE.tint),
+    trim: s.trim, trimLight: mix(s.trim, 0xffffff, DERIVE.trimLight), trimDark: mix(s.trim, 0x000000, DERIVE.trimDark), gem: s.gem,
+    hair: s.hair, hairDark: mix(s.hair, 0x000000, DERIVE.hairDark),
+    sec: s.sec, secLight: mix(s.sec, 0xffffff, DERIVE.secLight), secDark: mix(s.sec, 0x000000, DERIVE.secDark),
+  };
+}
+
 export const CARD_PALETTES: Record<CardPaletteId, CardPalette> = {
   standard: {
     id: 'standard',
@@ -83,7 +110,51 @@ export const CARD_PALETTES: Record<CardPaletteId, CardPalette> = {
       D: { main: 0xeaa012, dark: 0xa46606, light: 0xffd860, tint: 0xfdf0cc, trim: 0x7a4a26, trimLight: 0xb88454, trimDark: 0x4a2a10, gem: 0xe42424, hair: 0x5a3a1a, hairDark: 0x32200c, sec: 0x1a9a98, secLight: 0x60d8d0, secDark: 0x0c5e60 },
     },
   },
+  bernstein: {
+    id: 'bernstein',
+    name: 'Bernstein',
+    description: 'Warmes Harz, Pergament und Honiggold',
+    suits: {
+      S: suitFrom({ main: 0x3b2a1a, trim: 0xe3a436, gem: 0xffd466, hair: 0x6a4a28, sec: 0xb8741e }),
+      H: suitFrom({ main: 0xc8281c, trim: 0xe3a436, gem: 0xffe08a, hair: 0x7a3418, sec: 0x6a4a1e }),
+      C: suitFrom({ main: 0x1c4026, trim: 0xe3a436, gem: 0xff9a4a, hair: 0x4a3a1c, sec: 0xa8641c }),
+      D: suitFrom({ main: 0xe5482a, trim: 0xf2c868, gem: 0x6a3a14, hair: 0xa8641c, sec: 0x3b2a1a }),
+    },
+  },
+  tintenmeer: {
+    id: 'tintenmeer',
+    name: 'Tintenmeer',
+    description: 'Tiefes Blau, Meeresgrün und Korallenrot',
+    suits: {
+      S: suitFrom({ main: 0x16264a, trim: 0x8fd8e4, gem: 0x72f0e0, hair: 0x2a4a78, sec: 0x2a8a9a }),
+      H: suitFrom({ main: 0xd0304a, trim: 0x8fd8e4, gem: 0xffffff, hair: 0x1e3a5a, sec: 0x2a6a8a }),
+      C: suitFrom({ main: 0x0f4234, trim: 0x8fd8e4, gem: 0xff8a70, hair: 0x244a50, sec: 0x1e8a7a }),
+      D: suitFrom({ main: 0xe85a44, trim: 0xbfeef2, gem: 0x1a4a6a, hair: 0x2a6a8a, sec: 0x16264a }),
+    },
+  },
+  mondsilber: {
+    id: 'mondsilber',
+    name: 'Mondsilber',
+    description: 'Kühles Silber, Dämmerblau und Rosenrot',
+    suits: {
+      S: suitFrom({ main: 0x2a2c48, trim: 0xd6deee, gem: 0xa8e8ff, hair: 0x4a4e78, sec: 0x7a82b8 }),
+      H: suitFrom({ main: 0xd23a5a, trim: 0xe4eaf6, gem: 0xffffff, hair: 0x5a3a5a, sec: 0x6a76b0 }),
+      C: suitFrom({ main: 0x173d36, trim: 0xd6deee, gem: 0xffb8c8, hair: 0x344e60, sec: 0x6a8cb0 }),
+      D: suitFrom({ main: 0xe4505a, trim: 0xf6f8ff, gem: 0x2a2c48, hair: 0x8a8eb8, sec: 0x2a2c48 }),
+    },
+  },
+  glutkern: {
+    id: 'glutkern',
+    name: 'Glutkern',
+    description: 'Verkohltes Schwarz mit glühendem Rot',
+    suits: {
+      S: suitFrom({ main: 0x2a1a22, trim: 0xff9a22, gem: 0xffd85a, hair: 0x5a2a2a, sec: 0xc8501a }),
+      H: suitFrom({ main: 0xe02a1a, trim: 0xffb030, gem: 0xfff0a0, hair: 0x5a1a14, sec: 0x3a2a30 }),
+      C: suitFrom({ main: 0x123a26, trim: 0xff9a22, gem: 0xff5a2a, hair: 0x3a2a20, sec: 0xa83a1a }),
+      D: suitFrom({ main: 0xf04422, trim: 0xffd060, gem: 0x3a1a14, hair: 0x7a2a14, sec: 0x2a1a22 }),
+    },
+  },
 };
 
-export const CARD_PALETTE_IDS: readonly CardPaletteId[] = ['standard', 'kontrast'];
+export const CARD_PALETTE_IDS: readonly CardPaletteId[] = ['standard', 'kontrast', 'bernstein', 'tintenmeer', 'mondsilber', 'glutkern'];
 export const DEFAULT_CARD_PALETTE: CardPaletteId = 'standard';

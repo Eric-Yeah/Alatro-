@@ -1,5 +1,6 @@
 import { Filter, Graphics } from 'pixi.js';
 import { BOSS_TINT_MIX, MOODS, MOOD_FADE_S, type BgMood, type MoodDef } from '../data/juice';
+import { activeSkyDrifts, activeSkyId, applySkyToMood } from './cosmeticFx';
 import { FILTER_VERTEX } from './glsl';
 
 // Eigener Entwurf: langsam ziehende Schlieren in wenigen harten Farbstufen (kein Verlauf),
@@ -143,6 +144,13 @@ export class Background extends Graphics {
   private phase = 0;
   private cur: MoodDef = cloneMood(MOODS.menu);
   private target: MoodDef = cloneMood(MOODS.menu);
+  /** Gewählte Stimmung und Bossfarbe, damit der Himmel (Kosmetik) die Zielwerte neu auflösen kann */
+  private moodKind: BgMood = 'menu';
+  private bossColor: number | undefined;
+  /** Kennung des Himmels, für den `target` zuletzt aufgelöst wurde */
+  private skySeen = '';
+  /** Laufzeit in Sekunden (für den wandernden Farbton des Himmels, unabhängig vom Tempo der Stimmung) */
+  private clock = 0;
   /** Grafikstufe Supernova: Zusatz Schicht im Shader, weich ein und ausgeblendet */
   private fxOn = false;
   private fxLevel = 0;
@@ -181,10 +189,19 @@ export class Background extends Graphics {
 
   /** Wechselt weich zur Stimmung. Bei Bossen färbt die Bossfarbe die Stimmung leicht. */
   setMood(mood: BgMood, bossColor?: number) {
-    const t = cloneMood(MOODS[mood]);
-    if (mood === 'boss' && bossColor !== undefined) {
-      t.mid = tintTo(t.mid, bossColor, BOSS_TINT_MIX, 0.45);
-      t.accent = tintTo(t.accent, bossColor, BOSS_TINT_MIX * 0.5, 0.3);
+    this.moodKind = mood;
+    this.bossColor = bossColor;
+    this.resolveTarget();
+  }
+
+  /** Zielstimmung aus Stimmung, ausgerüstetem Himmel (Kosmetik) und Boss Tönung berechnen */
+  private resolveTarget() {
+    this.skySeen = activeSkyId();
+    const mood = this.moodKind;
+    const t = cloneMood(applySkyToMood(MOODS[mood], mood, this.clock));
+    if (mood === 'boss' && this.bossColor !== undefined) {
+      t.mid = tintTo(t.mid, this.bossColor, BOSS_TINT_MIX, 0.45);
+      t.accent = tintTo(t.accent, this.bossColor, BOSS_TINT_MIX * 0.5, 0.3);
     }
     this.target = t;
   }
@@ -223,6 +240,9 @@ export class Background extends Graphics {
 
   update(deltaMS: number) {
     const dt = deltaMS / 1000;
+    this.clock += dt;
+    // Himmel gewechselt oder wandernder Farbton: Ziel neu auflösen, die Farben gleiten weich hinterher
+    if (activeSkyId() !== this.skySeen || activeSkyDrifts()) this.resolveTarget();
     const k = Math.min(1, dt / MOOD_FADE_S);
     const c = this.cur;
     const t = this.target;

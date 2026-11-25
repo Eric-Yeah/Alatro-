@@ -1,4 +1,5 @@
 import { POINTER } from '../data/spektakel';
+import { sparkColors } from './cosmeticFx';
 import type { Particles } from './particles';
 
 // Zeiger Effekte der Grafikstufe Supernova: Sternenstaub Spur hinter Finger und Maus, Funken beim Tippen (keine Ringe).
@@ -99,7 +100,7 @@ export class PointerFx {
 
   private dust(x: number, y: number, dirX: number, dirY: number) {
     if (this.particles.count(1) <= 0) return;
-    const colors = POINTER.trailColors;
+    const colors = sparkColors(POINTER.trailColors);
     this.color = (this.color + 1) % colors.length;
     const color = colors[this.color];
     const [l0, l1] = POINTER.trailLife;
@@ -131,6 +132,7 @@ export class PointerFx {
     this.hasLast = true;
     this.carry = 0;
     const n = this.particles.count(POINTER.tapSparks);
+    const tapColors = sparkColors(POINTER.trailColors);
     const [v0, v1] = POINTER.tapSpeed;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
@@ -138,7 +140,7 @@ export class PointerFx {
       this.particles.spawn('spark', {
         x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, drag: 4, life: 360 + Math.random() * 240,
         rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 6,
-      }, POINTER.trailColors[i % POINTER.trailColors.length], { from: 18, to: 5 });
+      }, tapColors[i % tapColors.length], { from: 18, to: 5 });
     }
   }
 

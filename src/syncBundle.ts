@@ -10,6 +10,7 @@
 import { SYNC } from './data/sync';
 import { parseProfile, type DailyEntry, type Profile } from './profile';
 import { SAVE_VERSION, type RunState } from './core/run';
+import { mergeTrophyState } from './trophies';
 
 export interface SyncBundle {
   format: number;
@@ -124,6 +125,9 @@ export function mergeProfiles(a: Profile, b: Profile): Profile {
   }
   out.daily = daily;
   out.sync = b.stats.hands > a.stats.hands ? b.sync : a.sync;
+  // Pokale: Maximum und Vereinigung, der Run Stand folgt wie `sync` dem Profil mit mehr Hands
+  out.trophies = mergeTrophyState(a.trophies, b.trophies);
+  out.trophies.run = JSON.parse(JSON.stringify((b.stats.hands > a.stats.hands ? b : a).trophies.run));
   return out;
 }
 

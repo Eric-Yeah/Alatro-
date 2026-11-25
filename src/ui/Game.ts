@@ -39,6 +39,13 @@ import type { GuideTarget } from '../data/guide';
 import { TutorialFlow } from '../core/tutorialFlow';
 import { cardKey, createTutorialRun, rigTutorialShop, startTutorialRound } from '../core/tutorialRun';
 import { deckSeal, getProfile, nextSealGoal, observeRun, saveProfile } from '../profile';
+import { activeTitle, claimableCount, leagueIndexOf, observeTrophies } from '../trophies';
+import { COSMETICS } from '../data/cosmetics';
+import { LEAGUES } from '../data/trophyRoad';
+import { TROPHY_LAYOUT } from '../data/trophyLayout';
+import { TROPHY_H, TROPHY_W, buildRunTrophyBlock, buildTrophyRoad } from './TrophyView';
+import { lastRoundAmount } from './trophyViewMath';
+import { WARDROBE_H, WARDROBE_W, buildWardrobe } from './WardrobeView';
 import { ACH_H, ACH_W, buildAchievements } from './AchievementsView';
 import { Guide } from './Guide';
 import { sfx } from './audio';
@@ -141,6 +148,9 @@ export class Game {
   /** Erfolge: Warteschlange der Banner und Freischaltungen des laufenden Runs */
   private achQueue: AchievementDef[] = [];
   private achShowing = false;
+  /** Liga Aufstiege, die als Banner noch gezeigt werden (Index der Liga), und die höchste schon eingereihte */
+  private leagueQueue: number[] = [];
+  private leagueQueued = -1;
   private runUnlocked: string[] = [];
   /** Sammlung beim Start des Runs (für Neu im Atlas) und beim letzten Speichern (für die Toasts) */
   private runStartKeys: string[] = [];
@@ -1414,6 +1424,8 @@ export class Game {
     this.run = run;
     this.syncJokers();
     this.syncConsumables();
+    // Gespeicherter Run im Zustand roundWon: die Pokale der Runde sind vielleicht noch nicht verbucht
+    this.trackTrophies();
     this.clearOverlay();
     if (run.round && (run.phase === 'round' || run.phase === 'roundWon')) {
       for (const c of run.round.hand) this.makeCardView(c.id).position.set(DECK_X, DECK_Y);
@@ -1456,6 +1468,33 @@ export class Game {
       this.runUnlocked.push(a.id);
       this.queueAchievement(a);
     }
+    this.trackTrophies();
+  }
+
+  /**
+   * Verbucht die Pokale des Runs (muss im Zustand roundWon und gameOver laufen, rein und idempotent), zeigt den Toast
+   * nach einer gewonnenen Runde und reiht einen Liga Aufstieg als Banner ein.
+   */
+  private trackTrophies() {
+    const run = this.run;
+    if (!run || this.tut) return;
+    const p = getProfile();
+    const gain = observeTrophies(p, run);
+    if (gain) {
+      saveProfile();
+      if (gain.amount > 0 && run.phase === 'roundWon') this.trophyToast(gain.amount);
+    }
+    const idx = leagueIndexOf(p.trophies.total);
+    if (idx > p.trophies.leagueSeen && idx > this.leagueQueued) {
+      this.leagueQueued = idx;
+      this.leagueQueue.push(idx);
+      if (!this.achShowing) void this.drainAchievements();
+    }
+  }
+
+  /** Kurzer Toast "+N Pokale" über allen Fenstern (die Fenster des Rundensiegs würden ihn sonst abdunkeln) */
+  private trophyToast(amount: number) {
+    popup(this.achLayer, VIEW_W / 2, TROPHY_LAYOUT.toastY, t('+{n} Pokale', { n: fmt(amount) }), shade(LEAGUES[leagueIndexOf(getProfile().trophies.total)].color, 0.6), 30);
   }
 
   private queueAchievement(a: AchievementDef) {
@@ -1465,8 +1504,57 @@ export class Game {
 
   private async drainAchievements() {
     this.achShowing = true;
-    while (this.achQueue.length) await this.showAchievementBanner(this.achQueue.shift()!);
+    // Erfolge und Liga Aufstiege laufen nacheinander durch dieselbe Warteschlange, damit sich Banner nie überlagern
+    while (this.achQueue.length || this.leagueQueue.length) {
+      // Der Liga Aufstieg ist selten und wichtig, er kommt vor den Erfolgen dran
+      if (this.leagueQueue.length) await this.showLeagueBanner(this.leagueQueue.shift()!);
+      else await this.showAchievementBanner(this.achQueue.shift()!);
+    }
     this.achShowing = false;
+  }
+
+  /** Banner beim Liga Aufstieg (Name, Farbe, Flair Text), danach gilt die Liga als gesehen */
+  private async showLeagueBanner(index: number) {
+    const lg = LEAGUES[index];
+    const B = TROPHY_LAYOUT.banner;
+    sfx.achievement();
+    haptics.achievement();
+    this.fx.flash(0.12, lg.color);
+    const w = B.w;
+    const h = B.h;
+    const box = new Container();
+    box.addChild(panel(w, h, C.panelDark, 16, lg.color));
+    const badge = new Graphics()
+      .circle(0, 0, B.badgeR).fill(shade(lg.color, 0.35)).stroke({ width: 4, color: lg.color })
+      .star(0, 0, 6, 22, 11).fill(lg.color);
+    badge.position.set(58, h / 2);
+    const head = label(t('Liga Aufstieg'), 19, lg.color);
+    head.anchor.set(0, 0.5);
+    head.position.set(112, 26);
+    const name = label(lg.name, 30, C.text);
+    name.anchor.set(0, 0.5);
+    name.position.set(112, 58);
+    if (name.width > w - 250) name.scale.set((w - 250) / name.width);
+    const flair = label(lg.flavor, 15, C.textDim, { fontWeight: '600' });
+    flair.anchor.set(0, 0.5);
+    flair.position.set(112, 86);
+    if (flair.width > w - 140) flair.scale.set((w - 140) / flair.width);
+    const from = label(t('ab {n} Pokalen', { n: fmt(lg.from) }), 16, lg.color, { fontWeight: '700' });
+    from.anchor.set(1, 0.5);
+    from.position.set(w - 24, 28);
+    box.addChild(badge, head, name, flair, from);
+    box.pivot.set(w / 2, 0);
+    box.position.set(VIEW_W / 2, -h - 12);
+    this.achLayer.addChild(box);
+    await tween(box, { y: 14 }, 320, easeOutBack, true);
+    await new Promise((r) => setTimeout(r, B.showMs));
+    await tween(box, { y: -h - 12 }, 260, easeInOutCubic, true);
+    box.destroy({ children: true });
+    const ts = getProfile().trophies;
+    if (index > ts.leagueSeen) {
+      ts.leagueSeen = index;
+      saveProfile();
+    }
   }
 
   /** Banner oben am Bildschirm, bleibt unabhängig vom Animationstempo gut lesbar */
@@ -1508,6 +1596,18 @@ export class Game {
   private showAchievements() {
     const { box } = this.modal(ACH_W, ACH_H, C.panelDark);
     buildAchievements(box, () => this.showMainMenu());
+  }
+
+  /** Pokalpfad (Pfad, Decks, Verlauf) als Fenster, Zurück führt ins Hauptmenü */
+  private showTrophies(tab?: 'road' | 'decks' | 'history') {
+    const { box } = this.modal(TROPHY_W, TROPHY_H, C.panelDark);
+    buildTrophyRoad(box, () => this.showMainMenu(), { tab });
+  }
+
+  /** Wunderkammer (Kosmetik ausrüsten) als Fenster, Zurück führt ins Hauptmenü */
+  private showWardrobe() {
+    const { box } = this.modal(WARDROBE_W, WARDROBE_H, C.panelDark);
+    buildWardrobe(box, () => this.showMainMenu());
   }
 
   // ────────────────────────────────────────────────────────────── Einführungsrunde
@@ -1738,7 +1838,7 @@ export class Game {
       const deck = DECKS[deckIdx];
       const dl = label(t('Deck'), 20, C.textDim);
       dl.position.set(W / 2, 170);
-      const back = cardBack(deck.color);
+      const back = cardBack(deck.color, { ignoreEquipped: true });
       back.position.set(W / 2, 252);
       back.scale.set(0.7);
       const dn = label(deck.name, 30, C.text);
@@ -1847,7 +1947,7 @@ export class Game {
     head.position.set(W / 2, 52);
     const date = label(new Date(`${d.date}T12:00:00`).toLocaleDateString(numLocale(), { weekday: 'long', day: 'numeric', month: 'long' }), 22, C.textDim);
     date.position.set(W / 2, 100);
-    const back = cardBack(deck.color);
+    const back = cardBack(deck.color, { ignoreEquipped: true });
     back.position.set(W / 2, 210);
     back.scale.set(0.7);
     const dn = label(deck.name, 30, C.text);
@@ -1899,6 +1999,14 @@ export class Game {
       saved: canResume ? saved : null,
       version: APP_VERSION,
       rank: { name: rank.name, color: rank.color, unlocked: unlockedCount(profile), total: ACHIEVEMENTS.length },
+      title: activeTitle(profile),
+      trophies: {
+        total: profile.trophies.total,
+        leagueName: LEAGUES[leagueIndexOf(profile.trophies.total)].name,
+        leagueColor: LEAGUES[leagueIndexOf(profile.trophies.total)].color,
+        claimable: claimableCount(profile),
+      },
+      wardrobe: { owned: Object.keys(profile.trophies.owned).length, total: COSMETICS.length },
       dailyDone: !!profile.daily[dateKey()],
       guidePending: !profile.tutorialDone && !profile.tutorialOffered,
       atlas: { ...collectionProgress(), fresh: unseenKeys().length },
@@ -1906,6 +2014,8 @@ export class Game {
         guide: () => this.startGuide(),
         daily: () => this.showDaily(),
         achievements: () => this.showAchievements(),
+        trophies: () => this.showTrophies(),
+        wardrobe: () => this.showWardrobe(),
         resume: () => this.resume(saved!),
         newRun: () => this.startNewRun(),
         collection: () => this.showCollection(),
@@ -2198,7 +2308,11 @@ export class Game {
       [t('Zinsen ($1 je ${per}, max. ${cap})', { per: run.rules.interestPer, cap: run.rules.interestCap + jokerPassive(run).interestCapDelta }), e.interest],
       ...(e.jokers ? [['Jokers', e.jokers] as [string, number]] : []),
     ];
-    const overH = over ? 36 : 0;
+    // Pokale dieser Runde (aus der Abrechnung des Runs), eine Zeile unter dem Überschuss
+    const trophyRun = getProfile().trophies.run;
+    const roundTrophy = !this.tut && trophyRun && trophyRun.runId === run.runId ? lastRoundAmount(trophyRun.lines) : 0;
+    const trophyH = roundTrophy > 0 ? 36 : 0;
+    const overH = (over ? 36 : 0) + trophyH;
     const rowH = PAYOUT.rowH;
     const boxH = 288 + rowH * lines.length + overH + PAYOUT.totalH + PAYOUT.totalGap;
     const { box } = this.modal(580, boxH, C.panelDark);
@@ -2209,6 +2323,12 @@ export class Game {
       const ol = label(t('Überschuss: {n} Punkte ({pct} Prozent des Ziels)', { n: fmt(over.extra), pct: Math.round(over.ratio * 100) }), 19, C.chips);
       ol.position.set(290, 112);
       box.addChild(ol);
+    }
+    if (roundTrophy > 0) {
+      const lgColor = LEAGUES[leagueIndexOf(getProfile().trophies.total)].color;
+      const tl = label(t('Pokale: +{n}', { n: fmt(roundTrophy) }), 21, lgColor);
+      tl.position.set(290, 112 + (over ? 36 : 0));
+      box.addChild(tl);
     }
     // Zeilen in einer vertieften Leiste, feine Trennlinien
     const rowsTop = 150 + overH - rowH / 2;
@@ -2618,7 +2738,10 @@ export class Game {
     const infoH = info.height;
     const near = nearMiss(run.round?.score ?? 0, run.round?.target ?? 0);
     const nearH = near ? 34 : 0;
-    const H = 400 + recH + infoH + tip.height + 190 + nearH + 76;
+    this.trackTrophies();
+    const trophyBlock = this.tut ? null : buildRunTrophyBlock(W - 80, run.runId, () => this.showTrophies('road'));
+    const trophyH = trophyBlock ? trophyBlock.h + TROPHY_LAYOUT.block.gap : 0;
+    const H = 400 + recH + infoH + tip.height + 190 + nearH + 76 + trophyH;
     const { box } = this.modal(W, H, C.panelDark);
     const head = label(t('Verloren'), 64, C.mult);
     head.position.set(W / 2, 80);
@@ -2632,7 +2755,8 @@ export class Game {
     if (nl) nl.position.set(W / 2, 262);
     if (recs) recs.position.set(W / 2, 262 + nearH);
     info.position.set(W / 2, 262 + nearH + recH);
-    tip.position.set(W / 2, info.y + infoH + 22);
+    if (trophyBlock) trophyBlock.view.position.set(40, info.y + infoH + TROPHY_LAYOUT.block.gap);
+    tip.position.set(W / 2, info.y + infoH + 22 + trophyH);
     const seed = label(`Seed ${run.seed}`, 18, C.textDim);
     seed.position.set(W / 2, tip.y + tip.height + 26);
     // Erste Reihe: sofort weiter. Im Tageslauf gibt es nur den gleichen Seed (der Seed ist der Tag).
@@ -2649,6 +2773,7 @@ export class Game {
     this.well(box, 50, wellTop, W - 100, info.y + infoH + 12 - wellTop);
     box.addChild(head, l1, l1b, l2, info, tip, seed, b, again, m);
     if (quick) box.addChild(quick);
+    if (trophyBlock) box.addChild(trophyBlock.view);
     if (nl) box.addChild(nl);
     if (recs) box.addChild(recs);
   }
@@ -2665,7 +2790,10 @@ export class Game {
     const recs = sum.records.length ? wrapText(sum.records.join('\n'), W - 120, 22, C.money) : null;
     const recH = recs ? recs.height + 14 : 0;
     const harder = this.canGoHarder(run);
-    const H = 470 + recH + info.height + (harder ? 86 : 0) + 20;
+    this.trackTrophies();
+    const trophyBlock = this.tut ? null : buildRunTrophyBlock(W - 80, run.runId, () => this.showTrophies('road'));
+    const trophyH = trophyBlock ? trophyBlock.h + TROPHY_LAYOUT.block.gap : 0;
+    const H = 470 + recH + info.height + (harder ? 86 : 0) + 20 + trophyH;
     const { box } = this.modal(W, H, C.panelDark);
     const head = label(t('Gewonnen!'), 72, C.money, { stroke: { color: C.mult, width: 8 } });
     head.position.set(W / 2, 90);
@@ -2679,7 +2807,11 @@ export class Game {
     this.well(box, 50, wellTop, W - 100, 250 + recH + info.height + 12 - wellTop);
     box.addChild(head, l, sd, info);
     if (recs) box.addChild(recs);
-    let y = 250 + recH + info.height + 60;
+    if (trophyBlock) {
+      trophyBlock.view.position.set(40, 250 + recH + info.height + TROPHY_LAYOUT.block.gap);
+      box.addChild(trophyBlock.view);
+    }
+    let y = 250 + recH + info.height + 60 + trophyH;
     const a = new Button(t('Endless weiterspielen'), 400, 70, C.chips, () => this.showShop(), 26);
     a.position.set(W / 2, y);
     box.addChild(a);

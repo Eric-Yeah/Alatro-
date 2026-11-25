@@ -14,7 +14,7 @@ const same = (a: PixelBuffer, b: PixelBuffer) => a.data.every((v, i) => v === b.
 const ids = Object.keys(FIGURES) as CourtId[];
 
 describe('Pixel Art Karten', () => {
-  it('rendert alle 52 Karten in beiden Paletten in der festen Größe', () => {
+  it('rendert alle 52 Karten in allen Paletten in der festen Größe', () => {
     for (const id of CARD_PALETTE_IDS) {
       for (const suit of SUITS) {
         for (const rank of RANKS) {
@@ -38,7 +38,7 @@ describe('Pixel Art Karten', () => {
     for (const id of CARD_PALETTE_IDS) {
       for (const suit of SUITS) for (const rank of RANKS) seen.add(renderCard(suit, rank, id).data.join(','));
     }
-    expect(seen.size).toBe(104);
+    expect(seen.size).toBe(CARD_PALETTE_IDS.length * 52);
   });
 
   it('Pips liegen frei: Zahl der Pip Pixel passt zur Anzahl der Pips und kein Pip berührt den Index', () => {

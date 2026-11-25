@@ -10,8 +10,8 @@ import { DECK_VIEW } from '../data/deckView';
 import { TILE_DEPTH } from '../data/tileDepth';
 import { SEALS } from '../data/modifiers';
 import { t } from '../i18n';
-import { getSettings } from '../settings';
 import { cardTexture } from './cardArt/cardTextures';
+import { effectiveCardPalette } from './cosmeticFx';
 import { drawInset, dropShadow, setShadowLift, sunken } from './depth';
 import { richText } from './richText';
 import { tabTrough } from './tileDepth';
@@ -66,7 +66,7 @@ function cardTile(card: Card): { view: Container; shadow: NineSliceSprite } {
   const body = new Graphics().roundRect(-TILE_W / 2, -TILE_H / 2 + CARD_BODY.dy, TILE_W, TILE_H, TILE_R).fill(CARD_BODY.color);
   c.addChild(shadow, body);
   const face = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] : undefined;
-  const art = new Sprite(cardTexture(card.suit, card.rank, getSettings().cardPalette, { face, rankless }));
+  const art = new Sprite(cardTexture(card.suit, card.rank, effectiveCardPalette(), { face, rankless }));
   art.anchor.set(0.5);
   art.scale.set(DECK_VIEW.pxScale);
   c.addChild(art);

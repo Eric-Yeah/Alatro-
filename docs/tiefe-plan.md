@@ -1,4 +1,4 @@
-# Plan: Tiefen Look (Version 0.13.0)
+# Plan: Tiefen Look (Version 0.14.0)
 
 Ziel: das ganze Spiel wirkt räumlicher. Nicht 3D, aber weiche Schatten, Verläufe, Kanten, Glanz und Körper statt flacher Flächen. Vorbild ist ein Spieltisch mit Platten, vertieften Anzeigen, Karten mit Schatten und dicken Knöpfen. Die Pixel Art der Karten, Jokers und Consumables bleibt scharf, die Umgebung (Platten, Knöpfe, Felder, Schatten) wird weich und plastisch. Das ersetzt den bisherigen "klaren, flachen" Stil aus dem Abschnitt "Klarer Grafikstil" in `docs/HANDOFF.md` (harte Schatten, keine Verläufe).
 

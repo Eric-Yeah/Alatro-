@@ -1,6 +1,7 @@
 import { BufferImageSource, Texture } from 'pixi.js';
 import type { Rank, Suit } from '../../core/types';
 import type { CardPaletteId } from '../../data/cardArt/cardPalettes';
+import { renderBackById } from './cardBackArt';
 import { renderCard, renderCardBack, type CardRenderOpts } from './cardRender';
 import type { PixelBuffer } from './pixelBuffer';
 
@@ -37,4 +38,16 @@ export function cardTexture(suit: Suit, rank: Rank, palette: CardPaletteId, opts
 
 export function cardBackTexture(color: number): Texture {
   return cached(`b:${color}`, () => renderCardBack(color));
+}
+
+/** Rücken der Kosmetik (Muster aus Code, gecacht). Unbekannte Id: `null`, dann gilt die Deckfarbe. */
+export function cosmeticBackTexture(id: string): Texture | null {
+  const key = `c:${id}`;
+  const hit = cache.get(key);
+  if (hit) return hit;
+  const buf = renderBackById(id);
+  if (!buf) return null;
+  const t = toTexture(buf);
+  cache.set(key, t);
+  return t;
 }

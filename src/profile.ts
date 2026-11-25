@@ -9,6 +9,8 @@ import type { ProfileNumStat } from './data/achievements';
 import { STAKES } from './data/stakes';
 import type { RunState } from './core/run';
 import { notifyChange } from './syncHooks';
+import type { TrophyState } from './data/trophyTypes';
+import { newTrophyState, parseTrophyState } from './trophyState';
 
 const KEY = 'alatro.profile.v1';
 
@@ -56,6 +58,8 @@ export interface Profile {
   /** Angebot der Einführungsrunde wurde gezeigt (angenommen oder übersprungen) */
   tutorialOffered: boolean;
   daily: Record<string, DailyEntry>;
+  /** Pokalsystem (Pokale, Pfad, Kosmetik), siehe `src/trophies.ts` */
+  trophies: TrophyState;
   sync: ProfileSync | null;
 }
 
@@ -78,6 +82,7 @@ export function newProfile(): Profile {
     tutorialDone: false,
     tutorialOffered: false,
     daily: {},
+    trophies: newTrophyState(),
     sync: null,
   };
 }
@@ -108,6 +113,7 @@ export function parseProfile(raw: unknown): Profile {
       if (v && typeof v === 'object') base.daily[k] = { ante: num(v.ante), won: v.won === true, seed: String(v.seed ?? ''), deckId: String(v.deckId ?? '') };
     }
   }
+  base.trophies = parseTrophyState(o.trophies);
   if (o.sync && typeof o.sync === 'object' && typeof o.sync.runId === 'string') {
     const s = o.sync;
     base.sync = {

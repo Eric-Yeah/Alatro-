@@ -1,13 +1,21 @@
-# Übergabe: Stand nach dem Tiefen Look (Version 0.13.0)
+# Übergabe: Stand nach dem Tiefen Look und dem Pokalsystem (Version 0.14.0)
 
-Stand: 25.11.2026. Arbeitsbranch `claude/affectionate-brown-zwzu9c` (zuvor `claude/clever-franklin-nytl3y`), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
+Stand: 25.11.2026. Arbeitsbranch `claude/affectionate-brown-zwzu9c` (Pokalsystem von `claude/cool-babbage-xjdpyw` eingemergt), live über den Deploy Branch `claude/funny-brahmagupta-ic0bpe`.
 
-## Version 0.13.0: Tiefen Look im Comic Stil
+## Version 0.14.0: Tiefen Look im Comic Stil
 
-* Das ganze Spiel hat Tiefe, aber nicht realistisch: kräftige flache Farben, dunkle Kontur, harter Unterrand, scharfe Schatten, kleiner Lichtstreifen oben, Fenster mit heller Randlinie. Plan `docs/tiefe-plan.md`, Einzelheiten und offene Punkte `AUDIT.md` O119 bis O125. **Das ersetzt den Abschnitt "Klarer Grafikstil" weiter unten** (harte Schatten, keine Verläufe gilt nicht mehr).
+* Das ganze Spiel hat Tiefe, aber nicht realistisch: kräftige flache Farben, dunkle Kontur, harter Unterrand, scharfe Schatten, kleiner Lichtstreifen oben, Fenster mit heller Randlinie. Plan `docs/tiefe-plan.md`, Einzelheiten und offene Punkte `AUDIT.md` O131 bis O137. **Das ersetzt den Abschnitt "Klarer Grafikstil" weiter unten** (harte Schatten, keine Verläufe gilt nicht mehr).
 * **Wo:** Werkzeug `src/ui/depth.ts` (`dropShadow`, `drawPlate`, `drawInset`, `raised`, `sunken`, `gloss`, `drawMeter`, `vignette`, `setShadowLift`), Zahlen `src/data/depth.ts` (`SHADOW`, `BEVEL`, `CARD_BODY`, `METER`), Rechnung `depthMath.ts` (getestet), Kacheln und Raster `tileDepth.ts`, Tischfläche `tableSurface.ts`. `panel()`, `Button` und `popup` in `widgets.ts` bauen darauf auf.
 * **Neue Platten und Knöpfe:** immer über diese Bausteine, Stil zentral in `data/depth.ts` ändern. Container mit Schatten setzen `boundsArea` (sonst stimmen `getBounds` und die Einführungszeiger nicht). Karten haben `CardView.lift`, Jokers, Consumables, Packs und Vouchers ebenfalls.
 * **Als Nächstes:** Auf dem iPad prüfen: Bildrate mit FPS Anzeige in allen drei Stufen, Lesbarkeit der Zahlen auf den flachen Farben, Tippgefühl des Eindrückens der Knöpfe, ob die Filzfläche auf dem Tisch zu schwach oder zu stark wirkt (`FELT.color`), Game Over und Run gewonnen (nur über den Code geprüft).
+
+## Version 0.13.0: Pokalpfad und Wunderkammer
+
+* **Was:** Pokale pro gespielter Runde (mehr bei höherer Ante), 8 Ligen mit 48 Meilensteinen, 7 Deck Pfade, 69 Kosmetik Stücke (Rücken, Kartenfarben, Himmel, Funken, Titel). Entwurf, Zahlen und Begründungen: `docs/pokale-plan.md`. Entscheidungen und offene Punkte: `AUDIT.md` O119 bis O130.
+* **Wo:** Zahlen `src/data/trophies.ts` (Verdienst), `src/data/trophyRoad.ts` (Ligen, Pfad, Deck Stufen, Titel), `src/data/cosmetics.ts` (Katalog mit Parametern), Layout `src/data/trophyLayout.ts` und `wardrobeLayout.ts`. Logik ohne DOM `src/trophies.ts` (`observeTrophies`, `claimEntry`, `equip`, `mergeTrophyState`), Zustand `src/trophyState.ts` (Feld `profile.trophies`, keine neue `SAVE_VERSION`). Darstellung `src/ui/cosmeticFx.ts` (Rücken, Himmel, Funken, Paletten), Rücken Muster `src/ui/cardArt/cardBackArt.ts`, Ansichten `src/ui/TrophyView.ts` und `WardrobeView.ts`, reine Teile `trophyViewMath.ts` und `wardrobeMath.ts`. Verdrahtung in `Game.ts` (Suche nach `trackTrophies`) und `HomeView.ts`.
+* **Neue Kosmetik anlegen:** Eintrag in `COSMETICS` (Id mit Präfix `back_`, `pal_`, `sky_`, `spark_` oder `title_`), Parameter je Kategorie, Platz am Pfad in `ROAD` oder `DECK_STAGES` (ein Test prüft, dass jedes Stück genau einmal belohnt wird), englischer Name und Beschreibung in `src/i18n/patch/cosmetics.ts`.
+* **Pokale anders einstellen:** nur in `src/data/trophies.ts` und den Schwellen in `trophyRoad.ts`. Die Simulation in `src/trophies.test.ts` zeigt Runs je Liga und fängt Abweichungen ab.
+* **Als Nächstes:** Auf dem iPad prüfen: Tempo des Pfads (O120), Wischen und Kachelgrößen (O130), Lesbarkeit der Himmel Farben und der Boss Stimmung (O127), Gefühl der Pokal Toasts und der Abrechnung in der Rückschau.
 
 ## Version 0.12.1: Supernova ruhiger, Menü Überarbeitung zusammengeführt
 

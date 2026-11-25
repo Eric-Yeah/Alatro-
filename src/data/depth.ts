@@ -1,4 +1,4 @@
-// Zahlen für den Tiefen Look (Version 0.13.0): Comic Stil mit kräftigen flachen Farben, dunkler Kontur, hartem Unterrand und scharfen Schatten.
+// Zahlen für den Tiefen Look (Version 0.14.0): Comic Stil mit kräftigen flachen Farben, dunkler Kontur, hartem Unterrand und scharfen Schatten.
 // Farben als 0xRRGGBB, Strecken in Spielfeld Einheiten (1440 mal 1000), Alpha 0 bis 1.
 
 /** Weicher Schatten: Voreinstellungen je Art des Objekts */
