@@ -610,6 +610,7 @@ export class Game {
     sfx.select(v.selected);
     haptics.select(v.selected);
     tween(v, { y: v.homeY - (v.selected ? 40 : 0) }, 160, easeOutBack);
+    tween(v, { lift: v.selected ? 1 : 0 }, 160);
     if (spektakel.enabled()) {
       spektakel.select(this.spk(v), v.selected);
       if (v.selected) spektakel.aura(v, () => v.selected && !v.destroyed);

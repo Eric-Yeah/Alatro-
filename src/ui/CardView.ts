@@ -1,10 +1,12 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { isRankless, type Card } from '../core/cards';
 import { CARD_PX_H, CARD_PX_SCALE, CARD_PX_W } from '../data/cardArt/cardGlyphs';
+import { CARD_BODY, SHADOW } from '../data/depth';
 import { EDITIONS, ENHANCEMENTS, SEALS } from '../data/modifiers';
 import { getSettings, onSettings } from '../settings';
 import { cardBackTexture, cardTexture } from './cardArt/cardTextures';
 import { attachFloat } from './cardMotion';
+import { dropShadow, setShadowLift } from './depth';
 import { editionOverlay } from './editionFx';
 import { C, EDITION_COLORS, ENHANCEMENT_COLORS, FONT_BODY, SEAL_COLORS } from './theme';
 
@@ -31,11 +33,20 @@ export class CardView extends Container {
   /** Rückseite, wird erst beim Austeilen und Einziehen gebraucht */
   private backSide: Container | null = null;
   private readonly art: Sprite;
+  private readonly shadow: ReturnType<typeof dropShadow>;
+  private _lift = 0;
   private readonly faceColor: number | undefined;
 
   private currentTexture() {
     const card = this.card;
     return cardTexture(card.suit, card.rank, getSettings().cardPalette, { face: this.faceColor, rankless: isRankless(card) });
+  }
+
+  /** Abhebung 0 bis 1: der Schatten bleibt auf dem Tisch, wenn die Karte steigt (gewählte Karte) */
+  get lift() { return this._lift; }
+  set lift(v: number) {
+    this._lift = v;
+    if (!this.destroyed) setShadowLift(this.shadow, v);
   }
 
   /** Textur neu setzen (nach Wechsel der Kartenpalette) */
@@ -57,11 +68,13 @@ export class CardView extends Container {
     const faceColor = card.enhancement ? ENHANCEMENT_COLORS[card.enhancement] : undefined;
     this.faceColor = faceColor;
 
-    const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.35 });
+    this.shadow = cardShadow(w, h);
+    // Kartendicke: ein dunkler Streifen unter der Karte macht sie zum Körper
+    const body = new Graphics().roundRect(-w / 2, -h / 2 + CARD_BODY.dy, w, h, 8).fill(CARD_BODY.color);
     this.art = new Sprite(this.currentTexture());
     this.art.anchor.set(0.5);
     this.art.scale.set(CARD_PX_SCALE);
-    this.face.addChild(shadow, this.art);
+    this.face.addChild(this.shadow, body, this.art);
     live.add(this);
     ensureListener();
 
@@ -142,13 +155,21 @@ export class CardView extends Container {
   }
 }
 
+/** Weicher Schatten einer Karte (Mitte als Ursprung) */
+function cardShadow(w: number, h: number) {
+  const s = dropShadow(w, h, SHADOW.card, { radius: 8 });
+  s.x -= w / 2;
+  s.y -= h / 2;
+  return s;
+}
+
 export function cardBack(color: number = C.cardBack): Container {
   const c = new Container();
   const w = CARD_W, h = CARD_H;
-  const shadow = new Graphics().roundRect(-w / 2 + 3, -h / 2 + 6, w, h, 8).fill({ color: 0x000000, alpha: 0.35 });
+  const body = new Graphics().roundRect(-w / 2, -h / 2 + CARD_BODY.dy, w, h, 8).fill(CARD_BODY.color);
   const art = new Sprite(cardBackTexture(color));
   art.anchor.set(0.5);
   art.scale.set(CARD_PX_SCALE);
-  c.addChild(shadow, art);
+  c.addChild(cardShadow(w, h), body, art);
   return c;
 }

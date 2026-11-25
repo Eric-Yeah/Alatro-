@@ -1,6 +1,9 @@
-import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { Container, Graphics, Rectangle, Text, type TextStyleOptions } from 'pixi.js';
+import { BEVEL, SHADOW } from '../data/depth';
 import { sfx } from './audio';
 import { haptics } from './haptics';
+import { drawPlate, dropShadow, raised } from './depth';
+import { lighten } from './depthMath';
 import { C, FONT, FONT_BODY, STYLE, VIEW_BLEED, shade } from './theme';
 import { easeOutBack, tween } from './tween';
 
@@ -20,35 +23,44 @@ export function label(text: string, size: number, color = C.text, extra: Partial
   return t;
 }
 
+/** Platte mit weichem Schatten, Verlauf, Lichtkante und Unterrand (siehe `depth.ts`). Ursprung links oben. */
 export function panel(w: number, h: number, color = C.panel, radius = STYLE.radius, line = C.panelLine): Container {
-  const c = new Container();
-  c.addChild(new Graphics()
-    .roundRect(0, STYLE.shadowY, w, h, radius).fill(STYLE.shadowColor)
-    .roundRect(0, 0, w, h, radius).fill({ color, alpha: 0.9 }).stroke({ width: STYLE.outline, color: line })
-    // dünne Leuchtlinie innen: Hologramm Anmutung
-    .roundRect(4, 4, w - 8, h - 8, Math.max(2, radius - 3)).stroke({ width: 1.5, color: C.holo, alpha: 0.3 }));
-  return c;
+  return raised(w, h, color, { radius, line, alpha: 0.96, holo: true, shadow: SHADOW.panel });
 }
 
 export class Button extends Container {
   private bg = new Graphics();
+  private faceG = new Graphics();
+  /** Fläche samt Beschriftung, wird beim Drücken nach unten in den Unterrand gedrückt */
+  private face = new Container();
+  private shadow;
   private txt: Text;
   private _enabled = true;
+  private hover = false;
 
   constructor(text: string, private w: number, private h: number, private color: number, onTap: () => void, size = 28) {
     super();
     this.txt = label(text, size, C.text, { align: 'center' });
     this.txt.position.set(w / 2, h / 2);
     this.fit();
-    this.addChild(this.bg, this.txt);
+    this.shadow = dropShadow(w, h + BEVEL.buttonEdge, SHADOW.button, { radius: STYLE.radius });
+    this.face.addChild(this.faceG, this.txt);
+    this.addChild(this.shadow, this.bg, this.face);
     this.pivot.set(w / 2, h / 2);
+    this.boundsArea = new Rectangle(-STYLE.outline, -STYLE.outline, w + 2 * STYLE.outline, h + BEVEL.buttonEdge + 2 * STYLE.outline);
     this.draw();
     this.eventMode = 'static';
     this.cursor = 'pointer';
-    this.on('pointerdown', () => { if (this._enabled) tween(this, { 'scale.x': 0.94, 'scale.y': 0.94 }, 60); });
-    const release = () => tween(this, { 'scale.x': 1, 'scale.y': 1 }, 200, easeOutBack);
-    this.on('pointerup', release);
-    this.on('pointerupoutside', release);
+    const down = (on: boolean) => {
+      const dy = on && this._enabled ? BEVEL.press : 0;
+      tween(this.face, { y: dy }, on ? 50 : 160, on ? undefined : easeOutBack);
+      tween(this.shadow, { alpha: on && this._enabled ? SHADOW.button.alpha * 0.55 : SHADOW.button.alpha }, 80);
+    };
+    this.on('pointerdown', () => down(true));
+    this.on('pointerup', () => down(false));
+    this.on('pointerupoutside', () => down(false));
+    this.on('pointerover', () => { this.hover = true; this.draw(); });
+    this.on('pointerout', () => { this.hover = false; this.draw(); });
     this.on('pointertap', () => {
       if (this._enabled) { sfx.click(); haptics.tap(); onTap(); } else { sfx.deny(); haptics.deny(); }
     });
@@ -73,19 +85,23 @@ export class Button extends Container {
     this._enabled = v;
     this.alpha = v ? 1 : 0.4;
     this.cursor = v ? 'pointer' : 'default';
+    this.face.y = 0;
   }
   get enabled() { return this._enabled; }
 
   private draw() {
-    const { w, h, color } = this;
-    const r = STYLE.radius;
+    const { w, h } = this;
     const o = STYLE.outline;
-    // Kontur, unterer Rand in dunklerer Farbe, Fläche: alles flach und hart
+    const edge = BEVEL.buttonEdge;
+    const color = this.hover && this._enabled ? lighten(this.color, BEVEL.hoverLift) : this.color;
+    // Unterrand (Körper des Knopfes) bleibt stehen, nur die Fläche läuft beim Drücken hinein
     this.bg.clear()
-      .roundRect(-o, -o, w + o * 2, h + o * 2 + 5, r + o).fill(C.panelLine)
-      .roundRect(0, 0, w, h + 5, r).fill(shade(color, 0.55))
-      .roundRect(0, 0, w, h, r).fill(color)
-      .roundRect(5, 4, w - 10, 3, 1.5).fill({ color: 0xffffff, alpha: 0.28 });
+      .roundRect(-o, -o, w + o * 2, h + edge + o * 2, STYLE.radius + o).fill(C.panelLine)
+      .roundRect(0, 0, w, h + edge, STYLE.radius).fill(shade(this.color, BEVEL.edgeShade));
+    this.faceG.clear();
+    drawPlate(this.faceG, 0, 0, w, h, color, { edge: 0, outline: 0, line: C.panelLine, sheen: BEVEL.sheenH });
+    // Kontur der Fläche, damit sie sich beim Drücken vom Unterrand abhebt
+    this.faceG.roundRect(0, 0, w, h, STYLE.radius).stroke({ width: 2, color: shade(this.color, 0.4), alpha: 0.9 });
   }
 }
 
