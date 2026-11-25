@@ -8,6 +8,16 @@ const ed = nameOf.edition;
 const track = nameOf.track;
 
 const EN: Record<string, { title: string; items: Item[] }> = {
+  '0.13.0': {
+    title: 'Depth Look',
+    items: [
+      'New: The whole game feels more three dimensional. Panels, fields, buttons, cards, Jokers, packs and the shop have soft shadows, gradients, light edges and a body instead of flat surfaces. The light comes from above, the shadows fall downward.',
+      'New: Buttons have a thick bottom edge and press in when you tap them. Value displays are sunken, buttons and panels are raised, so you can see at a glance what you can tap.',
+      'New: A selected card rises, its shadow stays on the table and gets softer. Cards have a visible thickness.',
+      'New: The table has a subtle felt surface with card spots, the trays for Jokers and Consumables are sunken, the deck pile has thickness.',
+      'Note: The shadows are small textures without filters and run smoothly in all three graphics settings. The pixel art of the cards and Jokers stays sharp.',
+    ],
+  },
   '0.12.1': {
     title: 'Calmer Supernova, New Options',
     items: [

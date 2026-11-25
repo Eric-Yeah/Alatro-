@@ -110,10 +110,14 @@ export function popup(parent: Container, x: number, y: number, text: string, col
   const box = new Container();
   const t = label(text, size, C.text);
   const pad = 10;
-  const bg = new Graphics()
-    .roundRect(-t.width / 2 - pad, -t.height / 2 - 4, t.width + pad * 2, t.height + 8, 10)
-    .fill(color);
-  box.addChild(bg, t);
+  const w = t.width + pad * 2;
+  const h = t.height + 8;
+  // kleine erhabene Plakette mit weichem Schatten
+  const shadow = dropShadow(w, h + 3, SHADOW.button, { radius: 10 });
+  shadow.position.x -= w / 2;
+  shadow.position.y -= h / 2;
+  const bg = drawPlate(new Graphics(), -w / 2, -h / 2, w, h, color, { radius: 10, edge: 3, outline: 2 });
+  box.addChild(shadow, bg, t);
   box.position.set(x, y);
   box.scale.set(0.3);
   parent.addChild(box);
